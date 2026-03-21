@@ -62,7 +62,7 @@ function buildNegativeCues(archetype: ShotArchetype, input: LookbookInput, bluep
     extras.push("obscured logos", "distorted branding", "broken text");
   }
   if (archetype.occlusionRisk === "high" || archetype.occlusionRisk === "medium") {
-    extras.push("hidden product details", "occluded garment features");
+    extras.push("hidden product details", "occluded product features");
   }
   if (archetype.shotCategory === "motion") {
     extras.push("frozen mid-air pose", "unnatural stride length");
@@ -122,8 +122,8 @@ function buildBadges(
 function deriveShotPurpose(archetype: ShotArchetype, _input: LookbookInput): string {
   const purposes: Record<string, string> = {
     hero: "Anchor shot establishing the product clearly for the buyer.",
-    silhouette: "Shows garment shape, proportions, and overall line.",
-    detail: "Highlights construction, texture, and branding details.",
+    silhouette: "Shows product shape, proportions, and overall profile.",
+    detail: "Highlights construction, texture, and material quality.",
     motion: "Adds life and energy, showing how the product moves.",
     editorial: "Creates mood and narrative interest for the brand.",
     product_focus: "Directs attention to the specific product being featured.",
@@ -151,21 +151,21 @@ function deriveWhatItSells(archetype: ShotArchetype, input: LookbookInput, bluep
     }
   }
 
-  // Generic fallback
+  // Generic fallback (product-neutral wording)
   if (archetype.shotCategory === "hero") {
-    return `Complete visibility of the ${item}. The buyer sees fit, proportions, and the full product at a glance.`;
+    return `Complete visibility of the ${item}. The buyer sees shape, scale, and the full product at a glance.`;
   }
   if (archetype.shotCategory === "silhouette") {
-    return `The shape and line of the ${item}. Shows how the product drapes and sits on the body from a different angle.`;
+    return `The shape and profile of the ${item}. Shows how the product looks from a different angle and its overall line.`;
   }
   if (archetype.shotCategory === "detail") {
-    return `Craftsmanship and branding details of the ${item}. Texture, construction quality, and finish.`;
+    return `Construction and material detail of the ${item}. Texture, craftsmanship, and finish quality.`;
   }
   if (archetype.shotCategory === "motion") {
-    return `How the ${item} moves and drapes in motion. Buyers see fabric behaviour that static shots cannot show.`;
+    return `How the ${item} behaves in motion. Buyers see movement and material behaviour that static shots cannot show.`;
   }
   if (archetype.shotCategory === "editorial") {
-    return `Brand aspiration and lifestyle context for the ${item}. Elevates the product from an item to a story.`;
+    return `Lifestyle context and brand aspiration for the ${item}. Elevates the product from an item to a story.`;
   }
   return `The ${item} in its intended use context. Buyers see the product as it would be worn or carried.`;
 }

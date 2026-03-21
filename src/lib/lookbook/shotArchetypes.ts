@@ -1435,4 +1435,118 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     deltaBlueprint:
       "Dead-straight front portrait, 0-degree angle. Both ears fully visible, hair cleared from both sides. Even bilateral lighting for identical illumination on both {item}. Model faces camera squarely, chin neutral. Close crop at collarbone. This is a pair-validation shot: symmetry and matching are the priority.",
   },
+
+  // ────────────────────────────────────────────
+  // 28. bag_hardware_detail
+  // ────────────────────────────────────────────
+  {
+    id: "bag_hardware_detail",
+    title: "Bag Hardware Detail",
+    role: "Close-up on bag hardware: buckles, clasps, zippers, chain links, and metal fittings.",
+    shotCategory: "detail",
+    suitableFamilies: ["bags"],
+    suitableItems: [
+      "shoulder bag",
+      "tote",
+      "crossbody",
+      "handbag",
+      "clutch",
+      "briefcase",
+      "messenger",
+      "backpack",
+    ],
+    suitableGoals: ["product_clarity", "detail_focus", "premium_branding"],
+    suitableStyles: ["commercial", "luxury", "minimal", "editorial", "contemporary"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "medium",
+    productClaritySuitability: "high",
+    silhouetteSuitability: "low",
+    detailSuitability: "high",
+    movementSuitability: "low",
+    editorialStrength: "low",
+    higgsfieldReliability: "high",
+    difficulty: "easy",
+    logoRisk: "low",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The bag has prominent hardware (buckles, chain straps, branded clasps, metal feet) that signals quality or brand identity.",
+    avoidWhen: "The bag has minimal or no visible hardware (plain canvas tote, unstructured fabric bag).",
+    defaultFraming: "Extreme close-up on the hardware zone, filling 60-80% of the frame",
+    defaultLens: "85mm",
+    defaultAperture: "f/2.8",
+    defaultCameraHeight: "Aligned with the hardware position on the bag",
+    defaultCameraDistance: "~1m",
+    defaultAngle: "Perpendicular to the hardware surface for maximum detail",
+    defaultLighting: "Directional key light with controlled highlights on metal surfaces. Avoid flat lighting that kills hardware dimension.",
+    poseFamily: "Static detail with bag",
+    bodyDirection: "Model holds bag at the natural carry position, hardware facing camera",
+    handBehavior: "One hand holding strap or handle, positioned to frame but not cover hardware",
+    legBehavior: "Not visible in frame",
+    headDirection: "Not visible in frame",
+    realismNotes:
+      "Hardware detail is reliable at close crop. Watch for: metal colour consistency, buckle prong alignment, zipper teeth regularity, chain link uniformity. Engravings and small text may blur.",
+    whyItWorks:
+      "Hardware is how buyers judge bag quality online. A dedicated hardware crop shows craftsmanship, metal finish, and functional details that wider shots lose entirely.",
+    deltaBlueprint:
+      "Extreme close-up: crop to the bag's primary hardware zone. Camera perpendicular to the metal surface. Directional light to catch metal reflections and define hardware dimension. f/2.8 for shallow focus isolating the hardware against leather or fabric. No face visible. This is a construction quality validation shot for the {item}.",
+  },
+
+  // ────────────────────────────────────────────
+  // 29. bag_construction_detail
+  // ────────────────────────────────────────────
+  {
+    id: "bag_construction_detail",
+    title: "Bag Construction Detail",
+    role: "Close-up on bag construction: stitching, edge finishing, lining, interior pockets, and material texture.",
+    shotCategory: "detail",
+    suitableFamilies: ["bags"],
+    suitableItems: [
+      "shoulder bag",
+      "tote",
+      "crossbody",
+      "handbag",
+      "clutch",
+      "briefcase",
+      "messenger",
+      "backpack",
+    ],
+    suitableGoals: ["product_clarity", "detail_focus"],
+    suitableStyles: ["commercial", "luxury", "minimal", "editorial", "contemporary"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "low",
+    productClaritySuitability: "high",
+    silhouetteSuitability: "low",
+    detailSuitability: "high",
+    movementSuitability: "low",
+    editorialStrength: "low",
+    higgsfieldReliability: "high",
+    difficulty: "easy",
+    logoRisk: "low",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The bag's selling point is craftsmanship: hand-stitched edges, premium lining, reinforced corners, or distinctive material texture.",
+    avoidWhen: "The bag has minimal construction detail or the material is plain and uninteresting at close range.",
+    defaultFraming: "Extreme close-up on stitching, edge, or interior, filling 60-80% of the frame",
+    defaultLens: "85mm",
+    defaultAperture: "f/2.8",
+    defaultCameraHeight: "Aligned with the construction detail zone",
+    defaultCameraDistance: "~1m",
+    defaultAngle: "Angled to show stitching depth and material texture dimensionally",
+    defaultLighting: "Raking light from one side to reveal stitching depth, leather grain, and texture. Avoid flat frontal lighting.",
+    poseFamily: "Static detail with bag",
+    bodyDirection: "Model holds bag open or angled to reveal interior or edge construction",
+    handBehavior: "One hand opens or angles the bag to reveal the detail zone, not covering the target area",
+    legBehavior: "Not visible in frame",
+    headDirection: "Not visible in frame",
+    realismNotes:
+      "Construction detail is highly reliable at close crop. Watch for: stitching regularity (AI can make uneven stitch spacing), material texture consistency, lining pattern integrity. Interior rendering is less reliable than exterior.",
+    whyItWorks:
+      "Construction close-ups prove quality to buyers who cannot touch the bag in person. Stitching, edge finishing, and material grain are the primary quality signals for bags online.",
+    deltaBlueprint:
+      "Extreme close-up: crop to the bag's stitching, edge, or interior zone. Raking light from camera-left to reveal texture depth. f/2.8 for shallow focus on the construction detail. Show material grain, stitch quality, and edge finishing. No face visible. This is a craftsmanship validation shot for the {item}.",
+  },
 ];

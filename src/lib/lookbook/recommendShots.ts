@@ -13,6 +13,11 @@ import { buildRecommendedShot } from "./buildShotDelta";
 import { formatExportText } from "./exportShotPlan";
 import { resolveBlueprint, UNIVERSAL_RULES } from "./shotBlueprints";
 
+// ── Accessory-Led Families ──
+// These families have a physical product that is NOT the full outfit.
+// Selection rules differ: fewer heroes, more product-focus and detail variety.
+const ACCESSORY_LED_FAMILIES: string[] = ["bags", "jewelry", "eyewear", "watches", "small_accessories"];
+
 // ── Selection with Hard Constraints ──
 
 function selectShots(
@@ -27,9 +32,13 @@ function selectShots(
   const selected: ScoredArchetype[] = [];
   const categoryCount: Record<string, number> = {};
   let motionCount = 0;
+  let heroCount = 0;
 
   const maxPerCategory = UNIVERSAL_RULES.maxShotsPerCategory;
   const maxMotion = blueprint.maxMotionShots;
+  const isAccessoryLed = ACCESSORY_LED_FAMILIES.includes(input.productFamily);
+  // Accessory-led families: max 1 hero to avoid redundant full-body standing shots
+  const maxHero = isAccessoryLed ? 1 : maxPerCategory;
 
   // Phase 1: satisfy required archetypes first
   for (const requiredId of blueprint.requiredArchetypeIds) {
@@ -42,6 +51,7 @@ function selectShots(
       const cat = candidate.archetype.shotCategory;
       categoryCount[cat] = (categoryCount[cat] || 0) + 1;
       if (cat === "motion") motionCount++;
+      if (cat === "hero") heroCount++;
     }
   }
 
@@ -55,12 +65,33 @@ function selectShots(
     // Max per category
     if ((categoryCount[cat] || 0) >= maxPerCategory) continue;
 
+    // Hero cap for accessory-led families
+    if (cat === "hero" && heroCount >= maxHero) continue;
+
     // Motion cap
     if (cat === "motion" && motionCount >= maxMotion) continue;
 
     // No duplicate archetypes
     if (UNIVERSAL_RULES.noDuplicateArchetypes) {
       if (selected.some((s) => s.archetype.id === candidate.archetype.id)) continue;
+    }
+
+    // Framing diversity: for accessory-led families, do not allow a second
+    // full-body front-biased shot if we already have one, unless it is a
+    // different category (e.g. silhouette vs hero)
+    if (isAccessoryLed) {
+      const candidateFraming = candidate.archetype.defaultFraming.toLowerCase();
+      const isFrontFullBody = candidateFraming.includes("full body") &&
+        (candidate.archetype.defaultAngle.toLowerCase().includes("straight on") ||
+         candidate.archetype.defaultAngle.toLowerCase().includes("perpendicular"));
+      if (isFrontFullBody) {
+        const existingFrontFullBody = selected.filter((s) => {
+          const f = s.archetype.defaultFraming.toLowerCase();
+          const a = s.archetype.defaultAngle.toLowerCase();
+          return f.includes("full body") && (a.includes("straight on") || a.includes("perpendicular"));
+        }).length;
+        if (existingFrontFullBody >= 1) continue;
+      }
     }
 
     // DNA enforcement: if blueprint prefers portrait/detail framing, limit full-body shots
@@ -77,6 +108,7 @@ function selectShots(
     selected.push(candidate);
     categoryCount[cat] = (categoryCount[cat] || 0) + 1;
     if (cat === "motion") motionCount++;
+    if (cat === "hero") heroCount++;
   }
 
   // Guarantee: at least 1 clarity-driven shot

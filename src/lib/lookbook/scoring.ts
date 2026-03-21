@@ -276,6 +276,23 @@ export function scoreArchetype(
     }
   }
 
+  // Detail subtype preference for bags and accessories
+  // When logo visibility is not high, prefer construction/hardware detail over branding detail
+  if (blueprint.family === "bags" && archetype.shotCategory === "detail") {
+    const isConstructionOrHardware = archetype.id.includes("hardware_detail") || archetype.id.includes("construction_detail");
+    const isBrandingDetail = archetype.id.includes("logo_focus");
+    if (input.logoVisibilityPriority !== "high") {
+      if (isConstructionOrHardware) {
+        score += 15;
+        reasons.push("construction/hardware detail preferred for bags");
+      }
+      if (isBrandingDetail) {
+        score -= 10;
+        reasons.push("branding detail deprioritised (logo not high priority)");
+      }
+    }
+  }
+
   // Occlusion penalties from resolved blueprint
   const occlusion = getOcclusionPenalty(archetype, blueprint);
   if (occlusion.penalty < 0) {
