@@ -28,7 +28,7 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
   const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
 
   const handlePresetSelect = (defaults: Partial<LookbookInput>) => {
-    setInput({ ...input, ...defaults });
+    setInput(prev => ({ ...prev, ...defaults }));
     const match = STARTER_PRESETS.find(
       (p) => JSON.stringify(p.defaults) === JSON.stringify(defaults)
     );
@@ -62,10 +62,10 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
         family={input.productFamily}
         specificItem={input.specificItem}
         onFamilyChange={(f: ProductFamily) =>
-          setInput({ ...input, productFamily: f, specificItem: "" })
+          setInput(prev => ({ ...prev, productFamily: f, specificItem: "" }))
         }
         onItemChange={(item: string) =>
-          setInput({ ...input, specificItem: item })
+          setInput(prev => ({ ...prev, specificItem: item }))
         }
       />
 
@@ -78,21 +78,23 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
         creativity={input.creativityLevel}
         notes={input.notes || ""}
         onGoalChange={(v: CampaignGoal) =>
-          setInput({ ...input, campaignGoal: v })
+          setInput(prev => ({ ...prev, campaignGoal: v }))
         }
         onStyleChange={(v: TargetStyle) =>
-          setInput({ ...input, targetStyle: v })
+          setInput(prev => ({ ...prev, targetStyle: v }))
         }
         onGenderChange={(v: GenderPresentation) =>
-          setInput({ ...input, genderPresentation: v })
+          setInput(prev => ({ ...prev, genderPresentation: v }))
         }
         onLogoChange={(v: LogoVisibilityPriority) =>
-          setInput({ ...input, logoVisibilityPriority: v })
+          setInput(prev => ({ ...prev, logoVisibilityPriority: v }))
         }
         onCreativityChange={(v: CreativityLevel) =>
-          setInput({ ...input, creativityLevel: v })
+          setInput(prev => ({ ...prev, creativityLevel: v }))
         }
-        onNotesChange={(v: string) => setInput({ ...input, notes: v })}
+        onNotesChange={(v: string) =>
+          setInput(prev => ({ ...prev, notes: v }))
+        }
       />
 
       {/* Submit */}
