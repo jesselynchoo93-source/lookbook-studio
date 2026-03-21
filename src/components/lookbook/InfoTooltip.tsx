@@ -15,7 +15,7 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
         type="button"
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
-        onClick={() => setShow(!show)}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShow(!show); }}
         className="text-gray-500 hover:text-gray-400 transition-colors ml-1 text-xs"
         aria-label="More info"
       >
