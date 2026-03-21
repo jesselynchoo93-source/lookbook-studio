@@ -17,6 +17,7 @@ import { buildMasterShootDNA } from "./shootDNA";
 import { buildRecommendedShot } from "./buildShotDelta";
 import { formatExportText } from "./exportShotPlan";
 import { resolveBlueprint, UNIVERSAL_RULES } from "./shotBlueprints";
+import type { ShotArchetype } from "./types";
 import {
   PRODUCT_ONLY_ELIGIBLE_FAMILIES,
   PRODUCT_ONLY_ELIGIBLE_CATEGORIES,
@@ -27,6 +28,40 @@ import {
 // These families have a physical product that is NOT the full outfit.
 // Selection rules differ: fewer heroes, more product-focus and detail variety.
 const ACCESSORY_LED_FAMILIES: string[] = ["bags", "jewelry", "eyewear", "watches", "small_accessories"];
+
+// ── Evidence Relevance Gate ──
+// An archetype must provide at least 1 required OR recommended evidence type
+// for the product to be eligible for selection. This prevents irrelevant archetypes
+// (e.g. full-body hero for watches) from being selected via context scoring alone.
+
+function computeEvidenceRelevance(
+  archetype: ShotArchetype,
+  evidencePlan: ResolvedEvidencePlan,
+): { requiredMatches: number; recommendedMatches: number; totalRelevant: number; anyPlanMatch: number } {
+  const planRequired = new Set(
+    evidencePlan.orderedEvidence.filter((e) => e.priority === "required").map((e) => e.evidence),
+  );
+  const planRecommended = new Set(
+    evidencePlan.orderedEvidence.filter((e) => e.priority === "recommended").map((e) => e.evidence),
+  );
+  // All evidence in the plan (including optional), excluding discouraged
+  const planAll = new Set(
+    evidencePlan.orderedEvidence
+      .filter((e) => e.priority !== "discouraged")
+      .map((e) => e.evidence),
+  );
+
+  let requiredMatches = 0;
+  let recommendedMatches = 0;
+  let anyPlanMatch = 0;
+  for (const ev of archetype.evidenceCapabilities) {
+    if (planRequired.has(ev)) requiredMatches++;
+    if (planRecommended.has(ev)) recommendedMatches++;
+    if (planAll.has(ev)) anyPlanMatch++;
+  }
+
+  return { requiredMatches, recommendedMatches, totalRelevant: requiredMatches + recommendedMatches, anyPlanMatch };
+}
 
 /** Evidence types that require a body present. Used to gate product_only shots. */
 const ON_BODY_EVIDENCE: EvidenceType[] = [
@@ -82,6 +117,22 @@ function computeMarginalEvidenceGain(
 
 // ── Redundancy Penalty ──
 
+// Ambient evidence: inherent to any on-body shot at a given framing.
+// These are excluded from redundancy severity classification because
+// they don't represent distinct product features. Two full-body shots
+// both showing body_scale is expected, not a defect.
+const AMBIENT_EVIDENCE: Set<EvidenceType> = new Set([
+  "body_scale",
+  "face_scale",
+  "fit_on_body",
+  "full_silhouette",
+  "scale_reference",
+]);
+
+function countDistinctiveShared(sharedEvidence: EvidenceType[]): number {
+  return sharedEvidence.filter((ev) => !AMBIENT_EVIDENCE.has(ev)).length;
+}
+
 function computeRedundancyPenalty(
   candidate: ScoredArchetype,
   alreadySelected: ScoredArchetype[],
@@ -98,11 +149,14 @@ function computeRedundancyPenalty(
     const existingZones = new Set(existing.archetype.primaryDisplayZones);
     const existingBucket = getFramingBucket(existing.archetype.defaultFraming);
 
-    // Shared evidence
+    // Shared evidence (all)
     const sharedEvidence: EvidenceType[] = [];
     for (const ev of candidateEvidence) {
       if (existingEvidence.has(ev)) sharedEvidence.push(ev);
     }
+
+    // Distinctive shared evidence (excluding ambient)
+    const distinctiveCount = countDistinctiveShared(sharedEvidence);
 
     // Shared primary display zones
     let sharedZoneCount = 0;
@@ -113,20 +167,20 @@ function computeRedundancyPenalty(
     // Framing similarity
     const sameBucket = candidateBucket === existingBucket;
 
-    // Classify severity
-    if (sharedEvidence.length >= 3 && sameBucket && sharedZoneCount > 0) {
-      // Critical
+    // Classify severity using DISTINCTIVE shared evidence count
+    if (distinctiveCount >= 3 && sameBucket && sharedZoneCount > 0) {
+      // Critical: 3+ distinctive shared evidence, same bucket, overlapping zones
       totalPenalty -= 30;
       warnings.push({
         severity: "critical",
         shotA: i + 1,
         shotB: alreadySelected.length + 1,
         sharedEvidence,
-        message: `Critical redundancy: ${sharedEvidence.length} shared evidence types, same framing bucket (${candidateBucket}), ${sharedZoneCount} overlapping primary zones`,
+        message: `Critical redundancy: ${distinctiveCount} distinctive shared evidence (${sharedEvidence.length} total), same framing bucket (${candidateBucket}), ${sharedZoneCount} overlapping primary zones`,
       });
     } else if (
-      (sharedEvidence.length >= 2 && sameBucket) ||
-      (sharedEvidence.length >= 3 && !sameBucket)
+      (distinctiveCount >= 2 && sameBucket) ||
+      (distinctiveCount >= 3 && !sameBucket)
     ) {
       // Warning
       totalPenalty -= 15;
@@ -135,7 +189,7 @@ function computeRedundancyPenalty(
         shotA: i + 1,
         shotB: alreadySelected.length + 1,
         sharedEvidence,
-        message: `Redundancy warning: ${sharedEvidence.length} shared evidence types${sameBucket ? ", same framing bucket" : ", different framing bucket"}`,
+        message: `Redundancy warning: ${distinctiveCount} distinctive shared evidence (${sharedEvidence.length} total)${sameBucket ? ", same framing bucket" : ", different framing bucket"}`,
       });
     } else if (sharedEvidence.length === 1 && !sameBucket) {
       // Info: no penalty
@@ -180,16 +234,84 @@ function selectShots(
   const isProductOnly = (c: ScoredArchetype) =>
     c.archetype.primaryDisplayZones.includes("product_only");
 
+  // Pre-compute evidence relevance for all candidates
+  const relevanceCache = new Map<string, ReturnType<typeof computeEvidenceRelevance>>();
+  for (const s of scored) {
+    relevanceCache.set(s.archetype.id, computeEvidenceRelevance(s.archetype, evidencePlan));
+  }
+
+  // Track critical redundancy count in the selected set
+  let criticalRedundancyCount = 0;
+
+  // Universal archetypes (listed for nearly all families) can fill context/mood slots
+  // even when they lack specialized evidence for a niche product family.
+  const UNIVERSAL_FAMILY_THRESHOLD = 7;
+
   const passesHardConstraints = (candidate: ScoredArchetype): boolean => {
     const cat = candidate.archetype.shotCategory;
+    const families = candidate.archetype.suitableFamilies;
+    const isUniversal = families.length >= UNIVERSAL_FAMILY_THRESHOLD;
 
-    // Family match: block single-family archetypes designed for a different family
-    // (e.g. bag_hardware_detail for eyewear). Multi-family archetypes get a soft scoring penalty instead.
-    if (
-      candidate.archetype.suitableFamilies.length <= 2 &&
-      !candidate.archetype.suitableFamilies.includes(input.productFamily)
-    ) {
+    // Family match: block specialist archetypes not designed for this family.
+    // Universal archetypes (7+ families) always pass since they apply broadly.
+    if (!isUniversal && !families.includes(input.productFamily)) {
       return false;
+    }
+
+    // Evidence relevance gate:
+    // - Specialist archetypes: must provide at least 1 required OR recommended evidence.
+    // - Universal archetypes: must provide at least 1 match from the FULL evidence plan
+    //   (including optional). Prevents truly irrelevant universal archetypes (e.g.
+    //   torso_turn_editorial for watches provides 0 watch-related evidence at any level).
+    const relevance = relevanceCache.get(candidate.archetype.id);
+    if (relevance) {
+      if (!isUniversal && relevance.totalRelevant === 0) {
+        return false;
+      }
+      if (isUniversal && relevance.anyPlanMatch === 0) {
+        return false;
+      }
+    }
+
+    // Semantic compatibility gate: block archetypes with strongly category-specific
+    // semantics from being reused across unrelated families.
+    const id = candidate.archetype.id;
+    const fam = input.productFamily;
+    // "jewelry" in the archetype name/semantics should not leak to non-jewelry families
+    if (id === "profile_jewelry_focus" || id === "mood_portrait_jewelry") {
+      if (fam !== "jewelry") return false;
+    }
+    // Ear-specific archetypes only for jewelry
+    if (id === "ear_detail_crop" || id === "three_quarter_ear_reveal" || id === "pair_symmetry_validation") {
+      if (fam !== "jewelry") return false;
+    }
+    // Jewelry neckline focus only for jewelry
+    if (id === "jewelry_neckline_focus") {
+      if (fam !== "jewelry") return false;
+    }
+    // Bag-specific archetypes only for bags
+    if (id === "bag_carry_profile" || id === "bag_hardware_detail" || id === "bag_construction_detail") {
+      if (fam !== "bags") return false;
+    }
+    // Footwear-specific archetypes only for footwear
+    if (id === "footwear_ground_focus" || id === "footwear_material_detail") {
+      if (fam !== "footwear") return false;
+    }
+    // Eyewear-specific archetypes only for eyewear
+    if (id === "eyewear_portrait_halfbody" || id === "eyewear_temple_detail") {
+      if (fam !== "eyewear") return false;
+    }
+    // Watch-specific archetypes only for watches
+    if (id === "watch_dial_closeup" || id === "watch_wrist_hero" || id === "watch_strap_detail") {
+      if (fam !== "watches") return false;
+    }
+    // Apparel tailoring archetypes only for apparel
+    if (id === "tailoring_lapel_touch" || id === "cuff_adjustment_tailoring" || id === "open_jacket_ease" || id === "back_view_shape") {
+      if (fam !== "apparel") return false;
+    }
+    // Hand interaction only for small wrist/hand products
+    if (id === "accessory_hand_interaction") {
+      if (!["jewelry", "watches", "small_accessories"].includes(fam)) return false;
     }
 
     // Max per category
@@ -274,11 +396,31 @@ function selectShots(
         const bucket = getFramingBucket(c.archetype.defaultFraming);
         const existingBuckets = selected.map((s) => getFramingBucket(s.archetype.defaultFraming));
         if (existingBuckets.includes(bucket)) {
-          framingDiversityBonus = -10;
+          framingDiversityBonus = -15;
+        }
+
+        // Critical redundancy avoidance in Phase 1 (uses distinctive evidence)
+        let criticalPenalty = 0;
+        if (selected.length > 0) {
+          const candidateBucket = getFramingBucket(c.archetype.defaultFraming);
+          const candidateEvSet = new Set(c.archetype.evidenceCapabilities);
+          const candidateZoneSet = new Set(c.archetype.primaryDisplayZones);
+          for (const existing of selected) {
+            const exEvSet = new Set(existing.archetype.evidenceCapabilities);
+            const exZoneSet = new Set(existing.archetype.primaryDisplayZones);
+            const exBucket = getFramingBucket(existing.archetype.defaultFraming);
+            const sharedEv = [...candidateEvSet].filter((e) => exEvSet.has(e));
+            const distinctiveShared = sharedEv.filter((e) => !AMBIENT_EVIDENCE.has(e)).length;
+            const sharedZ = [...candidateZoneSet].filter((z) => exZoneSet.has(z)).length;
+            if (distinctiveShared >= 3 && candidateBucket === exBucket && sharedZ > 0) {
+              criticalPenalty = -60;
+              break;
+            }
+          }
         }
 
         const combinedScore =
-          marginalGain + c.score + framingDiversityBonus + redundancyPenalty;
+          marginalGain + c.score + framingDiversityBonus + redundancyPenalty + criticalPenalty;
 
         return { candidate: c, combinedScore };
       })
@@ -289,10 +431,57 @@ function selectShots(
     }
   }
 
-  // ── Phase 2: Greedy marginal gain ──
+  // ── Phase 2: Greedy marginal gain with hardened constraints ──
+
+  // Check which required role mix categories still need filling
+  const getUnfilledTargets = (): ShotCategory[] => {
+    const unfilled: ShotCategory[] = [];
+    for (const [cat, target] of Object.entries(evidencePlan.categoryRoleMix)) {
+      if ((target as number) >= 1 && (categoryCount[cat] || 0) < 1) {
+        unfilled.push(cat as ShotCategory);
+      }
+    }
+    return unfilled;
+  };
+
+  // Check if a candidate would cause critical redundancy with any selected shot.
+  // Uses distinctive (non-ambient) evidence count to avoid false positives
+  // for apparel-adjacent families where ambient evidence overlaps extensively.
+  const wouldCauseCriticalRedundancy = (candidate: ScoredArchetype): boolean => {
+    const candidateBucket = getFramingBucket(candidate.archetype.defaultFraming);
+    const candidateEvidence = new Set(candidate.archetype.evidenceCapabilities);
+    const candidateZones = new Set(candidate.archetype.primaryDisplayZones);
+
+    for (const existing of selected) {
+      const existingEvidence = new Set(existing.archetype.evidenceCapabilities);
+      const existingZones = new Set(existing.archetype.primaryDisplayZones);
+      const existingBucket = getFramingBucket(existing.archetype.defaultFraming);
+
+      const sharedEvidence = [...candidateEvidence].filter((e) => existingEvidence.has(e));
+      const distinctiveShared = sharedEvidence.filter((e) => !AMBIENT_EVIDENCE.has(e)).length;
+      const sharedZones = [...candidateZones].filter((z) => existingZones.has(z)).length;
+      const sameBucket = candidateBucket === existingBucket;
+
+      if (distinctiveShared >= 3 && sameBucket && sharedZones > 0) return true;
+    }
+    return false;
+  };
+
+  // Check if candidate covers any currently-uncovered required evidence
+  const coversUncoveredRequired = (candidate: ScoredArchetype): boolean => {
+    const requiredEvidence = evidencePlan.orderedEvidence
+      .filter((e) => e.priority === "required")
+      .map((e) => e.evidence);
+    return candidate.archetype.evidenceCapabilities.some(
+      (ev) => requiredEvidence.includes(ev) && !coveredEvidence.has(ev),
+    );
+  };
+
   while (selected.length < count) {
     let bestCandidate: ScoredArchetype | null = null;
     let bestScore = -Infinity;
+
+    const unfilledTargets = getUnfilledTargets();
 
     for (const candidate of scored) {
       if (isSelected(candidate)) continue;
@@ -312,17 +501,28 @@ function selectShots(
         if (!allRequiredOnBodyCovered()) continue;
       }
 
+      // Critical redundancy gate: block candidates that would create critical redundancy
+      // UNLESS they cover uncovered required evidence (only escape hatch)
+      if (wouldCauseCriticalRedundancy(candidate)) {
+        if (criticalRedundancyCount >= 1 || !coversUncoveredRequired(candidate)) {
+          continue; // Hard block
+        }
+      }
+
       const marginalGain = computeMarginalEvidenceGain(candidate, coveredEvidence, evidencePlan);
 
-      // Role mix bonus
+      // Role mix bonus/penalty (strengthened)
       const cat = candidate.archetype.shotCategory;
       const catTarget = evidencePlan.categoryRoleMix[cat] ?? 0;
       const catActual = categoryCount[cat] || 0;
       let roleMixBonus = 0;
       if (catActual < catTarget) {
-        roleMixBonus = 15;
+        roleMixBonus = 20; // Stronger pull toward unfilled targets
       } else if (catActual >= catTarget && catTarget > 0) {
-        roleMixBonus = -10;
+        roleMixBonus = -15; // Stronger penalty for exceeding targets
+      } else if (catTarget === 0 && unfilledTargets.length > 0) {
+        // Non-targeted category while targeted categories are still unfilled
+        roleMixBonus = -25;
       }
 
       const { penalty: redundancyPenalty } = computeRedundancyPenalty(candidate, selected);
@@ -340,7 +540,65 @@ function selectShots(
     }
 
     if (!bestCandidate) break;
+
+    // Track critical redundancy count before adding
+    if (wouldCauseCriticalRedundancy(bestCandidate)) {
+      criticalRedundancyCount++;
+    }
+
     addToSelected(bestCandidate);
+  }
+
+  // ── Phase 2b: Backfill pass ──
+  // If strict Phase 2 couldn't fill all slots (critical redundancy blocking was too aggressive),
+  // relax the constraint: allow critical redundancy with a heavy scoring penalty instead of blocking.
+  if (selected.length < count) {
+    while (selected.length < count) {
+      let bestCandidate: ScoredArchetype | null = null;
+      let bestScore = -Infinity;
+
+      for (const candidate of scored) {
+        if (isSelected(candidate)) continue;
+        if (!passesHardConstraints(candidate)) continue;
+
+        // product_only constraints (same as Phase 2)
+        if (isProductOnly(candidate)) {
+          if (productOnlyCount >= 1) continue;
+          if (!PRODUCT_ONLY_ELIGIBLE_FAMILIES.includes(input.productFamily)) continue;
+          if (!PRODUCT_ONLY_ELIGIBLE_CATEGORIES.includes(candidate.archetype.shotCategory)) continue;
+          if (input.productFamily === "bags" && candidate.archetype.shotCategory !== "detail") continue;
+          if (!allRequiredOnBodyCovered()) continue;
+        }
+
+        // No critical redundancy blocking in backfill; use heavy penalty instead
+        const marginalGain = computeMarginalEvidenceGain(candidate, coveredEvidence, evidencePlan);
+        const { penalty: redundancyPenalty } = computeRedundancyPenalty(candidate, selected);
+        const critRedPenalty = wouldCauseCriticalRedundancy(candidate) ? -40 : 0;
+
+        const cat = candidate.archetype.shotCategory;
+        const catTarget = evidencePlan.categoryRoleMix[cat] ?? 0;
+        const catActual = categoryCount[cat] || 0;
+        let roleMixBonus = catActual < catTarget ? 20 : catActual >= catTarget && catTarget > 0 ? -15 : 0;
+
+        const combinedScore =
+          marginalGain * 0.5 +
+          candidate.score * 0.25 +
+          roleMixBonus * 0.15 +
+          (redundancyPenalty + critRedPenalty) * 0.1;
+
+        if (combinedScore > bestScore) {
+          bestScore = combinedScore;
+          bestCandidate = candidate;
+        }
+      }
+
+      if (!bestCandidate) break;
+
+      if (wouldCauseCriticalRedundancy(bestCandidate)) {
+        criticalRedundancyCount++;
+      }
+      addToSelected(bestCandidate);
+    }
   }
 
   // ── Phase 3: Guarantee checks ──
@@ -553,21 +811,22 @@ function computeGenerationOrder(
     }
   }
 
-  // Post-sort: ensure first two generation-order shots don't have critical redundancy
-  // The validation assertion checks for 3+ shared evidence types regardless of framing bucket
+  // Post-sort: ensure first two generation-order shots don't share 3+ distinctive evidence
   if (result.length >= 2) {
     const firstIdx = result[0];
     const secondIdx = result[1];
     const firstEvidence = new Set(selected[firstIdx].archetype.evidenceCapabilities);
     const secondEvidence = selected[secondIdx].archetype.evidenceCapabilities;
     const shared = secondEvidence.filter((e) => firstEvidence.has(e));
+    const distinctiveShared = shared.filter((e) => !AMBIENT_EVIDENCE.has(e));
 
-    if (shared.length >= 3) {
+    if (distinctiveShared.length >= 3) {
       // Find the best non-redundant shot to swap into position 2
       for (let swap = 2; swap < result.length; swap++) {
         const swapEvidence = selected[result[swap]].archetype.evidenceCapabilities;
         const swapShared = swapEvidence.filter((e) => firstEvidence.has(e));
-        if (swapShared.length < 3) {
+        const swapDistinctive = swapShared.filter((e) => !AMBIENT_EVIDENCE.has(e));
+        if (swapDistinctive.length < 3) {
           const temp = result[1];
           result[1] = result[swap];
           result[swap] = temp;
@@ -594,10 +853,13 @@ export function computeDiagnostics(
     }
   }
 
-  // Classify coverage
+  // Classify coverage by priority
   const requiredEvidenceCovered: EvidenceType[] = [];
   const recommendedEvidenceCovered: EvidenceType[] = [];
   const uncoveredEvidence: EvidenceType[] = [];
+  const uncoveredRequired: EvidenceType[] = [];
+  const uncoveredRecommended: EvidenceType[] = [];
+  const uncoveredOptional: EvidenceType[] = [];
 
   for (const er of evidencePlan.orderedEvidence) {
     if (er.priority === "discouraged") continue;
@@ -609,8 +871,14 @@ export function computeDiagnostics(
         recommendedEvidenceCovered.push(er.evidence);
       }
     } else {
-      if (er.priority === "required" || er.priority === "recommended") {
+      if (er.priority === "required") {
+        uncoveredRequired.push(er.evidence);
         uncoveredEvidence.push(er.evidence);
+      } else if (er.priority === "recommended") {
+        uncoveredRecommended.push(er.evidence);
+        uncoveredEvidence.push(er.evidence);
+      } else if (er.priority === "optional") {
+        uncoveredOptional.push(er.evidence);
       }
     }
   }
@@ -640,24 +908,26 @@ export function computeDiagnostics(
 
       const sameBucket = aBucket === bBucket;
 
-      if (sharedEvidence.length >= 3 && sameBucket && sharedZoneCount > 0) {
+      const distinctiveCount = countDistinctiveShared(sharedEvidence);
+
+      if (distinctiveCount >= 3 && sameBucket && sharedZoneCount > 0) {
         redundancyWarnings.push({
           severity: "critical",
           shotA: i + 1,
           shotB: j + 1,
           sharedEvidence,
-          message: `Critical redundancy between shot ${i + 1} and shot ${j + 1}: ${sharedEvidence.length} shared evidence, same framing bucket, ${sharedZoneCount} overlapping zones`,
+          message: `Critical redundancy between shot ${i + 1} and shot ${j + 1}: ${distinctiveCount} distinctive shared evidence (${sharedEvidence.length} total), same framing bucket, ${sharedZoneCount} overlapping zones`,
         });
       } else if (
-        (sharedEvidence.length >= 2 && sameBucket) ||
-        (sharedEvidence.length >= 3 && !sameBucket)
+        (distinctiveCount >= 2 && sameBucket) ||
+        (distinctiveCount >= 3 && !sameBucket)
       ) {
         redundancyWarnings.push({
           severity: "warning",
           shotA: i + 1,
           shotB: j + 1,
           sharedEvidence,
-          message: `Redundancy warning between shot ${i + 1} and shot ${j + 1}: ${sharedEvidence.length} shared evidence${sameBucket ? ", same framing bucket" : ""}`,
+          message: `Redundancy warning between shot ${i + 1} and shot ${j + 1}: ${distinctiveCount} distinctive shared evidence (${sharedEvidence.length} total)${sameBucket ? ", same framing bucket" : ""}`,
         });
       } else if (sharedEvidence.length === 1 && !sameBucket) {
         redundancyWarnings.push({
@@ -682,9 +952,14 @@ export function computeDiagnostics(
     requiredEvidenceCovered,
     recommendedEvidenceCovered,
     uncoveredEvidence,
+    uncoveredRequired,
+    uncoveredRecommended,
+    uncoveredOptional,
     redundancyWarnings,
     roleMixActual,
     roleMixTarget: evidencePlan.categoryRoleMix,
+    shotCountRequested: selected.length, // will be overridden by caller with actual request
+    shotCountActual: selected.length,
   };
 }
 
@@ -743,6 +1018,8 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
 
   // Step 9: Diagnostics
   const diagnostics = computeDiagnostics(selected, blueprint.evidencePlan);
+  diagnostics.shotCountRequested = input.shotCount;
+  diagnostics.shotCountActual = shots.length;
 
   // Step 10: Export text (includes diagnostics)
   const exportText = formatExportText(dna, shots, genOrder, input, diagnostics);

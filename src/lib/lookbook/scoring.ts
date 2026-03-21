@@ -219,6 +219,21 @@ export function scoreArchetype(
     }
   }
 
+  // Semantic affinity: prefer family-specialist archetypes over generic universal ones.
+  // A specialist archetype (1-3 families) designed for this family will outscore a
+  // universal archetype (7+ families) that happens to be eligible.
+  const familyCount = archetype.suitableFamilies.length;
+  if (archetype.suitableFamilies.includes(input.productFamily)) {
+    if (familyCount <= 3) {
+      contextRaw += 20;
+      contextReasons.push("family specialist affinity (+20)");
+    } else if (familyCount <= 6) {
+      contextRaw += 10;
+      contextReasons.push("semi-specialist affinity (+10)");
+    }
+    // Universal (7+): no additional affinity, relies on evidence score
+  }
+
   // Detail subtype preference for bags and accessories
   // When logo visibility is not high, prefer construction/hardware detail over branding detail
   if (blueprint.family === "bags" && archetype.shotCategory === "detail") {

@@ -104,11 +104,22 @@ export function formatExportText(
     }
     lines.push("");
 
-    if (diagnostics.uncoveredEvidence.length > 0) {
-      lines.push(`UNCOVERED evidence (${diagnostics.uncoveredEvidence.length}):`);
-      lines.push(`  ${diagnostics.uncoveredEvidence.join(", ")}`);
+    if (diagnostics.uncoveredRequired.length > 0) {
+      lines.push(`UNCOVERED REQUIRED evidence (${diagnostics.uncoveredRequired.length}):`);
+      lines.push(`  ${diagnostics.uncoveredRequired.join(", ")}`);
       lines.push("");
-    } else {
+    }
+    if (diagnostics.uncoveredRecommended.length > 0) {
+      lines.push(`UNCOVERED RECOMMENDED evidence (${diagnostics.uncoveredRecommended.length}):`);
+      lines.push(`  ${diagnostics.uncoveredRecommended.join(", ")}`);
+      lines.push("");
+    }
+    if (diagnostics.uncoveredOptional.length > 0) {
+      lines.push(`Uncovered optional evidence (${diagnostics.uncoveredOptional.length}):`);
+      lines.push(`  ${diagnostics.uncoveredOptional.join(", ")}`);
+      lines.push("");
+    }
+    if (diagnostics.uncoveredRequired.length === 0 && diagnostics.uncoveredRecommended.length === 0) {
       lines.push("All required and recommended evidence is covered.");
       lines.push("");
     }

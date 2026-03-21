@@ -91,7 +91,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     title: "Clean Silhouette Full-Body",
     role: "Side-angle full-body showing garment outline and proportions.",
     shotCategory: "silhouette",
-    suitableFamilies: ["apparel", "full_look"],
+    suitableFamilies: ["apparel", "full_look", "scarves"],
     suitableItems: [],
     suitableGoals: ["silhouette", "product_clarity"],
     suitableStyles: [
@@ -497,7 +497,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     title: "Relaxed Lean",
     role: "Model leaning against a surface, conveying casual editorial energy and garment drape.",
     shotCategory: "editorial",
-    suitableFamilies: ["apparel", "full_look"],
+    suitableFamilies: ["apparel", "full_look", "scarves"],
     suitableItems: [],
     suitableGoals: ["mood", "styling_story"],
     suitableStyles: ["editorial", "street", "contemporary", "resort", "luxury"],
@@ -557,7 +557,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     title: "Side Silhouette",
     role: "Full profile view showing the clean garment line from the side.",
     shotCategory: "silhouette",
-    suitableFamilies: ["apparel", "full_look"],
+    suitableFamilies: ["apparel", "full_look", "scarves"],
     suitableItems: [],
     suitableGoals: ["silhouette"],
     suitableStyles: [
@@ -688,7 +688,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     title: "Controlled Half Stride",
     role: "Subtle walking motion with one foot forward, capturing garment movement.",
     shotCategory: "motion",
-    suitableFamilies: ["apparel", "footwear", "full_look"],
+    suitableFamilies: ["apparel", "footwear", "full_look", "scarves"],
     suitableItems: [],
     suitableGoals: ["movement", "mood"],
     suitableStyles: ["editorial", "street", "contemporary", "resort", "commercial"],
@@ -750,7 +750,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     title: "Pivot Step",
     role: "Caught mid-pivot, rotational energy and fabric twist.",
     shotCategory: "motion",
-    suitableFamilies: ["apparel", "full_look"],
+    suitableFamilies: ["apparel", "full_look", "scarves"],
     suitableItems: [],
     suitableGoals: ["movement", "mood"],
     suitableStyles: ["editorial", "avant_garde", "contemporary", "street"],
@@ -810,7 +810,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     title: "Seated Edge Pose",
     role: "Model seated on the edge of a surface, showing garment drape and casual editorial energy.",
     shotCategory: "editorial",
-    suitableFamilies: ["apparel", "full_look"],
+    suitableFamilies: ["apparel", "full_look", "scarves"],
     suitableItems: [],
     suitableGoals: ["mood", "styling_story"],
     suitableStyles: ["editorial", "luxury", "contemporary", "resort", "minimal"],
@@ -1890,6 +1890,391 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     ],
     primaryDisplayZones: ["hand"],
     secondaryDisplayZones: ["hip"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
+  },
+
+  // ────────────────────────────────────────────
+  // 30. eyewear_temple_detail
+  // ────────────────────────────────────────────
+  {
+    id: "eyewear_temple_detail",
+    title: "Eyewear Temple Detail",
+    role: "Close crop on the temple arm, hinge, and side profile of the frames to show construction and brand detail.",
+    shotCategory: "detail",
+    suitableFamilies: ["eyewear"],
+    suitableItems: [
+      "sunglasses",
+      "glasses",
+      "optical frames",
+      "aviators",
+      "wayfarers",
+    ],
+    suitableGoals: ["detail_focus", "product_clarity", "premium_branding"],
+    suitableStyles: [
+      "commercial",
+      "luxury",
+      "minimal",
+      "editorial",
+      "contemporary",
+    ],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "high",
+    productClaritySuitability: "high",
+    silhouetteSuitability: "low",
+    detailSuitability: "high",
+    movementSuitability: "low",
+    editorialStrength: "low",
+    higgsfieldReliability: "high",
+    difficulty: "easy",
+    logoRisk: "low",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The eyewear has distinctive temple arms, branded hinges, engraved logos, or premium construction detail worth highlighting.",
+    avoidWhen:
+      "The frames are generic with no notable temple or hinge detail.",
+    defaultFraming:
+      "Extreme close-up on the temple arm and hinge zone, filling 60-80% of the frame",
+    defaultLens: "85mm",
+    defaultAperture: "f/2.8",
+    defaultCameraHeight: "Aligned with the temple arm on the face",
+    defaultCameraDistance: "~1m",
+    defaultAngle:
+      "Three-quarter profile, angled to show the temple arm depth and hinge mechanism",
+    defaultLighting:
+      "Directional side light to define hinge detail and surface texture without glare on lenses",
+    poseFamily: "Static detail",
+    bodyDirection: "Head in three-quarter profile, ear and temple arm facing camera",
+    handBehavior: "Not in frame",
+    legBehavior: "Not visible in frame",
+    headDirection: "Three-quarter turn away from camera, presenting the temple side",
+    realismNotes:
+      "Temple and hinge detail is reliable at close crop. Watch for: hinge pin rendering, logo legibility on temple arm, lens-to-frame junction. Lens reflection should look natural.",
+    whyItWorks:
+      "The temple arm carries brand identity and construction quality signals. Close-up validation shows hinge engineering and material finish that wide shots cannot capture.",
+    deltaBlueprint:
+      "Extreme close-up: crop to the temple arm and hinge zone. Three-quarter profile angle. Camera at temple height, ~1m distance. f/2.8 for shallow focus isolating the hinge and brand mark. Side light to reveal surface texture. The temple arm and its construction fill the frame. This is a craftsmanship shot for the {item}.",
+    evidenceCapabilities: [
+      "side_profile",
+      "texture_detail",
+      "surface_reflection",
+      "logo_placement",
+      "profile_depth",
+      "construction_quality",
+    ],
+    primaryDisplayZones: ["face"],
+    secondaryDisplayZones: ["ear"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
+  },
+
+  // ────────────────────────────────────────────
+  // 31. watch_dial_closeup
+  // ────────────────────────────────────────────
+  {
+    id: "watch_dial_closeup",
+    title: "Watch Dial Close-Up",
+    role: "Close crop on the watch dial, case, and crown to showcase movement detail and finishing.",
+    shotCategory: "detail",
+    suitableFamilies: ["watches"],
+    suitableItems: [
+      "sport watch",
+      "dress watch",
+      "dive watch",
+      "chronograph",
+      "field watch",
+      "pilot watch",
+    ],
+    suitableGoals: ["detail_focus", "product_clarity", "premium_branding"],
+    suitableStyles: [
+      "commercial",
+      "luxury",
+      "minimal",
+      "editorial",
+      "contemporary",
+    ],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "high",
+    productClaritySuitability: "high",
+    silhouetteSuitability: "low",
+    detailSuitability: "high",
+    movementSuitability: "low",
+    editorialStrength: "low",
+    higgsfieldReliability: "medium",
+    difficulty: "moderate",
+    logoRisk: "low",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The watch dial has distinctive finishing, applied indices, branded crown, or visible movement detail that communicates quality.",
+    avoidWhen:
+      "The watch is a basic digital or fashion quartz where dial detail is not a selling point.",
+    defaultFraming:
+      "Extreme close-up on the watch face and case, filling 70-90% of the frame",
+    defaultLens: "100mm macro",
+    defaultAperture: "f/4",
+    defaultCameraHeight: "Aligned with the wrist, slightly above to show dial face",
+    defaultCameraDistance: "~0.5m",
+    defaultAngle:
+      "Slightly above and angled to show dial face, crown, and case profile simultaneously",
+    defaultLighting:
+      "Controlled directional light to define dial indices and hands without obscuring glare. Avoid direct reflection on crystal.",
+    poseFamily: "Static wrist detail",
+    bodyDirection: "Wrist turned toward camera to present the dial face",
+    handBehavior: "Hand relaxed, wrist rotated to show the watch face to camera",
+    legBehavior: "Not visible in frame",
+    headDirection: "Not visible in frame",
+    realismNotes:
+      "Watch dial rendering is moderately reliable. Watch for: index alignment, hand positions that look realistic, crown size consistency, crystal reflection. Small text on the dial may be illegible. Expect 2-3 generations.",
+    whyItWorks:
+      "A dedicated dial close-up lets buyers evaluate finishing quality, index legibility, and case proportions, the details that distinguish a quality timepiece from a fashion accessory.",
+    deltaBlueprint:
+      "Extreme close-up: crop to dial, case, and crown. Camera slightly above wrist height, angled to show the full dial face. 100mm macro at f/4 for sharp focus across the dial. Controlled directional light to define indices without crystal glare. The watch face fills the frame. This is a horological detail shot for the {item}.",
+    evidenceCapabilities: [
+      "surface_reflection",
+      "hardware_detail",
+      "dimensional_depth",
+      "construction_quality",
+      "logo_placement",
+    ],
+    primaryDisplayZones: ["wrist"],
+    secondaryDisplayZones: ["hand"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
+  },
+
+  // ────────────────────────────────────────────
+  // 32. footwear_material_detail
+  // ────────────────────────────────────────────
+  {
+    id: "footwear_material_detail",
+    title: "Footwear Material Detail",
+    role: "Close crop on shoe material, stitching, sole edge, or heel construction to showcase craftsmanship.",
+    shotCategory: "detail",
+    suitableFamilies: ["footwear"],
+    suitableItems: [
+      "sneakers",
+      "loafers",
+      "boots",
+      "heels",
+      "sandals",
+      "dress shoes",
+      "oxford",
+      "derby",
+      "mules",
+    ],
+    suitableGoals: ["detail_focus", "product_clarity", "premium_branding"],
+    suitableStyles: [
+      "commercial",
+      "luxury",
+      "street",
+      "minimal",
+      "editorial",
+      "contemporary",
+    ],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "medium",
+    productClaritySuitability: "high",
+    silhouetteSuitability: "low",
+    detailSuitability: "high",
+    movementSuitability: "low",
+    editorialStrength: "low",
+    higgsfieldReliability: "high",
+    difficulty: "easy",
+    logoRisk: "low",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The shoe has notable construction: stitching, sole edge finishing, material texture, heel construction, or lacing system worth highlighting.",
+    avoidWhen:
+      "The shoe has minimal construction detail or the material is uniform and unremarkable at close range.",
+    defaultFraming:
+      "Extreme close-up on the material or construction zone, filling 60-80% of the frame",
+    defaultLens: "85mm",
+    defaultAperture: "f/2.8",
+    defaultCameraHeight: "Aligned with the detail zone (sole edge, upper, or heel)",
+    defaultCameraDistance: "~1m",
+    defaultAngle:
+      "Angled to show material grain, stitching depth, and sole-to-upper junction",
+    defaultLighting:
+      "Raking light from one side to reveal stitching depth, leather grain, and sole edge detail.",
+    poseFamily: "Static footwear detail",
+    bodyDirection: "Foot positioned to present the detail zone to camera",
+    handBehavior: "Not in frame",
+    legBehavior: "Foot and ankle only, cropped above ankle",
+    headDirection: "Not visible in frame",
+    realismNotes:
+      "Footwear material close-ups are highly reliable. Watch for: stitching regularity, sole-to-upper seam rendering, material texture consistency. Lacing and eyelet rendering requires care.",
+    whyItWorks:
+      "Material and construction close-ups prove shoe quality to buyers who cannot handle the product. Stitching, leather grain, and sole construction are primary quality signals for footwear.",
+    deltaBlueprint:
+      "Extreme close-up: crop to the shoe's material, stitching, or construction zone. Camera at detail height, ~1m distance. f/2.8 for shallow focus on the craft detail. Raking side light to reveal texture depth and stitching. The construction detail fills the frame. This is a craftsmanship shot for the {item}.",
+    evidenceCapabilities: [
+      "texture_detail",
+      "construction_quality",
+      "sole_profile",
+      "profile_depth",
+    ],
+    primaryDisplayZones: ["foot"],
+    secondaryDisplayZones: ["ankle"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
+  },
+
+  // ────────────────────────────────────────────
+  // 33. watch_wrist_hero
+  // ────────────────────────────────────────────
+  {
+    id: "watch_wrist_hero",
+    title: "Watch Wrist Hero",
+    role: "Primary hero shot of the watch on the wrist, showing case size, dial, strap, and wrist proportion in a natural wearing position.",
+    shotCategory: "hero",
+    suitableFamilies: ["watches"],
+    suitableItems: [
+      "sport watch",
+      "dress watch",
+      "dive watch",
+      "chronograph",
+      "field watch",
+      "pilot watch",
+    ],
+    suitableGoals: [
+      "product_clarity",
+      "detail_focus",
+      "premium_branding",
+      "silhouette",
+    ],
+    suitableStyles: [
+      "commercial",
+      "luxury",
+      "minimal",
+      "editorial",
+      "contemporary",
+    ],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "high",
+    productClaritySuitability: "high",
+    silhouetteSuitability: "medium",
+    detailSuitability: "medium",
+    movementSuitability: "low",
+    editorialStrength: "medium",
+    higgsfieldReliability: "medium",
+    difficulty: "moderate",
+    logoRisk: "low",
+    anatomyRisk: "medium",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "Any watch shoot. This is the primary hero that shows the watch as a complete product on the wrist, establishing proportions and wrist presence.",
+    avoidWhen:
+      "Never. Every watch shoot needs a wrist hero.",
+    defaultFraming:
+      "Medium close-up from mid-forearm to hand, watch centred and filling 50-60% of the frame",
+    defaultLens: "85mm",
+    defaultAperture: "f/3.5",
+    defaultCameraHeight: "Slightly above wrist level, angled to show dial face clearly",
+    defaultCameraDistance: "~1.5m",
+    defaultAngle:
+      "Slightly above perpendicular to show dial face, with enough angle to reveal case thickness",
+    defaultLighting:
+      "Soft directional key from camera-left to illuminate dial without crystal glare. Fill light from opposite side to define case edge.",
+    poseFamily: "Static wrist presentation",
+    bodyDirection: "Wrist turned toward camera, forearm angled naturally as if checking the time",
+    handBehavior: "Hand relaxed, fingers slightly curled, wrist rotated to present dial to camera",
+    legBehavior: "Not visible in frame",
+    headDirection: "Not visible in frame",
+    realismNotes:
+      "Watch-on-wrist hero is moderately reliable. Watch for: case-to-wrist proportion, strap/bracelet sitting flush against skin, crown position consistency, dial legibility. Band links and clasp may need regeneration. Expect 2-4 generations.",
+    whyItWorks:
+      "A dedicated wrist hero gives buyers the most important information first: how the watch looks on a real wrist. Case proportions, dial legibility, and strap fit are the primary purchase drivers for watches.",
+    deltaBlueprint:
+      "Medium close-up: forearm to hand, watch centred. Camera slightly above wrist, angled to reveal dial face and case thickness. 85mm at f/3.5 for the watch sharp with forearm softening naturally. Soft key light from camera-left. The model's wrist is turned to present the watch as if naturally checking the time. The watch is the hero subject; the wrist provides context and scale.",
+    evidenceCapabilities: [
+      "wrist_visibility",
+      "hardware_detail",
+      "face_scale",
+      "dimensional_depth",
+    ],
+    primaryDisplayZones: ["wrist"],
+    secondaryDisplayZones: ["hand"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
+  },
+
+  // ────────────────────────────────────────────
+  // 34. watch_strap_detail
+  // ────────────────────────────────────────────
+  {
+    id: "watch_strap_detail",
+    title: "Watch Strap & Closure Detail",
+    role: "Close crop on the watch strap, bracelet links, and clasp/buckle mechanism to show closure quality and strap construction.",
+    shotCategory: "detail",
+    suitableFamilies: ["watches"],
+    suitableItems: [
+      "sport watch",
+      "dress watch",
+      "dive watch",
+      "chronograph",
+      "field watch",
+      "pilot watch",
+    ],
+    suitableGoals: ["detail_focus", "product_clarity", "premium_branding"],
+    suitableStyles: [
+      "commercial",
+      "luxury",
+      "minimal",
+      "editorial",
+      "contemporary",
+    ],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "medium",
+    productClaritySuitability: "high",
+    silhouetteSuitability: "low",
+    detailSuitability: "high",
+    movementSuitability: "low",
+    editorialStrength: "low",
+    higgsfieldReliability: "medium",
+    difficulty: "moderate",
+    logoRisk: "low",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The watch has a notable strap or bracelet: deployant clasp, brushed steel links, leather with contrast stitching, NATO weave, or rubber with texture.",
+    avoidWhen:
+      "The strap is a plain, featureless rubber or fabric band with no detail worth highlighting.",
+    defaultFraming:
+      "Extreme close-up on the strap and clasp zone, filling 70-90% of the frame",
+    defaultLens: "100mm macro",
+    defaultAperture: "f/4",
+    defaultCameraHeight: "Aligned with the inner wrist where the clasp sits",
+    defaultCameraDistance: "~0.5m",
+    defaultAngle:
+      "Inner wrist or side wrist angle to show clasp mechanism and strap underside",
+    defaultLighting:
+      "Raking directional light to reveal strap texture, link finishing, and clasp engraving. Avoid harsh reflections on polished clasp surfaces.",
+    poseFamily: "Static wrist detail",
+    bodyDirection: "Wrist rotated to show inner side or strap edge to camera",
+    handBehavior: "Hand relaxed, wrist turned to expose clasp and strap underside",
+    legBehavior: "Not visible in frame",
+    headDirection: "Not visible in frame",
+    realismNotes:
+      "Strap and clasp rendering is moderately reliable. Watch for: bracelet link alignment, clasp hinge accuracy, leather stitching regularity, strap-to-lug junction. Deployant clasps are harder to render than simple buckles. Expect 2-4 generations.",
+    whyItWorks:
+      "The strap and closure are daily touchpoints buyers evaluate for comfort and durability. Showing clasp quality, strap material, and link finishing addresses a key purchase concern that dial shots cannot cover.",
+    deltaBlueprint:
+      "Extreme close-up: crop to strap and clasp zone. Camera at inner-wrist height, ~0.5m. 100mm macro at f/4 for sharp clasp detail. Raking light from one side to catch strap texture and clasp engraving. The model's wrist is turned to present the clasp or strap underside. The closure mechanism fills the frame. This is a strap craftsmanship shot for the {item}.",
+    evidenceCapabilities: [
+      "closure_mechanism",
+      "texture_detail",
+      "construction_quality",
+    ],
+    primaryDisplayZones: ["wrist"],
+    secondaryDisplayZones: ["hand"],
     showsProductInMotion: false,
     showsFullProduct: false,
   },

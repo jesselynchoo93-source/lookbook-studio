@@ -184,10 +184,16 @@ export interface RedundancyWarning {
 export interface PlanDiagnostics {
   requiredEvidenceCovered: EvidenceType[];
   recommendedEvidenceCovered: EvidenceType[];
+  /** @deprecated Use uncoveredRequired + uncoveredRecommended instead */
   uncoveredEvidence: EvidenceType[];
+  uncoveredRequired: EvidenceType[];
+  uncoveredRecommended: EvidenceType[];
+  uncoveredOptional: EvidenceType[];
   redundancyWarnings: RedundancyWarning[];
   roleMixActual: Partial<Record<ShotCategory, number>>;
   roleMixTarget: Partial<Record<ShotCategory, number>>;
+  shotCountRequested: number;
+  shotCountActual: number;
 }
 
 // ── Label Maps ──

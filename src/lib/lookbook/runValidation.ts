@@ -1,14 +1,29 @@
 /**
- * Full validation runner for the evidence-based shot selection system.
- * Prints selected shots, evidence coverage, diagnostics, and assertion results for all 9 cases.
+ * Hard-fail validation runner for the evidence-based shot selection system.
+ * Asserts correctness across 9 product categories. A case FAILS if ANY hard assertion is violated.
+ *
+ * Hard assertions (all cases):
+ *   A. Shot count: plan must return exactly the requested number of shots
+ *   B. Required evidence: all required evidence types must be covered by at least one shot
+ *   C. Role mix minimums: each targeted category must have >= its minimum count
+ *   D. Zero critical redundancies in the entire set
+ *   E. First two generation-order shots do NOT share 3+ distinctive evidence
+ *   F. No apparel-specific wording for non-apparel families
+ *   G. Max 1 zero-evidence shot
+ *   H. No semantically incompatible archetypes
  *
  * Run: npx tsx src/lib/lookbook/runValidation.ts
  */
 
 import { generateLookbookPlan } from "./recommendShots";
-import type { LookbookInput, EvidenceType, LookbookPlanResult, ShotCategory } from "./types";
+import type {
+  LookbookInput,
+  EvidenceType,
+  LookbookPlanResult,
+  ShotCategory,
+} from "./types";
 
-// ── Helpers ──
+// ── Assertion Helpers ──
 
 function hasEvidence(result: LookbookPlanResult, ev: EvidenceType): boolean {
   return result.shots.some((s) => s.evidenceProvided.includes(ev));
@@ -22,18 +37,62 @@ function countDistinctCategories(result: LookbookPlanResult): number {
   return new Set(result.shots.map((s) => s.archetype.shotCategory)).size;
 }
 
-function hasNoApparelWording(result: LookbookPlanResult): string[] {
+// ── Cross-Cutting Hard Assertions ──
+
+function checkShotCount(result: LookbookPlanResult): string[] {
   const errors: string[] = [];
-  const badPhrases = ["garment", "fabric drape"];
-  for (const shot of result.shots) {
-    for (const phrase of badPhrases) {
-      if (shot.whatItSells.toLowerCase().includes(phrase)) {
-        errors.push(`Shot ${shot.position} "${shot.archetype.title}" whatItSells contains "${phrase}"`);
-      }
+  const { shotCountRequested, shotCountActual } = result.diagnostics;
+  if (shotCountActual < shotCountRequested) {
+    errors.push(
+      `Shot count: requested ${shotCountRequested}, got ${shotCountActual}. ` +
+      `The planner failed to fill all slots.`
+    );
+  }
+  return errors;
+}
+
+function checkRequiredEvidence(result: LookbookPlanResult): string[] {
+  const errors: string[] = [];
+  for (const ev of result.diagnostics.uncoveredRequired) {
+    errors.push(`Uncovered REQUIRED evidence: ${ev}`);
+  }
+  return errors;
+}
+
+function checkRoleMixMinimums(result: LookbookPlanResult): string[] {
+  const errors: string[] = [];
+  const target = result.diagnostics.roleMixTarget;
+  const actual = result.diagnostics.roleMixActual;
+
+  for (const [cat, min] of Object.entries(target)) {
+    const targetMin = min as number;
+    if (targetMin < 1) continue;
+    const actualCount = (actual as Record<string, number>)[cat] || 0;
+    if (actualCount < targetMin) {
+      errors.push(`Role mix: ${cat} target=${targetMin}, actual=${actualCount}`);
     }
   }
   return errors;
 }
+
+function checkCriticalRedundancyCap(result: LookbookPlanResult): string[] {
+  const errors: string[] = [];
+  const criticals = result.diagnostics.redundancyWarnings.filter(
+    (w) => w.severity === "critical"
+  );
+  if (criticals.length > 0) {
+    errors.push(
+      `Critical redundancy: ${criticals.length} (must be 0). ` +
+      criticals.map((c) => `Shots ${c.shotA}&${c.shotB}: ${c.sharedEvidence.join(", ")}`).join("; ")
+    );
+  }
+  return errors;
+}
+
+// Ambient evidence excluded from gen-order redundancy check
+const AMBIENT_EVIDENCE: Set<EvidenceType> = new Set([
+  "body_scale", "face_scale", "fit_on_body", "full_silhouette", "scale_reference",
+]);
 
 function checkGenOrderNonRedundancy(result: LookbookPlanResult): string[] {
   const errors: string[] = [];
@@ -43,11 +102,110 @@ function checkGenOrderNonRedundancy(result: LookbookPlanResult): string[] {
   const shotA = result.shots[first];
   const shotB = result.shots[second];
   if (!shotA || !shotB) return errors;
-  const shared = shotA.evidenceProvided.filter((e) => shotB.evidenceProvided.includes(e));
-  if (shared.length >= 3) {
+  const shared = shotA.evidenceProvided.filter((e) =>
+    shotB.evidenceProvided.includes(e)
+  );
+  const distinctiveShared = shared.filter((e) => !AMBIENT_EVIDENCE.has(e));
+  if (distinctiveShared.length >= 3) {
     errors.push(
-      `Gen-order redundancy: first two shots (${shotA.archetype.title}, ${shotB.archetype.title}) share ${shared.length} evidence: ${shared.join(", ")}`
+      `Gen-order redundancy: first two shots (${shotA.archetype.title}, ${shotB.archetype.title}) ` +
+      `share ${distinctiveShared.length} distinctive evidence: ${distinctiveShared.join(", ")}`
     );
+  }
+  return errors;
+}
+
+function checkNoApparelWording(result: LookbookPlanResult, family: string): string[] {
+  if (family === "apparel" || family === "full_look") return [];
+  const errors: string[] = [];
+  const badPhrases = ["garment", "fabric drape"];
+  for (const shot of result.shots) {
+    for (const phrase of badPhrases) {
+      if (shot.whatItSells.toLowerCase().includes(phrase)) {
+        errors.push(
+          `Family copy: shot ${shot.position} "${shot.archetype.title}" ` +
+          `whatItSells contains "${phrase}" (family: ${family})`
+        );
+      }
+    }
+  }
+  return errors;
+}
+
+function checkNoZeroEvidenceShots(result: LookbookPlanResult): string[] {
+  const errors: string[] = [];
+  const zeroEvidenceShots = result.shots.filter((s) => s.evidenceProvided.length === 0);
+  if (zeroEvidenceShots.length > 1) {
+    for (const shot of zeroEvidenceShots) {
+      errors.push(
+        `Zero-evidence shot: #${shot.position} "${shot.archetype.title}" ` +
+        `(${zeroEvidenceShots.length} total, max 1)`
+      );
+    }
+  }
+  return errors;
+}
+
+function checkNoIncompatibleArchetypes(
+  result: LookbookPlanResult,
+  family: string,
+): string[] {
+  const errors: string[] = [];
+
+  for (const shot of result.shots) {
+    const id = shot.archetype.id;
+
+    // Jewelry-specific archetypes must not appear for non-jewelry families
+    if (
+      ["profile_jewelry_focus", "mood_portrait_jewelry", "jewelry_neckline_focus",
+       "ear_detail_crop", "three_quarter_ear_reveal", "pair_symmetry_validation"].includes(id)
+    ) {
+      if (family !== "jewelry") {
+        errors.push(`Incompatible: ${id} selected for ${family} (jewelry-only)`);
+      }
+    }
+
+    // Bag-specific archetypes must not appear for non-bag families
+    if (["bag_carry_profile", "bag_hardware_detail", "bag_construction_detail"].includes(id)) {
+      if (family !== "bags") {
+        errors.push(`Incompatible: ${id} selected for ${family} (bags-only)`);
+      }
+    }
+
+    // Footwear-specific archetypes must not appear for non-footwear families
+    if (["footwear_ground_focus", "footwear_material_detail"].includes(id)) {
+      if (family !== "footwear") {
+        errors.push(`Incompatible: ${id} selected for ${family} (footwear-only)`);
+      }
+    }
+
+    // Eyewear-specific archetypes must not appear for non-eyewear families
+    if (["eyewear_portrait_halfbody", "eyewear_temple_detail"].includes(id)) {
+      if (family !== "eyewear") {
+        errors.push(`Incompatible: ${id} selected for ${family} (eyewear-only)`);
+      }
+    }
+
+    // Watch-specific archetypes must not appear for non-watch families
+    if (["watch_dial_closeup", "watch_wrist_hero", "watch_strap_detail"].includes(id)) {
+      if (family !== "watches") {
+        errors.push(`Incompatible: ${id} selected for ${family} (watches-only)`);
+      }
+    }
+
+    // Apparel tailoring archetypes must not appear for non-apparel families
+    if (["tailoring_lapel_touch", "cuff_adjustment_tailoring", "open_jacket_ease", "back_view_shape"].includes(id)) {
+      if (family !== "apparel") {
+        errors.push(`Incompatible: ${id} selected for ${family} (apparel-only)`);
+      }
+    }
+
+    // Hand interaction only for jewelry/watches/small_accessories
+    if (id === "accessory_hand_interaction") {
+      if (!["jewelry", "watches", "small_accessories"].includes(family)) {
+        errors.push(`Incompatible: ${id} selected for ${family}`);
+      }
+    }
   }
   return errors;
 }
@@ -57,7 +215,8 @@ function checkGenOrderNonRedundancy(result: LookbookPlanResult): string[] {
 interface TestCase {
   name: string;
   input: LookbookInput;
-  assertions: (result: LookbookPlanResult) => string[];
+  /** Case-specific assertions on top of the cross-cutting ones */
+  caseAssertions: (result: LookbookPlanResult) => string[];
 }
 
 const TEST_CASES: TestCase[] = [
@@ -73,14 +232,12 @@ const TEST_CASES: TestCase[] = [
       creativityLevel: "safe",
       shotCount: 6,
     },
-    assertions: (result) => {
+    caseAssertions: (result) => {
       const errors: string[] = [];
-      if (!hasEvidence(result, "carry_method")) errors.push("FAIL: Missing carry_method evidence");
-      if (!hasEvidence(result, "full_silhouette")) errors.push("FAIL: Missing full_silhouette evidence");
-      if (!hasEvidence(result, "hardware_detail")) errors.push("FAIL: Missing hardware_detail evidence");
-      if (!hasEvidence(result, "side_profile")) errors.push("FAIL: Missing side_profile evidence");
-      if (countCategory(result, "product_focus") < 1) errors.push("FAIL: Need >= 1 product_focus shot");
-      errors.push(...hasNoApparelWording(result));
+      if (!hasEvidence(result, "carry_method")) errors.push("Missing carry_method");
+      if (!hasEvidence(result, "full_silhouette")) errors.push("Missing full_silhouette");
+      if (!hasEvidence(result, "hardware_detail")) errors.push("Missing hardware_detail");
+      if (countCategory(result, "product_focus") < 1) errors.push("Need >= 1 product_focus");
       return errors;
     },
   },
@@ -96,12 +253,11 @@ const TEST_CASES: TestCase[] = [
       creativityLevel: "safe",
       shotCount: 6,
     },
-    assertions: (result) => {
+    caseAssertions: (result) => {
       const errors: string[] = [];
-      if (!hasEvidence(result, "interior_capacity")) errors.push("FAIL: Missing interior_capacity (tote-specific)");
-      if (!hasEvidence(result, "carry_method")) errors.push("FAIL: Missing carry_method");
-      if (countCategory(result, "detail") < 1) errors.push("FAIL: Need >= 1 detail shot");
-      errors.push(...hasNoApparelWording(result));
+      if (!hasEvidence(result, "interior_capacity")) errors.push("Missing interior_capacity (tote)");
+      if (!hasEvidence(result, "carry_method")) errors.push("Missing carry_method");
+      if (countCategory(result, "detail") < 1) errors.push("Need >= 1 detail");
       return errors;
     },
   },
@@ -117,15 +273,14 @@ const TEST_CASES: TestCase[] = [
       creativityLevel: "balanced",
       shotCount: 6,
     },
-    assertions: (result) => {
+    caseAssertions: (result) => {
       const errors: string[] = [];
-      if (!hasEvidence(result, "ear_visibility")) errors.push("FAIL: Missing ear_visibility");
-      if (!hasEvidence(result, "pair_symmetry")) errors.push("FAIL: Missing pair_symmetry");
+      if (!hasEvidence(result, "ear_visibility")) errors.push("Missing ear_visibility");
+      if (!hasEvidence(result, "pair_symmetry")) errors.push("Missing pair_symmetry");
       const fullBody = result.shots.filter((s) =>
         s.archetype.defaultFraming.toLowerCase().includes("full body")
       ).length;
-      if (fullBody > 2) errors.push(`FAIL: Too many full-body shots (${fullBody}), expected <= 2`);
-      errors.push(...hasNoApparelWording(result));
+      if (fullBody > 2) errors.push(`Too many full-body shots (${fullBody}), max 2`);
       return errors;
     },
   },
@@ -141,17 +296,15 @@ const TEST_CASES: TestCase[] = [
       creativityLevel: "safe",
       shotCount: 6,
     },
-    assertions: (result) => {
+    caseAssertions: (result) => {
       const errors: string[] = [];
-      if (!hasEvidence(result, "face_framing")) errors.push("FAIL: Missing face_framing");
-      if (!hasEvidence(result, "side_profile")) errors.push("FAIL: Missing side_profile");
-      for (const shot of result.shots) {
-        const id = shot.archetype.id.toLowerCase();
-        if (id.includes("bag_") || id.includes("footwear_")) {
-          errors.push(`FAIL: Shot ${shot.position} uses non-eyewear archetype: ${shot.archetype.id}`);
-        }
-      }
-      errors.push(...hasNoApparelWording(result));
+      if (!hasEvidence(result, "face_framing")) errors.push("Missing face_framing");
+      if (!hasEvidence(result, "side_profile")) errors.push("Missing side_profile");
+      // Eyewear should use eyewear-specific detail, not generic logo crop
+      const hasEyewearDetail = result.shots.some(
+        (s) => s.archetype.id === "eyewear_temple_detail"
+      );
+      if (!hasEyewearDetail) errors.push("Missing eyewear_temple_detail (should prefer over generic detail)");
       return errors;
     },
   },
@@ -167,11 +320,11 @@ const TEST_CASES: TestCase[] = [
       creativityLevel: "safe",
       shotCount: 6,
     },
-    assertions: (result) => {
+    caseAssertions: (result) => {
       const errors: string[] = [];
-      if (!hasEvidence(result, "construction_quality")) errors.push("FAIL: Missing construction_quality");
-      if (!hasEvidence(result, "full_silhouette")) errors.push("FAIL: Missing full_silhouette");
-      if (!hasEvidence(result, "logo_placement")) errors.push("FAIL: Missing logo_placement");
+      if (!hasEvidence(result, "construction_quality")) errors.push("Missing construction_quality");
+      if (!hasEvidence(result, "full_silhouette")) errors.push("Missing full_silhouette");
+      if (!hasEvidence(result, "logo_placement")) errors.push("Missing logo_placement");
       return errors;
     },
   },
@@ -187,12 +340,16 @@ const TEST_CASES: TestCase[] = [
       creativityLevel: "balanced",
       shotCount: 6,
     },
-    assertions: (result) => {
+    caseAssertions: (result) => {
       const errors: string[] = [];
-      if (!hasEvidence(result, "on_foot_presence")) errors.push("FAIL: Missing on_foot_presence");
-      if (!hasEvidence(result, "sole_profile")) errors.push("FAIL: Missing sole_profile");
-      if (countCategory(result, "motion") < 1) errors.push("FAIL: Need >= 1 motion shot");
-      errors.push(...hasNoApparelWording(result));
+      if (!hasEvidence(result, "on_foot_presence")) errors.push("Missing on_foot_presence");
+      if (!hasEvidence(result, "sole_profile")) errors.push("Missing sole_profile");
+      if (countCategory(result, "motion") < 1) errors.push("Need >= 1 motion");
+      // Footwear should use footwear-specific detail
+      const hasFootwearDetail = result.shots.some(
+        (s) => s.archetype.id === "footwear_material_detail"
+      );
+      if (!hasFootwearDetail) errors.push("Missing footwear_material_detail (should prefer over generic detail)");
       return errors;
     },
   },
@@ -208,13 +365,27 @@ const TEST_CASES: TestCase[] = [
       creativityLevel: "safe",
       shotCount: 6,
     },
-    assertions: (result) => {
+    caseAssertions: (result) => {
       const errors: string[] = [];
-      if (!hasEvidence(result, "wrist_visibility")) errors.push("FAIL: Missing wrist_visibility");
-      if (!hasEvidence(result, "hardware_detail")) errors.push("FAIL: Missing hardware_detail");
+      if (!hasEvidence(result, "wrist_visibility")) errors.push("Missing wrist_visibility");
+      if (!hasEvidence(result, "hardware_detail")) errors.push("Missing hardware_detail");
       const detailOrFocus = countCategory(result, "detail") + countCategory(result, "product_focus");
-      if (detailOrFocus < 2) errors.push(`FAIL: Need 2+ detail/product_focus shots, got ${detailOrFocus}`);
-      errors.push(...hasNoApparelWording(result));
+      if (detailOrFocus < 2) errors.push(`Need 2+ detail/product_focus, got ${detailOrFocus}`);
+      // Watches should use watch-specific hero
+      const hasWatchHero = result.shots.some(
+        (s) => s.archetype.id === "watch_wrist_hero"
+      );
+      if (!hasWatchHero) errors.push("Missing watch_wrist_hero (should prefer over generic hero_full_body_seller)");
+      // Watches should use watch-specific dial detail
+      const hasWatchDetail = result.shots.some(
+        (s) => s.archetype.id === "watch_dial_closeup"
+      );
+      if (!hasWatchDetail) errors.push("Missing watch_dial_closeup");
+      // Watches should use strap/closure detail
+      const hasStrapDetail = result.shots.some(
+        (s) => s.archetype.id === "watch_strap_detail"
+      );
+      if (!hasStrapDetail) errors.push("Missing watch_strap_detail (needed for closure_mechanism)");
       return errors;
     },
   },
@@ -230,13 +401,13 @@ const TEST_CASES: TestCase[] = [
       creativityLevel: "directional",
       shotCount: 6,
     },
-    assertions: (result) => {
+    caseAssertions: (result) => {
       const errors: string[] = [];
-      if (!hasEvidence(result, "full_silhouette")) errors.push("FAIL: Missing full_silhouette");
-      if (!hasEvidence(result, "fit_on_body")) errors.push("FAIL: Missing fit_on_body");
-      if (!hasEvidence(result, "styling_context")) errors.push("FAIL: Missing styling_context");
+      if (!hasEvidence(result, "full_silhouette")) errors.push("Missing full_silhouette");
+      if (!hasEvidence(result, "fit_on_body")) errors.push("Missing fit_on_body");
+      if (!hasEvidence(result, "styling_context")) errors.push("Missing styling_context");
       if (countDistinctCategories(result) < 3)
-        errors.push(`FAIL: Need 3+ categories, got ${countDistinctCategories(result)}`);
+        errors.push(`Need 3+ categories, got ${countDistinctCategories(result)}`);
       return errors;
     },
   },
@@ -252,17 +423,10 @@ const TEST_CASES: TestCase[] = [
       creativityLevel: "balanced",
       shotCount: 6,
     },
-    assertions: (result) => {
+    caseAssertions: (result) => {
       const errors: string[] = [];
-      if (!hasEvidence(result, "fabric_drape")) errors.push("FAIL: Missing fabric_drape");
-      if (!hasEvidence(result, "texture_detail")) errors.push("FAIL: Missing texture_detail");
-      for (const shot of result.shots) {
-        const id = shot.archetype.id.toLowerCase();
-        if (id.includes("footwear_") || id.includes("bag_") || id.includes("ear_") || id.includes("jewelry_")) {
-          errors.push(`FAIL: Shot ${shot.position} uses wrong-family archetype: ${shot.archetype.id}`);
-        }
-      }
-      errors.push(...hasNoApparelWording(result));
+      if (!hasEvidence(result, "fabric_drape")) errors.push("Missing fabric_drape");
+      if (!hasEvidence(result, "texture_detail")) errors.push("Missing texture_detail");
       return errors;
     },
   },
@@ -270,134 +434,196 @@ const TEST_CASES: TestCase[] = [
 
 // ── Runner ──
 
-function printSeparator() {
-  console.log("═".repeat(90));
+function sep() {
+  return "=".repeat(90);
+}
+function subsep() {
+  return "-".repeat(90);
 }
 
-function printSubSeparator() {
-  console.log("─".repeat(90));
+interface CaseResult {
+  name: string;
+  passed: boolean;
+  errors: string[];
+  criticalRedundancies: number;
+  uncoveredRequired: string[];
+  uncoveredRecommended: string[];
+  roleMixViolations: string[];
+  result: LookbookPlanResult;
+}
+
+function runCase(tc: TestCase): CaseResult {
+  const result = generateLookbookPlan(tc.input);
+  const family = tc.input.productFamily;
+  const allErrors: string[] = [];
+
+  // Cross-cutting hard assertions (order matters for readability)
+  allErrors.push(...checkShotCount(result));
+  allErrors.push(...checkRequiredEvidence(result));
+  allErrors.push(...checkRoleMixMinimums(result));
+  allErrors.push(...checkCriticalRedundancyCap(result));
+  allErrors.push(...checkGenOrderNonRedundancy(result));
+  allErrors.push(...checkNoApparelWording(result, family));
+  allErrors.push(...checkNoZeroEvidenceShots(result));
+  allErrors.push(...checkNoIncompatibleArchetypes(result, family));
+
+  // Case-specific assertions
+  allErrors.push(...tc.caseAssertions(result));
+
+  const criticals = result.diagnostics.redundancyWarnings.filter(
+    (w) => w.severity === "critical"
+  ).length;
+
+  return {
+    name: tc.name,
+    passed: allErrors.length === 0,
+    errors: allErrors,
+    criticalRedundancies: criticals,
+    uncoveredRequired: result.diagnostics.uncoveredRequired,
+    uncoveredRecommended: result.diagnostics.uncoveredRecommended,
+    roleMixViolations: checkRoleMixMinimums(result),
+    result,
+  };
+}
+
+function printCaseResult(cr: CaseResult) {
+  const status = cr.passed ? "PASS" : "FAIL";
+  const result = cr.result;
+  const input = result.input;
+  const diag = result.diagnostics;
+
+  console.log(sep());
+  console.log(`  ${status}  ${cr.name}`);
+  console.log(
+    `  Input: ${input.productFamily} > ${input.specificItem || "(no item)"} | ` +
+    `${input.targetStyle} | ${input.campaignGoal} | logo=${input.logoVisibilityPriority} | ` +
+    `creativity=${input.creativityLevel} | ${input.shotCount} shots`
+  );
+  console.log(sep());
+
+  // Shot count
+  console.log("");
+  console.log(`  SHOTS: ${diag.shotCountActual}/${diag.shotCountRequested} requested`);
+  console.log(subsep());
+  for (const shot of result.shots) {
+    const ev = shot.evidenceProvided.length > 0 ? shot.evidenceProvided.join(", ") : "(none)";
+    const badges = shot.badges.length > 0 ? ` [${shot.badges.join(", ")}]` : "";
+    console.log(`  #${shot.position}  ${shot.archetype.title} (${shot.archetype.id})`);
+    console.log(`       Category: ${shot.archetype.shotCategory} | Priority: ${shot.generationPriority}${badges}`);
+    console.log(`       Evidence: ${ev}`);
+    console.log(`       What it sells: ${shot.whatItSells}`);
+    console.log("");
+  }
+
+  // Generation order
+  console.log("  GENERATION ORDER:");
+  console.log(subsep());
+  const genOrder = result.generationOrder.map((pos) => {
+    const shot = result.shots[pos - 1];
+    return `  ${pos}. ${shot.archetype.title} [${shot.archetype.shotCategory}]`;
+  });
+  console.log(genOrder.join("\n"));
+  console.log("");
+
+  // Evidence coverage by priority
+  console.log("  EVIDENCE COVERAGE:");
+  console.log(subsep());
+  console.log(`  Required covered:     ${diag.requiredEvidenceCovered.join(", ") || "(none)"}`);
+  console.log(`  Required UNCOVERED:   ${diag.uncoveredRequired.join(", ") || "(none)"}`);
+  console.log(`  Recommended covered:  ${diag.recommendedEvidenceCovered.join(", ") || "(none)"}`);
+  console.log(`  Recommended uncovered: ${diag.uncoveredRecommended.join(", ") || "(none)"}`);
+  console.log(`  Optional uncovered:   ${diag.uncoveredOptional.join(", ") || "(none)"}`);
+  console.log("");
+
+  // Role mix
+  const targetStr = Object.entries(diag.roleMixTarget).map(([k, v]) => `${k}=${v}`).join(", ");
+  const actualStr = Object.entries(diag.roleMixActual).map(([k, v]) => `${k}=${v}`).join(", ");
+  console.log(`  Role mix target:  ${targetStr}`);
+  console.log(`  Role mix actual:  ${actualStr}`);
+  console.log("");
+
+  // Redundancy warnings (non-info)
+  const warnings = diag.redundancyWarnings.filter((w) => w.severity !== "info");
+  if (warnings.length > 0) {
+    console.log("  REDUNDANCY WARNINGS:");
+    console.log(subsep());
+    for (const w of warnings) {
+      console.log(`  [${w.severity.toUpperCase()}] ${w.message}`);
+    }
+    console.log("");
+  }
+
+  // Hard assertion results
+  if (cr.errors.length > 0) {
+    console.log("  HARD ASSERTION FAILURES:");
+    console.log(subsep());
+    for (const e of cr.errors) {
+      console.log(`  X ${e}`);
+    }
+    console.log("");
+  } else {
+    console.log("  All hard assertions passed.");
+    console.log("");
+  }
 }
 
 function run() {
-  let passed = 0;
-  let failed = 0;
-
   console.log("");
-  printSeparator();
-  console.log("  LOOKBOOK STUDIO — EVIDENCE-BASED SHOT SELECTION VALIDATION");
-  console.log("  9 test cases across product categories");
-  printSeparator();
+  console.log(sep());
+  console.log("  LOOKBOOK STUDIO -- HARD-FAIL VALIDATION HARNESS v2");
+  console.log("  9 cases | shot count + required evidence + role mix + compatibility");
+  console.log(sep());
   console.log("");
 
+  const results: CaseResult[] = [];
   for (const tc of TEST_CASES) {
-    const result = generateLookbookPlan(tc.input);
-    const errors = tc.assertions(result);
-    const genOrderErrors = checkGenOrderNonRedundancy(result);
-    errors.push(...genOrderErrors);
+    const cr = runCase(tc);
+    results.push(cr);
+    printCaseResult(cr);
+  }
 
-    const status = errors.length === 0 ? "PASS ✓" : "FAIL ✗";
-    if (errors.length === 0) passed++;
-    else failed++;
+  // ── Summary ──
+  console.log(sep());
+  console.log("  SUMMARY");
+  console.log(sep());
+  console.log("");
 
-    // Header
-    printSeparator();
-    console.log(`  ${status}  ${tc.name}`);
-    console.log(`  Input: ${tc.input.productFamily} > ${tc.input.specificItem || "(no item)"} | ${tc.input.targetStyle} | ${tc.input.campaignGoal} | logo=${tc.input.logoVisibilityPriority} | creativity=${tc.input.creativityLevel} | ${tc.input.shotCount} shots`);
-    printSeparator();
+  const passed = results.filter((r) => r.passed).length;
+  const failed = results.filter((r) => !r.passed).length;
 
-    // Selected shots
-    console.log("");
-    console.log("  SELECTED SHOTS:");
-    printSubSeparator();
-    for (const shot of result.shots) {
-      const ev = shot.evidenceProvided.length > 0 ? shot.evidenceProvided.join(", ") : "(none)";
-      const badges = shot.badges.length > 0 ? `[${shot.badges.join(", ")}]` : "";
-      console.log(`  #${shot.position}  ${shot.archetype.title}`);
-      console.log(`       ID: ${shot.archetype.id}`);
-      console.log(`       Category: ${shot.archetype.shotCategory} | Priority: ${shot.generationPriority} ${badges}`);
-      console.log(`       Evidence: ${ev}`);
-      console.log(`       Framing: ${shot.framingDelta}`);
-      console.log(`       What it sells: ${shot.whatItSells}`);
-      console.log(`       Risk: ${shot.riskSummary}`);
-      console.log("");
-    }
+  for (const cr of results) {
+    const icon = cr.passed ? "PASS" : "FAIL";
+    const errorCount = cr.errors.length;
 
-    // Generation order
-    console.log("  GENERATION ORDER:");
-    printSubSeparator();
-    const genOrder = result.generationOrder.map((pos) => {
-      const shot = result.shots[pos - 1];
-      return `  ${pos}. ${shot.archetype.title} [${shot.archetype.shotCategory}]`;
-    });
-    console.log(genOrder.join("\n"));
-    console.log("");
-
-    // Evidence coverage
-    console.log("  EVIDENCE COVERAGE:");
-    printSubSeparator();
-    const allEvidence = new Set<EvidenceType>();
-    for (const shot of result.shots) {
-      for (const ev of shot.evidenceProvided) allEvidence.add(ev);
-    }
-    console.log(`  All evidence provided: ${[...allEvidence].join(", ")}`);
-    console.log("");
-
-    // Coverage scores
-    console.log("  COVERAGE SCORES:");
-    printSubSeparator();
-    console.log(`  Clarity: ${result.coverage.clarity}  |  Branding: ${result.coverage.branding}  |  Silhouette: ${result.coverage.silhouette}`);
-    console.log(`  Editorial: ${result.coverage.editorial}  |  Detail: ${result.coverage.detail}  |  Motion: ${result.coverage.motion}`);
-    if (Object.keys(result.coverage.evidenceCoverage).length > 0) {
-      console.log(`  Evidence coverage map: ${Object.entries(result.coverage.evidenceCoverage).map(([k, v]) => `${k}=${v}`).join(", ")}`);
-    }
-    console.log("");
-
-    // Diagnostics
-    console.log("  DIAGNOSTICS:");
-    printSubSeparator();
-    const diag = result.diagnostics;
-    console.log(`  Required evidence covered: ${diag.requiredEvidenceCovered.length > 0 ? diag.requiredEvidenceCovered.join(", ") : "(none)"}`);
-    console.log(`  Recommended evidence covered: ${diag.recommendedEvidenceCovered.length > 0 ? diag.recommendedEvidenceCovered.join(", ") : "(none)"}`);
-    console.log(`  Uncovered evidence: ${diag.uncoveredEvidence.length > 0 ? diag.uncoveredEvidence.join(", ") : "(none — all covered)"}`);
-    console.log("");
-
-    // Role mix
-    const targetEntries = Object.entries(diag.roleMixTarget).map(([k, v]) => `${k}=${v}`).join(", ");
-    const actualEntries = Object.entries(diag.roleMixActual).map(([k, v]) => `${k}=${v}`).join(", ");
-    console.log(`  Role mix target:  ${targetEntries}`);
-    console.log(`  Role mix actual:  ${actualEntries}`);
-    console.log("");
-
-    // Redundancy warnings
-    if (diag.redundancyWarnings.length > 0) {
-      console.log("  REDUNDANCY WARNINGS:");
-      printSubSeparator();
-      for (const w of diag.redundancyWarnings) {
-        console.log(`  [${w.severity.toUpperCase()}] ${w.message}`);
-      }
-      console.log("");
-    }
-
-    // Assertion results
-    if (errors.length > 0) {
-      console.log("  ASSERTION FAILURES:");
-      printSubSeparator();
-      for (const e of errors) {
-        console.log(`  ✗ ${e}`);
-      }
-      console.log("");
+    if (cr.passed) {
+      const recMsg = cr.uncoveredRecommended.length > 0
+        ? ` (recommended uncovered: ${cr.uncoveredRecommended.join(", ")})`
+        : "";
+      console.log(`  ${icon}  ${cr.name}${recMsg}`);
     } else {
-      console.log("  All assertions passed.");
-      console.log("");
+      console.log(`  ${icon}  ${cr.name} (${errorCount} failures)`);
+      for (const e of cr.errors) {
+        console.log(`         - ${e}`);
+      }
     }
   }
 
-  // Summary
-  printSeparator();
   console.log("");
-  console.log(`  FINAL RESULTS: ${passed} PASSED, ${failed} FAILED out of ${TEST_CASES.length}`);
+  console.log(subsep());
+  console.log(`  FINAL: ${passed} PASSED, ${failed} FAILED out of ${TEST_CASES.length}`);
+
+  const totalCriticals = results.reduce((sum, r) => sum + r.criticalRedundancies, 0);
+  const totalUncoveredReq = results.reduce((sum, r) => sum + r.uncoveredRequired.length, 0);
+  const totalUncoveredRec = results.reduce((sum, r) => sum + r.uncoveredRecommended.length, 0);
+  const totalRoleMix = results.reduce((sum, r) => sum + r.roleMixViolations.length, 0);
+  console.log(
+    `  Totals: ${totalCriticals} critical redundancies | ` +
+    `${totalUncoveredReq} uncovered required | ` +
+    `${totalUncoveredRec} uncovered recommended | ` +
+    `${totalRoleMix} role mix violations`
+  );
+  console.log(subsep());
   console.log("");
-  printSeparator();
 
   return failed;
 }

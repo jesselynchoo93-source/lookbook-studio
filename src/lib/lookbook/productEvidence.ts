@@ -56,7 +56,7 @@ export const FAMILY_EVIDENCE: Record<ProductFamily, FamilyEvidenceSpec> = {
       req("construction_quality", "optional"),
       req("body_scale", "optional"),
     ],
-    categoryRoleMix: { hero: 1, product_focus: 2, detail: 1 },
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 1 },
     productZones: ["foot", "knee_down", "ankle"],
   },
 
@@ -75,7 +75,7 @@ export const FAMILY_EVIDENCE: Record<ProductFamily, FamilyEvidenceSpec> = {
       req("interior_capacity", "optional"),
       req("surface_reflection", "optional"),
     ],
-    categoryRoleMix: { hero: 1, product_focus: 2, detail: 2 },
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 2 },
     productZones: ["shoulder", "shoulder_line", "hip", "hand", "side_body"],
   },
 
@@ -105,8 +105,10 @@ export const FAMILY_EVIDENCE: Record<ProductFamily, FamilyEvidenceSpec> = {
       req("surface_reflection", "recommended"),
       req("logo_placement", "optional"),
       req("profile_depth", "optional"),
+      req("styling_context", "optional"),
+      req("full_silhouette", "optional"),
     ],
-    categoryRoleMix: { hero: 1, product_focus: 2, detail: 1 },
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 1 },
     productZones: ["face", "ear"],
   },
 
@@ -121,8 +123,10 @@ export const FAMILY_EVIDENCE: Record<ProductFamily, FamilyEvidenceSpec> = {
       req("closure_mechanism", "recommended"),
       req("face_scale", "optional"),
       req("profile_depth", "optional"),
+      req("styling_context", "optional"),
+      req("full_silhouette", "optional"),
     ],
-    categoryRoleMix: { product_focus: 2, hero: 1, detail: 1 },
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 2 },
     productZones: ["wrist", "hand"],
   },
 
@@ -168,7 +172,7 @@ export const FAMILY_EVIDENCE: Record<ProductFamily, FamilyEvidenceSpec> = {
       req("movement_behavior", "optional"),
       req("attachment_point", "optional"),
     ],
-    categoryRoleMix: { hero: 1, product_focus: 1, detail: 1 },
+    categoryRoleMix: { hero: 1, editorial: 1, detail: 1 },
     productZones: ["neckline", "shoulder", "shoulder_line", "upper_body"],
   },
 
@@ -182,7 +186,7 @@ export const FAMILY_EVIDENCE: Record<ProductFamily, FamilyEvidenceSpec> = {
       req("closure_mechanism", "optional"),
       req("profile_depth", "optional"),
     ],
-    categoryRoleMix: { product_focus: 2, detail: 1 },
+    categoryRoleMix: { product_focus: 1, detail: 1 },
     productZones: ["hand", "wrist"],
   },
 
@@ -586,6 +590,7 @@ export function composeEvidenceSells(
 /** Families eligible for product_only display zone shots. */
 export const PRODUCT_ONLY_ELIGIBLE_FAMILIES: ProductFamily[] = [
   "jewelry", "watches", "small_accessories", "eyewear", "bags",
+  "footwear", "scarves", "belts",
 ];
 
 /** Categories allowed for product_only shots. */

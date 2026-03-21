@@ -1,0 +1,579 @@
+
+==========================================================================================
+  LOOKBOOK STUDIO -- HARD-FAIL VALIDATION HARNESS v2
+  9 cases | shot count + required evidence + role mix + compatibility
+==========================================================================================
+
+==========================================================================================
+  PASS  1. bags > shoulder bag > commercial
+  Input: bags > shoulder bag | commercial | product_clarity | logo=medium | creativity=safe | 6 shots
+==========================================================================================
+
+  SHOTS: 6/6 requested
+------------------------------------------------------------------------------------------
+  #1  Hero Full-Body Seller (hero_full_body_seller)
+       Category: hero | Priority: 1 [Safe, Logo-safe, High reliability]
+       Evidence: full_silhouette, body_scale
+       What it sells: Complete shoulder bag visibility: shape, strap drop, and scale against the body at a glance.
+
+  #2  Bag Carry Profile (bag_carry_profile)
+       Category: product_focus | Priority: 2 [Safe, Logo-safe]
+       Evidence: carry_method, side_profile, dimensional_depth, attachment_point, body_scale
+       What it sells: Profile carry showing strap position on the shoulder, bag depth, and how it sits against the hip.
+
+  #3  Bag Hardware Detail (bag_hardware_detail)
+       Category: detail | Priority: 3 [Safe, High detail, High reliability]
+       Evidence: hardware_detail, surface_reflection, closure_mechanism, texture_detail
+       What it sells: Hardware quality, closure mechanism, stitching, and material texture at close range.
+
+  #4  Bag Construction Detail (bag_construction_detail)
+       Category: detail | Priority: 4 [Safe, High detail, High reliability]
+       Evidence: construction_quality, texture_detail, interior_capacity
+       What it sells: Hardware quality, closure mechanism, stitching, and material texture at close range.
+
+  #5  Torso Turn Editorial (torso_turn_editorial)
+       Category: editorial | Priority: 5
+       Evidence: body_scale
+       What it sells: Lifestyle context showing who carries this bag and where, with the bag as the focal point.
+
+  #6  Mood Environmental Hero (mood_environmental_hero)
+       Category: editorial | Priority: 6 [Higher risk]
+       Evidence: body_scale
+       What it sells: Lifestyle context showing who carries this bag and where, with the bag as the focal point.
+
+  GENERATION ORDER:
+------------------------------------------------------------------------------------------
+  1. Hero Full-Body Seller [hero]
+  2. Bag Carry Profile [product_focus]
+  3. Bag Hardware Detail [detail]
+  4. Bag Construction Detail [detail]
+  5. Torso Turn Editorial [editorial]
+  6. Mood Environmental Hero [editorial]
+
+  EVIDENCE COVERAGE:
+------------------------------------------------------------------------------------------
+  Required covered:     full_silhouette, carry_method, hardware_detail, body_scale, side_profile
+  Required UNCOVERED:   (none)
+  Recommended covered:  texture_detail, construction_quality, dimensional_depth, attachment_point
+  Recommended uncovered: (none)
+  Optional uncovered:   (none)
+
+  Role mix target:  hero=1, product_focus=1, detail=2
+  Role mix actual:  hero=1, product_focus=1, detail=2, editorial=2
+
+  All hard assertions passed.
+
+==========================================================================================
+  PASS  2. bags > tote > commercial
+  Input: bags > tote | commercial | product_clarity | logo=medium | creativity=safe | 6 shots
+==========================================================================================
+
+  SHOTS: 6/6 requested
+------------------------------------------------------------------------------------------
+  #1  Hero Full-Body Seller (hero_full_body_seller)
+       Category: hero | Priority: 1 [Safe, Logo-safe, High reliability]
+       Evidence: full_silhouette, body_scale
+       What it sells: Complete tote visibility: shape, handles, and scale against the body.
+
+  #2  Bag Carry Profile (bag_carry_profile)
+       Category: product_focus | Priority: 2 [Safe, Logo-safe]
+       Evidence: carry_method, dimensional_depth, attachment_point, body_scale
+       What it sells: Profile carry showing handle drop, bag depth, and how it sits at the side.
+
+  #3  Bag Hardware Detail (bag_hardware_detail)
+       Category: detail | Priority: 3 [Safe, High detail, High reliability]
+       Evidence: hardware_detail, surface_reflection, closure_mechanism, texture_detail
+       What it sells: Stitching quality, hardware, interior pocket detail, and material texture.
+
+  #4  Bag Construction Detail (bag_construction_detail)
+       Category: detail | Priority: 4 [Safe, High detail, High reliability]
+       Evidence: construction_quality, texture_detail, interior_capacity
+       What it sells: Stitching quality, hardware, interior pocket detail, and material texture.
+
+  #5  Torso Turn Editorial (torso_turn_editorial)
+       Category: editorial | Priority: 5
+       Evidence: body_scale
+       What it sells: Lifestyle context showing who carries this tote and where.
+
+  #6  Mood Environmental Hero (mood_environmental_hero)
+       Category: editorial | Priority: 6 [Higher risk]
+       Evidence: body_scale
+       What it sells: Lifestyle context showing who carries this tote and where.
+
+  GENERATION ORDER:
+------------------------------------------------------------------------------------------
+  1. Hero Full-Body Seller [hero]
+  2. Bag Carry Profile [product_focus]
+  3. Bag Hardware Detail [detail]
+  4. Bag Construction Detail [detail]
+  5. Torso Turn Editorial [editorial]
+  6. Mood Environmental Hero [editorial]
+
+  EVIDENCE COVERAGE:
+------------------------------------------------------------------------------------------
+  Required covered:     full_silhouette, carry_method, hardware_detail, body_scale, interior_capacity
+  Required UNCOVERED:   (none)
+  Recommended covered:  texture_detail, construction_quality, dimensional_depth, attachment_point
+  Recommended uncovered: (none)
+  Optional uncovered:   (none)
+
+  Role mix target:  hero=1, product_focus=1, detail=2
+  Role mix actual:  hero=1, product_focus=1, detail=2, editorial=2
+
+  All hard assertions passed.
+
+==========================================================================================
+  PASS  3. jewelry > earrings > editorial
+  Input: jewelry > earrings | editorial | mood | logo=low | creativity=balanced | 6 shots
+==========================================================================================
+
+  SHOTS: 6/6 requested
+------------------------------------------------------------------------------------------
+  #1  Portrait Hero Clean (portrait_hero_clean)
+       Category: hero | Priority: 1 [Balanced, High detail, High reliability]
+       Evidence: ear_visibility, neckline_visibility, face_scale
+       What it sells: Ear visibility and placement against the face. The buyer sees scale, sparkle, and how the piece frames the jawline.
+
+  #2  Three-Quarter Ear Reveal (three_quarter_ear_reveal)
+       Category: product_focus | Priority: 3 [Balanced, High detail, High reliability]
+       Evidence: ear_visibility, profile_depth, surface_reflection, attachment_point, face_scale
+       What it sells: Earring dimension, drop length, and how it catches light from different angles near the jaw and neck.
+
+  #3  Jewelry Neckline Focus (jewelry_neckline_focus)
+       Category: detail | Priority: 4 [Balanced, High detail]
+       Evidence: neckline_visibility, texture_detail, surface_reflection, attachment_point
+       What it sells: Stone setting, metal finish, clasp quality, and earring construction at full magnification.
+
+  #4  Pair Symmetry Validation (pair_symmetry_validation)
+       Category: product_focus | Priority: 2 [Balanced, High detail, High reliability]
+       Evidence: pair_symmetry, symmetry_validation, ear_visibility, face_scale
+       What it sells: Earring dimension, drop length, and how it catches light from different angles near the jaw and neck.
+
+  #5  Mood Portrait with Jewelry (mood_portrait_jewelry)
+       Category: editorial | Priority: 6 [Balanced]
+       Evidence: styling_context, face_scale
+       What it sells: Aspirational mood showing the earring in context. The buyer sees who wears this piece and when.
+
+  #6  Detail Crop Logo Focus (detail_crop_logo_focus)
+       Category: detail | Priority: 5 [Balanced, High detail, High reliability]
+       Evidence: texture_detail
+       What it sells: Stone setting, metal finish, clasp quality, and earring construction at full magnification.
+
+  GENERATION ORDER:
+------------------------------------------------------------------------------------------
+  1. Portrait Hero Clean [hero]
+  4. Pair Symmetry Validation [product_focus]
+  2. Three-Quarter Ear Reveal [product_focus]
+  3. Jewelry Neckline Focus [detail]
+  6. Detail Crop Logo Focus [detail]
+  5. Mood Portrait with Jewelry [editorial]
+
+  EVIDENCE COVERAGE:
+------------------------------------------------------------------------------------------
+  Required covered:     face_scale, texture_detail, surface_reflection, ear_visibility, pair_symmetry
+  Required UNCOVERED:   (none)
+  Recommended covered:  styling_context, attachment_point, symmetry_validation, neckline_visibility
+  Recommended uncovered: (none)
+  Optional uncovered:   scale_reference
+
+  Role mix target:  hero=1, product_focus=2, detail=2
+  Role mix actual:  hero=1, product_focus=2, detail=2, editorial=1
+
+  REDUNDANCY WARNINGS:
+------------------------------------------------------------------------------------------
+  [WARNING] Redundancy warning between shot 2 and shot 3: 2 distinctive shared evidence (2 total), same framing bucket
+
+  All hard assertions passed.
+
+==========================================================================================
+  PASS  4. eyewear > sunglasses > commercial
+  Input: eyewear > sunglasses | commercial | product_clarity | logo=medium | creativity=safe | 6 shots
+==========================================================================================
+
+  SHOTS: 6/6 requested
+------------------------------------------------------------------------------------------
+  #1  Portrait Hero Clean (portrait_hero_clean)
+       Category: hero | Priority: 1 [Safe, Logo-safe, High detail, High reliability]
+       Evidence: face_framing, logo_placement, face_scale
+       What it sells: Frame shape and lens tint on the face. Buyer sees fit, style, and face-framing effect.
+
+  #2  Eyewear Portrait Half-Body (eyewear_portrait_halfbody)
+       Category: product_focus | Priority: 2 [Safe, Logo-safe, High detail]
+       Evidence: face_framing, logo_placement, surface_reflection, face_scale
+       What it sells: Three-quarter view showing frame depth, temple arm, and lens profile.
+
+  #3  Eyewear Temple Detail (eyewear_temple_detail)
+       Category: detail | Priority: 3 [Safe, Logo-safe, High detail, High reliability]
+       Evidence: side_profile, texture_detail, surface_reflection, logo_placement, profile_depth
+       What it sells: Frame construction, hinge detail, lens coating, and brand markings close-up.
+
+  #4  Torso Turn Editorial (torso_turn_editorial)
+       Category: editorial | Priority: 5
+       Evidence: styling_context
+       What it sells: Lifestyle mood with visible sunglasses, showing attitude and occasion.
+
+  #5  Detail Crop Logo Focus (detail_crop_logo_focus)
+       Category: detail | Priority: 4 [Safe, Logo-safe, High detail, High reliability]
+       Evidence: logo_placement, texture_detail
+       What it sells: Frame construction, hinge detail, lens coating, and brand markings close-up.
+
+  #6  Mood Environmental Hero (mood_environmental_hero)
+       Category: editorial | Priority: 6 [Higher risk]
+       Evidence: styling_context
+       What it sells: Lifestyle mood with visible sunglasses, showing attitude and occasion.
+
+  GENERATION ORDER:
+------------------------------------------------------------------------------------------
+  1. Portrait Hero Clean [hero]
+  2. Eyewear Portrait Half-Body [product_focus]
+  3. Eyewear Temple Detail [detail]
+  5. Detail Crop Logo Focus [detail]
+  4. Torso Turn Editorial [editorial]
+  6. Mood Environmental Hero [editorial]
+
+  EVIDENCE COVERAGE:
+------------------------------------------------------------------------------------------
+  Required covered:     face_framing, side_profile, face_scale
+  Required UNCOVERED:   (none)
+  Recommended covered:  texture_detail, surface_reflection
+  Recommended uncovered: (none)
+  Optional uncovered:   full_silhouette
+
+  Role mix target:  hero=1, product_focus=1, detail=1
+  Role mix actual:  hero=1, product_focus=1, detail=2, editorial=2
+
+  REDUNDANCY WARNINGS:
+------------------------------------------------------------------------------------------
+  [WARNING] Redundancy warning between shot 1 and shot 2: 2 distinctive shared evidence (4 total), same framing bucket
+  [WARNING] Redundancy warning between shot 3 and shot 5: 2 distinctive shared evidence (2 total), same framing bucket
+
+  All hard assertions passed.
+
+==========================================================================================
+  PASS  5. apparel > suit jacket > premium_branding
+  Input: apparel > suit jacket | tailoring | premium_branding | logo=high | creativity=safe | 6 shots
+==========================================================================================
+
+  SHOTS: 6/6 requested
+------------------------------------------------------------------------------------------
+  #1  Hero Full-Body Seller (hero_full_body_seller)
+       Category: hero | Priority: 1 [Safe, Logo-safe, High reliability]
+       Evidence: full_silhouette, fit_on_body, logo_placement, fabric_drape, body_scale
+       What it sells: Complete blazer visibility: shoulder line, button stance, length, and proportions at a glance.
+
+  #2  Cuff Adjustment Tailoring (cuff_adjustment_tailoring)
+       Category: detail | Priority: 4 [Safe, High detail]
+       Evidence: texture_detail, construction_quality
+       What it sells: Interior lining, label, and construction quality. Craftsmanship validation.
+
+  #3  Clean Silhouette Full-Body (clean_silhouette_fullbody)
+       Category: silhouette | Priority: 2 [Safe, High reliability]
+       Evidence: full_silhouette, side_profile, fit_on_body, fabric_drape, body_scale
+       What it sells: Garment outline showing drape, shoulder structure, and length from a side angle.
+
+  #4  Seated Forward Lean (seated_forward_lean)
+       Category: editorial | Priority: 5
+       Evidence: fit_on_body, fabric_drape, styling_context, body_scale
+       What it sells: The blazer in a styled context, showing how it elevates the look.
+
+  #5  Controlled Half Stride (controlled_half_stride)
+       Category: motion | Priority: 6 [Motion]
+       Evidence: full_silhouette, fit_on_body, fabric_drape, movement_behavior, body_scale
+       What it sells: Dynamic behaviour of suit jacket. Buyer sees: complete product shape and proportions; how the product fits and sits when worn; how the fabric falls and moves on the body.
+
+  #6  Tailoring Lapel Touch (tailoring_lapel_touch)
+       Category: product_focus | Priority: 3 [High detail]
+       Evidence: texture_detail, construction_quality, fit_on_body, body_scale
+       What it sells: Lapel construction, stitching detail, and button quality close-up.
+
+  GENERATION ORDER:
+------------------------------------------------------------------------------------------
+  1. Hero Full-Body Seller [hero]
+  3. Clean Silhouette Full-Body [silhouette]
+  6. Tailoring Lapel Touch [product_focus]
+  2. Cuff Adjustment Tailoring [detail]
+  4. Seated Forward Lean [editorial]
+  5. Controlled Half Stride [motion]
+
+  EVIDENCE COVERAGE:
+------------------------------------------------------------------------------------------
+  Required covered:     full_silhouette, fit_on_body, fabric_drape, construction_quality
+  Required UNCOVERED:   (none)
+  Recommended covered:  logo_placement, texture_detail, body_scale, side_profile
+  Recommended uncovered: (none)
+  Optional uncovered:   (none)
+
+  Role mix target:  hero=1, silhouette=1, detail=1, editorial=1
+  Role mix actual:  hero=1, detail=1, silhouette=1, editorial=1, motion=1, product_focus=1
+
+  All hard assertions passed.
+
+==========================================================================================
+  PASS  6. footwear > sneakers > lifestyle
+  Input: footwear > sneakers | street | styling_story | logo=medium | creativity=balanced | 6 shots
+==========================================================================================
+
+  SHOTS: 6/6 requested
+------------------------------------------------------------------------------------------
+  #1  Hero Full-Body Seller (hero_full_body_seller)
+       Category: hero | Priority: 1 [Balanced, Logo-safe, High reliability]
+       Evidence: full_silhouette, body_scale
+       What it sells: Complete sneaker visibility on foot: shape, lacing, sole profile, and material at a glance.
+
+  #2  Footwear Ground Focus (footwear_ground_focus)
+       Category: product_focus | Priority: 2 [Balanced, Logo-safe, High detail]
+       Evidence: on_foot_presence, sole_profile, texture_detail
+       What it sells: Low-angle close-up of sole design, material texture, and construction quality.
+
+  #3  Footwear Material Detail (footwear_material_detail)
+       Category: detail | Priority: 4 [Balanced, High detail, High reliability]
+       Evidence: texture_detail, construction_quality, sole_profile, profile_depth
+       What it sells: Lacing detail, tongue construction, heel tab, and material close-up.
+
+  #4  Controlled Half Stride (controlled_half_stride)
+       Category: motion | Priority: 3 [Balanced, Motion]
+       Evidence: full_silhouette, movement_behavior, on_foot_presence, body_scale
+       What it sells: Sneaker in stride showing sole flex, upper movement, and ground energy.
+
+  #5  Torso Turn Editorial (torso_turn_editorial)
+       Category: editorial | Priority: 5 [Balanced]
+       Evidence: body_scale
+       What it sells: Street or lifestyle context showing the sneaker's attitude and styling.
+
+  #6  Mood Environmental Hero (mood_environmental_hero)
+       Category: editorial | Priority: 6 [Higher risk]
+       Evidence: body_scale
+       What it sells: Street or lifestyle context showing the sneaker's attitude and styling.
+
+  GENERATION ORDER:
+------------------------------------------------------------------------------------------
+  1. Hero Full-Body Seller [hero]
+  2. Footwear Ground Focus [product_focus]
+  4. Controlled Half Stride [motion]
+  3. Footwear Material Detail [detail]
+  5. Torso Turn Editorial [editorial]
+  6. Mood Environmental Hero [editorial]
+
+  EVIDENCE COVERAGE:
+------------------------------------------------------------------------------------------
+  Required covered:     on_foot_presence, sole_profile, texture_detail
+  Required UNCOVERED:   (none)
+  Recommended covered:  full_silhouette, movement_behavior, profile_depth, construction_quality
+  Recommended uncovered: (none)
+  Optional uncovered:   (none)
+
+  Role mix target:  hero=1, product_focus=1, detail=1
+  Role mix actual:  hero=1, product_focus=1, detail=1, motion=1, editorial=2
+
+  REDUNDANCY WARNINGS:
+------------------------------------------------------------------------------------------
+  [WARNING] Redundancy warning between shot 2 and shot 3: 2 distinctive shared evidence (2 total), same framing bucket
+
+  All hard assertions passed.
+
+==========================================================================================
+  PASS  7. watches > sport watch > detail_focus
+  Input: watches > sport watch | commercial | detail_focus | logo=low | creativity=safe | 6 shots
+==========================================================================================
+
+  SHOTS: 6/6 requested
+------------------------------------------------------------------------------------------
+  #1  Watch Wrist Hero (watch_wrist_hero)
+       Category: hero | Priority: 2 [Safe]
+       Evidence: wrist_visibility, hardware_detail, face_scale, dimensional_depth
+       What it sells: Watch on wrist showing case size, dial, and strap in a natural position.
+
+  #2  Accessory Hand Interaction (accessory_hand_interaction)
+       Category: product_focus | Priority: 1 [Safe, High detail]
+       Evidence: texture_detail, hardware_detail, surface_reflection, wrist_visibility
+       What it sells: Wrist-level close-up of dial, bezel, and case construction.
+
+  #3  Watch Strap & Closure Detail (watch_strap_detail)
+       Category: detail | Priority: 3 [Safe, High detail]
+       Evidence: closure_mechanism, texture_detail
+       What it sells: Crown, pushers, bezel markings, and strap closure at full magnification.
+
+  #4  Watch Dial Close-Up (watch_dial_closeup)
+       Category: detail | Priority: 4 [Safe, High detail]
+       Evidence: surface_reflection, hardware_detail, dimensional_depth
+       What it sells: Crown, pushers, bezel markings, and strap closure at full magnification.
+
+  #5  Torso Turn Editorial (torso_turn_editorial)
+       Category: editorial | Priority: 5
+       Evidence: styling_context
+       What it sells: Active or outdoor lifestyle context with visible watch.
+
+  #6  Mood Environmental Hero (mood_environmental_hero)
+       Category: editorial | Priority: 6 [Higher risk]
+       Evidence: styling_context
+       What it sells: Active or outdoor lifestyle context with visible watch.
+
+  GENERATION ORDER:
+------------------------------------------------------------------------------------------
+  2. Accessory Hand Interaction [product_focus]
+  1. Watch Wrist Hero [hero]
+  3. Watch Strap & Closure Detail [detail]
+  4. Watch Dial Close-Up [detail]
+  5. Torso Turn Editorial [editorial]
+  6. Mood Environmental Hero [editorial]
+
+  EVIDENCE COVERAGE:
+------------------------------------------------------------------------------------------
+  Required covered:     wrist_visibility, texture_detail, surface_reflection
+  Required UNCOVERED:   (none)
+  Recommended covered:  hardware_detail, dimensional_depth, closure_mechanism
+  Recommended uncovered: (none)
+  Optional uncovered:   profile_depth, full_silhouette, movement_behavior
+
+  Role mix target:  hero=1, product_focus=1, detail=2
+  Role mix actual:  hero=1, product_focus=1, detail=2, editorial=2
+
+  REDUNDANCY WARNINGS:
+------------------------------------------------------------------------------------------
+  [WARNING] Redundancy warning between shot 1 and shot 2: 2 distinctive shared evidence (2 total), same framing bucket
+  [WARNING] Redundancy warning between shot 1 and shot 4: 2 distinctive shared evidence (2 total), same framing bucket
+  [WARNING] Redundancy warning between shot 2 and shot 4: 2 distinctive shared evidence (2 total), same framing bucket
+
+  All hard assertions passed.
+
+==========================================================================================
+  PASS  8. full_look > evening ensemble > editorial
+  Input: full_look > evening ensemble | editorial | mood | logo=low | creativity=directional | 6 shots
+==========================================================================================
+
+  SHOTS: 6/6 requested
+------------------------------------------------------------------------------------------
+  #1  Hero Full-Body Seller (hero_full_body_seller)
+       Category: hero | Priority: 1 [High reliability]
+       Evidence: full_silhouette, fit_on_body, fabric_drape, body_scale
+       What it sells: Primary visibility of evening ensemble. Buyer sees: complete product shape and proportions; how the product fits and sits when worn; how the fabric falls and moves on the body.
+
+  #2  Side Silhouette (side_silhouette)
+       Category: silhouette | Priority: 2 [Directional, High reliability]
+       Evidence: full_silhouette, fit_on_body, fabric_drape, body_scale
+       What it sells: Shape and outline of evening ensemble. Buyer sees: complete product shape and proportions; how the product fits and sits when worn; how the fabric falls and moves on the body.
+
+  #3  Seated Forward Lean (seated_forward_lean)
+       Category: editorial | Priority: 3 [Directional]
+       Evidence: fit_on_body, fabric_drape, styling_context, body_scale
+       What it sells: Lifestyle context for evening ensemble. Buyer sees: how the product fits and sits when worn; how the fabric falls and moves on the body; product in a lifestyle or editorial setting.
+
+  #4  Controlled Half Stride (controlled_half_stride)
+       Category: motion | Priority: 5 [Directional, Motion]
+       Evidence: full_silhouette, fit_on_body, fabric_drape, movement_behavior, body_scale
+       What it sells: Dynamic behaviour of evening ensemble. Buyer sees: complete product shape and proportions; how the product fits and sits when worn; how the fabric falls and moves on the body.
+
+  #5  Relaxed Lean (relaxed_lean)
+       Category: editorial | Priority: 4 [Directional]
+       Evidence: fit_on_body, fabric_drape, styling_context, body_scale
+       What it sells: Lifestyle context for evening ensemble. Buyer sees: how the product fits and sits when worn; how the fabric falls and moves on the body; product in a lifestyle or editorial setting.
+
+  #6  Pivot Step (pivot_step)
+       Category: motion | Priority: 6 [Directional, Motion]
+       Evidence: movement_behavior, fabric_drape, fit_on_body, body_scale
+       What it sells: Dynamic behaviour of evening ensemble. Buyer sees: how the product moves and behaves in motion; how the fabric falls and moves on the body; how the product fits and sits when worn.
+
+  GENERATION ORDER:
+------------------------------------------------------------------------------------------
+  1. Hero Full-Body Seller [hero]
+  2. Side Silhouette [silhouette]
+  3. Seated Forward Lean [editorial]
+  5. Relaxed Lean [editorial]
+  4. Controlled Half Stride [motion]
+  6. Pivot Step [motion]
+
+  EVIDENCE COVERAGE:
+------------------------------------------------------------------------------------------
+  Required covered:     full_silhouette, fit_on_body, styling_context
+  Required UNCOVERED:   (none)
+  Recommended covered:  fabric_drape, movement_behavior, body_scale
+  Recommended uncovered: (none)
+  Optional uncovered:   back_shape, dimensional_depth
+
+  Role mix target:  hero=1, silhouette=1, editorial=1
+  Role mix actual:  hero=1, silhouette=1, editorial=2, motion=2
+
+  REDUNDANCY WARNINGS:
+------------------------------------------------------------------------------------------
+  [WARNING] Redundancy warning between shot 4 and shot 6: 2 distinctive shared evidence (4 total), same framing bucket
+
+  All hard assertions passed.
+
+==========================================================================================
+  PASS  9. scarves > silk scarf > styling_story
+  Input: scarves > silk scarf | editorial | styling_story | logo=low | creativity=balanced | 6 shots
+==========================================================================================
+
+  SHOTS: 6/6 requested
+------------------------------------------------------------------------------------------
+  #1  Hero Full-Body Seller (hero_full_body_seller)
+       Category: hero | Priority: 1 [Balanced, High reliability]
+       Evidence: full_silhouette, fabric_drape, body_scale
+       What it sells: Primary visibility of silk scarf. Buyer sees: complete product shape and proportions; how the fabric falls and moves on the body; product size and proportion relative to the body.
+
+  #2  Torso Turn Editorial (torso_turn_editorial)
+       Category: editorial | Priority: 2 [Balanced]
+       Evidence: fabric_drape, styling_context, body_scale
+       What it sells: Lifestyle context for silk scarf. Buyer sees: how the fabric falls and moves on the body; product in a lifestyle or editorial setting; product size and proportion relative to the body.
+
+  #3  Detail Crop Logo Focus (detail_crop_logo_focus)
+       Category: detail | Priority: 4 [Balanced, High detail, High reliability]
+       Evidence: texture_detail
+       What it sells: Craftsmanship and detail of the silk scarf. Focus: drape and fold pattern; fabric texture and weight; print or pattern visibility.
+
+  #4  Controlled Half Stride (controlled_half_stride)
+       Category: motion | Priority: 6 [Balanced, Motion]
+       Evidence: full_silhouette, fabric_drape, movement_behavior, body_scale
+       What it sells: Dynamic behaviour of silk scarf. Buyer sees: complete product shape and proportions; how the fabric falls and moves on the body; how the product moves and behaves in motion.
+
+  #5  Side Silhouette (side_silhouette)
+       Category: silhouette | Priority: 3 [Balanced, High reliability]
+       Evidence: full_silhouette, fabric_drape, body_scale
+       What it sells: Shape and outline of silk scarf. Buyer sees: complete product shape and proportions; how the fabric falls and moves on the body; product size and proportion relative to the body.
+
+  #6  Relaxed Lean (relaxed_lean)
+       Category: editorial | Priority: 5 [Balanced]
+       Evidence: fabric_drape, styling_context, body_scale
+       What it sells: Lifestyle context for silk scarf. Buyer sees: how the fabric falls and moves on the body; product in a lifestyle or editorial setting; product size and proportion relative to the body.
+
+  GENERATION ORDER:
+------------------------------------------------------------------------------------------
+  1. Hero Full-Body Seller [hero]
+  2. Torso Turn Editorial [editorial]
+  5. Side Silhouette [silhouette]
+  3. Detail Crop Logo Focus [detail]
+  6. Relaxed Lean [editorial]
+  4. Controlled Half Stride [motion]
+
+  EVIDENCE COVERAGE:
+------------------------------------------------------------------------------------------
+  Required covered:     fabric_drape, texture_detail
+  Required UNCOVERED:   (none)
+  Recommended covered:  styling_context, full_silhouette, body_scale, movement_behavior
+  Recommended uncovered: (none)
+  Optional uncovered:   attachment_point
+
+  Role mix target:  hero=1, editorial=1, detail=1
+  Role mix actual:  hero=1, editorial=2, detail=1, motion=1, silhouette=1
+
+  All hard assertions passed.
+
+==========================================================================================
+  SUMMARY
+==========================================================================================
+
+  PASS  1. bags > shoulder bag > commercial
+  PASS  2. bags > tote > commercial
+  PASS  3. jewelry > earrings > editorial
+  PASS  4. eyewear > sunglasses > commercial
+  PASS  5. apparel > suit jacket > premium_branding
+  PASS  6. footwear > sneakers > lifestyle
+  PASS  7. watches > sport watch > detail_focus
+  PASS  8. full_look > evening ensemble > editorial
+  PASS  9. scarves > silk scarf > styling_story
+
+------------------------------------------------------------------------------------------
+  FINAL: 9 PASSED, 0 FAILED out of 9
+  Totals: 0 critical redundancies | 0 uncovered required | 0 uncovered recommended | 0 role mix violations
+------------------------------------------------------------------------------------------
+
