@@ -1,398 +1,603 @@
 import type {
-  ShotBlueprint,
+  UniversalBlueprintRules,
+  FamilyShotBlueprint,
+  ItemShotOverride,
+  ResolvedBlueprint,
   LookbookInput,
+  ProductFamily,
+  ShotCategory,
 } from "./types";
 
-// ── Blueprint Definitions ──
+// ═══════════════════════════════════════════════
+// LAYER 1: UNIVERSAL RULES
+// ═══════════════════════════════════════════════
 
-const BLUEPRINTS: ShotBlueprint[] = [
-  // ── Earrings ──
-  {
-    id: "earrings_commercial_balanced",
-    label: "Earrings — Commercial Balanced",
-    description:
-      "Portrait-led set for earrings sold in a commercial context. Prioritises ear visibility, pair validation, and detail close-ups over full-body fashion shots.",
-    requiredRoles: [
-      "portrait_hero_clean",
-      "three_quarter_ear_reveal",
-      "ear_detail_crop",
-    ],
-    optionalRoles: [
-      "pair_symmetry_validation",
-      "profile_jewelry_focus",
-      "mood_portrait_jewelry",
-      "jewelry_neckline_focus",
-    ],
-    bannedArchetypeIds: [
-      "hero_full_body_seller",
-      "clean_silhouette_fullbody",
-      "relaxed_contrapposto",
-      "detail_crop_logo_focus",
-      "accessory_hand_interaction",
-      "back_view_shape",
-      "open_jacket_ease",
-      "tailoring_lapel_touch",
-      "cuff_adjustment_tailoring",
-      "controlled_half_stride",
-      "pivot_step",
-      "seated_edge_pose",
-      "seated_forward_lean",
-      "bag_carry_profile",
-      "footwear_ground_focus",
-      "side_silhouette",
-    ],
-    preferredFramingFamily: "close_up",
-    preferredMovementLevel: "static",
-    preferredCropFamily: "face_detail",
-    maxMotionShots: 0,
-    brandingEmphasis: "product_first",
-    occlusionPenalties: [
-      "hands covering ear area",
-      "hair blocking earrings",
-      "strong rotation hiding the product",
-      "crop cutting the jewelry awkwardly",
-      "chin occluding earring",
-    ],
-    sellsLanguage: [
-      "ear visibility and placement",
-      "scale near face and jawline",
-      "sparkle, metal finish, and stone readability",
-      "skin and neckline relationship",
-      "pair readability and symmetry",
-      "elegance near jawline and neck",
-    ],
-  },
+export const UNIVERSAL_RULES: UniversalBlueprintRules = {
+  maxShotsPerCategory: 2,
+  guaranteeClarityShot: true,
+  guaranteeEditorialWhenCreative: true,
+  defaultMaxMotionShots: 2,
+  noDuplicateArchetypes: true,
+  generationOrderStrategy: "reliability_first",
+};
 
-  {
-    id: "earrings_editorial_directional",
-    label: "Earrings — Editorial Directional",
-    description:
-      "Editorial-leaning earring set allowing mood and atmosphere while keeping the product readable. More creative angles and lighting.",
-    requiredRoles: [
-      "portrait_hero_clean",
-      "profile_jewelry_focus",
-      "mood_portrait_jewelry",
-    ],
-    optionalRoles: [
-      "three_quarter_ear_reveal",
-      "ear_detail_crop",
-      "jewelry_neckline_focus",
-    ],
-    bannedArchetypeIds: [
-      "hero_full_body_seller",
-      "clean_silhouette_fullbody",
-      "relaxed_contrapposto",
-      "detail_crop_logo_focus",
-      "accessory_hand_interaction",
-      "back_view_shape",
-      "open_jacket_ease",
-      "tailoring_lapel_touch",
-      "cuff_adjustment_tailoring",
-      "controlled_half_stride",
-      "pivot_step",
-      "bag_carry_profile",
-      "footwear_ground_focus",
-      "side_silhouette",
-    ],
-    preferredFramingFamily: "half_body",
-    preferredMovementLevel: "subtle",
-    preferredCropFamily: "face_detail",
-    maxMotionShots: 0,
-    brandingEmphasis: "secondary",
-    occlusionPenalties: [
-      "hands covering ear area",
-      "hair blocking earrings",
-      "strong rotation hiding the product",
-      "crop cutting the jewelry awkwardly",
-    ],
-    sellsLanguage: [
-      "elegance near jawline and neck",
-      "sparkle and light play on the piece",
-      "mood and aspiration",
-      "skin and neckline relationship",
-    ],
-  },
+// ═══════════════════════════════════════════════
+// LAYER 2: FAMILY BLUEPRINTS
+// ═══════════════════════════════════════════════
 
-  // ── Necklace ──
-  {
-    id: "necklace_commercial",
-    label: "Necklace — Commercial",
-    description:
-      "Portrait and neckline-focused set for necklaces. Prioritises chain/pendant visibility against the collarbone and chest.",
-    requiredRoles: [
-      "portrait_hero_clean",
-      "jewelry_neckline_focus",
-    ],
-    optionalRoles: [
-      "three_quarter_ear_reveal",
-      "mood_portrait_jewelry",
-      "profile_jewelry_focus",
-      "ear_detail_crop",
-    ],
-    bannedArchetypeIds: [
-      "hero_full_body_seller",
-      "clean_silhouette_fullbody",
-      "relaxed_contrapposto",
-      "back_view_shape",
-      "accessory_hand_interaction",
-      "open_jacket_ease",
-      "tailoring_lapel_touch",
-      "cuff_adjustment_tailoring",
-      "bag_carry_profile",
-      "footwear_ground_focus",
-    ],
-    preferredFramingFamily: "half_body",
-    preferredMovementLevel: "static",
-    preferredCropFamily: "chest_up",
-    maxMotionShots: 0,
-    brandingEmphasis: "product_first",
-    occlusionPenalties: [
-      "hands covering neckline",
-      "hair covering pendant",
-      "clothing collar hiding chain",
-    ],
-    sellsLanguage: [
-      "chain drape and pendant position",
-      "scale against collarbone and chest",
-      "metal finish and clasp detail",
-      "layering potential",
-    ],
-  },
-
-  // ── Bracelet ──
-  {
-    id: "bracelet_detail_focus",
-    label: "Bracelet — Detail Focus",
-    description:
-      "Hand and wrist-focused set for bracelets. Allows the hand interaction archetype and prioritises wrist-level crops.",
-    requiredRoles: [
-      "accessory_hand_interaction",
-      "jewelry_neckline_focus",
-    ],
-    optionalRoles: [
-      "portrait_hero_clean",
-      "mood_portrait_jewelry",
-      "ear_detail_crop",
-    ],
-    bannedArchetypeIds: [
-      "hero_full_body_seller",
-      "clean_silhouette_fullbody",
-      "relaxed_contrapposto",
-      "back_view_shape",
-      "bag_carry_profile",
-      "footwear_ground_focus",
-      "open_jacket_ease",
-      "tailoring_lapel_touch",
-      "cuff_adjustment_tailoring",
-    ],
-    preferredFramingFamily: "close_up",
-    preferredMovementLevel: "static",
-    preferredCropFamily: "product_zone",
-    maxMotionShots: 0,
-    brandingEmphasis: "product_first",
-    occlusionPenalties: [
-      "sleeve covering bracelet",
-      "hand position hiding clasp",
-    ],
-    sellsLanguage: [
-      "wrist scale and fit",
-      "clasp and closure detail",
-      "metal or bead finish",
-      "stacking potential",
-    ],
-  },
-
-  // ── Eyewear ──
-  {
-    id: "eyewear_minimal_branding",
-    label: "Eyewear — Minimal Branding",
-    description:
-      "Portrait-led set for eyewear with minimal branding emphasis. Focuses on frame shape, face fit, and style over logo.",
-    requiredRoles: [
-      "eyewear_portrait_halfbody",
-      "portrait_hero_clean",
-    ],
-    optionalRoles: [
-      "three_quarter_ear_reveal",
-      "profile_jewelry_focus",
-      "mood_portrait_jewelry",
-    ],
-    bannedArchetypeIds: [
-      "hero_full_body_seller",
-      "clean_silhouette_fullbody",
-      "relaxed_contrapposto",
-      "detail_crop_logo_focus",
-      "back_view_shape",
-      "accessory_hand_interaction",
-      "bag_carry_profile",
-      "footwear_ground_focus",
-      "open_jacket_ease",
-      "tailoring_lapel_touch",
-      "cuff_adjustment_tailoring",
-    ],
-    preferredFramingFamily: "half_body",
-    preferredMovementLevel: "static",
-    preferredCropFamily: "face_detail",
-    maxMotionShots: 0,
-    brandingEmphasis: "secondary",
-    occlusionPenalties: [
-      "hands touching frames",
-      "hair covering temple arms",
-      "lens glare hiding eyes",
-    ],
-    sellsLanguage: [
-      "frame shape on face",
-      "temple arm fit",
-      "lens tint and finish",
-      "bridge fit and nose pad placement",
-    ],
-  },
-
-  // ── Apparel: Blazer ──
-  {
-    id: "blazer_luxury_balanced",
-    label: "Blazer — Luxury Balanced",
-    description:
-      "Full-body and tailoring-focused set for blazers. Includes hero, silhouette, lapel detail, and editorial angles.",
-    requiredRoles: [
-      "hero_full_body_seller",
-      "tailoring_lapel_touch",
-    ],
-    optionalRoles: [
-      "clean_silhouette_fullbody",
-      "open_jacket_ease",
-      "relaxed_contrapposto",
-      "torso_turn_editorial",
-      "cuff_adjustment_tailoring",
-      "mood_environmental_hero",
-    ],
-    bannedArchetypeIds: [
-      "bag_carry_profile",
-      "footwear_ground_focus",
-      "eyewear_portrait_halfbody",
-      "jewelry_neckline_focus",
-      "ear_detail_crop",
-      "three_quarter_ear_reveal",
-      "profile_jewelry_focus",
-      "pair_symmetry_validation",
-    ],
+const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
+  apparel: {
+    family: "apparel",
+    label: "Apparel",
+    sellsFocus: ["fit and proportions", "fabric drape and texture", "silhouette line", "styling versatility", "branding and logo visibility"],
     preferredFramingFamily: "full_body",
-    preferredMovementLevel: "subtle",
     preferredCropFamily: "full",
-    maxMotionShots: 1,
-    brandingEmphasis: "balanced",
-    occlusionPenalties: [
-      "jacket closed hiding construction",
-    ],
-    sellsLanguage: [
-      "lapel construction and shoulder line",
-      "fabric drape and button stance",
-      "full garment silhouette",
-      "layering and interior detail",
-    ],
-  },
-
-  // ── Full Look ──
-  {
-    id: "full_look_editorial_balanced",
-    label: "Full Look — Editorial Balanced",
-    description:
-      "Multi-piece styling set. Full-body shots dominate to show the complete outfit, with editorial mood and detail variations.",
-    requiredRoles: [
-      "hero_full_body_seller",
-      "relaxed_contrapposto",
-    ],
-    optionalRoles: [
-      "clean_silhouette_fullbody",
-      "torso_turn_editorial",
-      "controlled_half_stride",
-      "relaxed_lean",
-      "mood_environmental_hero",
-      "detail_crop_logo_focus",
-    ],
-    bannedArchetypeIds: [
-      "bag_carry_profile",
-      "footwear_ground_focus",
-      "eyewear_portrait_halfbody",
-      "jewelry_neckline_focus",
-      "ear_detail_crop",
-      "three_quarter_ear_reveal",
-      "profile_jewelry_focus",
-      "pair_symmetry_validation",
-      "accessory_hand_interaction",
-    ],
-    preferredFramingFamily: "full_body",
     preferredMovementLevel: "moderate",
-    preferredCropFamily: "full",
     maxMotionShots: 2,
     brandingEmphasis: "balanced",
+    preferredArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "torso_turn_editorial", "detail_crop_logo_focus"],
+    restrictedArchetypeIds: ["bag_carry_profile", "footwear_ground_focus", "eyewear_portrait_halfbody", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation"],
+    occlusionPenalties: ["garment hidden by arm crossing", "logo covered by hand placement"],
+    generationCategoryOrder: ["hero", "silhouette", "product_focus", "detail", "editorial", "motion"],
+    dnaHints: {
+      environment: "Clean neutral studio or minimal location: seamless backdrop or simple architectural surface, no competing visual elements.",
+      lighting: "Soft directional natural light from camera-right with natural bounce fill. Late-morning quality. Controlled highlights, preserved shadow depth.",
+      lens: "Editorial lens family: 85mm primary at f/5.6 baseline. Natural optical falloff. No forced bokeh.",
+      framing: "Full-body primary with 3/4 and half-body variations. Detail crops for branding and construction.",
+      generationNotes: "Generate the safest anchor shots first (hero, clarity, branding). Then generate medium-risk editorial and silhouette variations. Save the most directional or motion-heavy shots for last.",
+    },
+  },
+
+  footwear: {
+    family: "footwear",
+    label: "Footwear",
+    sellsFocus: ["shoe shape and profile", "sole design and construction", "material texture", "on-foot presence and stance", "ground contact and movement"],
+    preferredFramingFamily: "mixed",
+    preferredCropFamily: "full",
+    preferredMovementLevel: "moderate",
+    maxMotionShots: 2,
+    brandingEmphasis: "balanced",
+    preferredArchetypeIds: ["hero_full_body_seller", "footwear_ground_focus", "controlled_half_stride", "clean_silhouette_fullbody", "detail_crop_logo_focus"],
+    restrictedArchetypeIds: ["jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "eyewear_portrait_halfbody", "bag_carry_profile", "tailoring_lapel_touch", "cuff_adjustment_tailoring"],
+    occlusionPenalties: ["trouser hem covering shoe detail", "shoe floating above ground surface"],
+    generationCategoryOrder: ["hero", "product_focus", "silhouette", "motion", "detail", "editorial"],
+    dnaHints: {
+      environment: "Clean surface with visible ground plane. Urban concrete, studio floor, or minimal architectural surface. Ground texture matters for realism.",
+      lighting: "Soft directional light with ground-level fill to define sole edges and material texture. Avoid overhead-only lighting that loses ground detail.",
+      lens: "Mixed lens family: 85mm for full-body, 35mm for low-angle ground-focus shots. f/4-f/5.6 baseline.",
+      framing: "Mixed framing: full-body for context, low-angle crops for product emphasis. Ground-level detail shots.",
+      generationNotes: "Generate full-body hero first to validate shoe rendering. Then low-angle product focus. Motion shots last, as stride mechanics are harder for AI.",
+    },
+  },
+
+  bags: {
+    family: "bags",
+    label: "Bags",
+    sellsFocus: ["bag shape and structure", "carry method and strap drop", "scale against the body", "hardware and closure detail", "interior glimpse when relevant"],
+    preferredFramingFamily: "three_quarter",
+    preferredCropFamily: "waist_up",
+    preferredMovementLevel: "subtle",
+    maxMotionShots: 1,
+    brandingEmphasis: "balanced",
+    preferredArchetypeIds: ["hero_full_body_seller", "bag_carry_profile", "detail_crop_logo_focus", "relaxed_contrapposto", "torso_turn_editorial"],
+    restrictedArchetypeIds: ["jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "eyewear_portrait_halfbody", "footwear_ground_focus", "tailoring_lapel_touch", "cuff_adjustment_tailoring"],
+    occlusionPenalties: ["bag hidden behind body", "strap occluded by arm", "hardware covered by hand grip"],
+    generationCategoryOrder: ["hero", "product_focus", "detail", "silhouette", "editorial", "motion"],
+    dnaHints: {
+      environment: "Clean neutral studio or minimal urban surface. Background should not compete with the bag's shape and hardware.",
+      lighting: "Directional key light to define bag shape and hardware. Controlled highlights on leather or fabric surfaces.",
+      lens: "Editorial lens family: 85mm primary at f/4-f/5.6. Enough depth to keep the full bag in focus.",
+      framing: "Three-quarter to full-body primary. Profile angle for carry shots. Detail crops for hardware and branding.",
+      generationNotes: "Generate hero first to validate bag rendering against body. Then carry-profile shot. Detail crops for hardware. Editorial mood last.",
+    },
+  },
+
+  jewelry: {
+    family: "jewelry",
+    label: "Jewelry",
+    sellsFocus: ["product visibility against skin", "scale near face or hands", "sparkle and metal finish", "stone and setting detail", "elegance and placement context"],
+    preferredFramingFamily: "close_up",
+    preferredCropFamily: "face_detail",
+    preferredMovementLevel: "static",
+    maxMotionShots: 0,
+    brandingEmphasis: "product_first",
+    preferredArchetypeIds: ["portrait_hero_clean", "jewelry_neckline_focus", "three_quarter_ear_reveal", "profile_jewelry_focus", "ear_detail_crop", "mood_portrait_jewelry", "pair_symmetry_validation", "accessory_hand_interaction"],
+    restrictedArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "open_jacket_ease", "tailoring_lapel_touch", "cuff_adjustment_tailoring", "back_view_shape", "controlled_half_stride", "pivot_step", "seated_edge_pose", "seated_forward_lean", "bag_carry_profile", "footwear_ground_focus", "side_silhouette", "detail_crop_logo_focus"],
+    occlusionPenalties: ["hands covering product zone", "hair blocking jewelry", "clothing covering the piece", "strong rotation hiding the product"],
+    generationCategoryOrder: ["hero", "product_focus", "detail", "editorial", "silhouette", "motion"],
+    dnaHints: {
+      environment: "Clean neutral studio: seamless backdrop or solid matte surface. No competing patterns or textures. The product and skin are the only visual elements.",
+      lighting: "Soft directional key light from camera-right with catchlight on metal and stone surfaces. Gentle fill to prevent harsh shadows on skin. Avoid flat overhead lighting that kills sparkle.",
+      lens: "Portrait/detail lens family: 85mm primary, f/2.8-f/4 for shallow depth on product. Tighter crops encouraged.",
+      framing: "Half-body and close-up crops as primary. Full-body only if explicitly needed for context.",
+      generationNotes: "Generate the clean portrait hero first to validate product rendering on skin. Then angled/profile views for dimensional detail. Detail crops for construction. Mood portraits last.",
+    },
+  },
+
+  eyewear: {
+    family: "eyewear",
+    label: "Eyewear",
+    sellsFocus: ["frame shape on face", "bridge and nose fit", "temple arm profile", "lens tint and finish", "face-framing effect"],
+    preferredFramingFamily: "half_body",
+    preferredCropFamily: "face_detail",
+    preferredMovementLevel: "static",
+    maxMotionShots: 0,
+    brandingEmphasis: "product_first",
+    preferredArchetypeIds: ["eyewear_portrait_halfbody", "portrait_hero_clean", "three_quarter_ear_reveal", "profile_jewelry_focus", "mood_portrait_jewelry"],
+    restrictedArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "open_jacket_ease", "tailoring_lapel_touch", "cuff_adjustment_tailoring", "back_view_shape", "controlled_half_stride", "pivot_step", "bag_carry_profile", "footwear_ground_focus", "jewelry_neckline_focus", "ear_detail_crop", "pair_symmetry_validation", "accessory_hand_interaction", "detail_crop_logo_focus"],
+    occlusionPenalties: ["hands touching frames", "hair covering temple arms", "lens glare hiding eyes"],
+    generationCategoryOrder: ["hero", "product_focus", "detail", "editorial", "silhouette", "motion"],
+    dnaHints: {
+      environment: "Clean studio or minimal backdrop. Nothing competing with the frames on the face.",
+      lighting: "Soft beauty light from above with gentle fill. Controlled to prevent lens glare while maintaining catchlight in lenses.",
+      lens: "Portrait lens family: 85mm primary, f/2.8-f/4 for face and frame clarity.",
+      framing: "Half-body and portrait crops as primary. Profile shots for temple arm visibility.",
+      generationNotes: "Generate front-facing portrait hero first to validate frame rendering on face. Then three-quarter for frame depth. Profile for temple arms. Editorial mood last.",
+    },
+  },
+
+  watches: {
+    family: "watches",
+    label: "Watches",
+    sellsFocus: ["case shape and dial visibility", "wrist scale and fit", "strap material and closure", "crown and pusher detail", "on-wrist lifestyle context"],
+    preferredFramingFamily: "close_up",
+    preferredCropFamily: "product_zone",
+    preferredMovementLevel: "static",
+    maxMotionShots: 0,
+    brandingEmphasis: "product_first",
+    preferredArchetypeIds: ["accessory_hand_interaction", "portrait_hero_clean", "mood_portrait_jewelry"],
+    restrictedArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "open_jacket_ease", "tailoring_lapel_touch", "back_view_shape", "controlled_half_stride", "pivot_step", "bag_carry_profile", "footwear_ground_focus", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "detail_crop_logo_focus"],
+    occlusionPenalties: ["sleeve covering watch face", "hand position hiding dial", "wrist angle hiding case profile"],
+    generationCategoryOrder: ["product_focus", "hero", "detail", "editorial", "silhouette", "motion"],
+    dnaHints: {
+      environment: "Clean studio or minimal setting. Dark matte surfaces work well for watch photography.",
+      lighting: "Directional key light to catch dial reflections and case edges. Controlled fill to prevent strap shadow from hiding detail.",
+      lens: "Portrait/macro lens family: 85mm primary, f/2.8 for wrist-level detail. Tight crops encouraged.",
+      framing: "Wrist-level close-ups as primary. Half-body for lifestyle context.",
+      generationNotes: "Generate wrist close-up first to validate watch rendering. Then lifestyle half-body. Detail crop for dial. Mood portrait last.",
+    },
+  },
+
+  headwear: {
+    family: "headwear",
+    label: "Headwear",
+    sellsFocus: ["shape and crown structure", "brim or visor profile", "fit on head", "fabric and construction detail", "styling context"],
+    preferredFramingFamily: "half_body",
+    preferredCropFamily: "chest_up",
+    preferredMovementLevel: "subtle",
+    maxMotionShots: 1,
+    brandingEmphasis: "balanced",
+    preferredArchetypeIds: ["portrait_hero_clean", "eyewear_portrait_halfbody", "three_quarter_ear_reveal", "profile_jewelry_focus", "mood_portrait_jewelry", "detail_crop_logo_focus"],
+    restrictedArchetypeIds: ["footwear_ground_focus", "bag_carry_profile", "jewelry_neckline_focus", "ear_detail_crop", "pair_symmetry_validation", "accessory_hand_interaction", "back_view_shape", "cuff_adjustment_tailoring", "tailoring_lapel_touch"],
+    occlusionPenalties: ["hair hiding hat structure", "hand covering brim detail"],
+    generationCategoryOrder: ["hero", "product_focus", "silhouette", "detail", "editorial", "motion"],
+    dnaHints: {
+      environment: "Clean studio or urban exterior. Background should not compete with the headwear shape.",
+      lighting: "Directional light from camera-right to define crown and brim shape. Avoid top-down lighting that flattens the hat.",
+      lens: "Portrait lens family: 85mm primary at f/4. Half-body framing to show hat in head context.",
+      framing: "Half-body and portrait crops as primary. Profile for brim shape. Full-body only for styling context.",
+      generationNotes: "Generate front-facing portrait first to validate hat rendering. Then profile for brim/crown shape. Logo detail if branded. Editorial last.",
+    },
+  },
+
+  belts: {
+    family: "belts",
+    label: "Belts",
+    sellsFocus: ["buckle design and hardware", "leather or material quality", "waist definition and styling", "width and proportion", "how it anchors the outfit"],
+    preferredFramingFamily: "three_quarter",
+    preferredCropFamily: "waist_up",
+    preferredMovementLevel: "static",
+    maxMotionShots: 0,
+    brandingEmphasis: "balanced",
+    preferredArchetypeIds: ["hero_full_body_seller", "detail_crop_logo_focus", "relaxed_contrapposto", "torso_turn_editorial"],
+    restrictedArchetypeIds: ["footwear_ground_focus", "bag_carry_profile", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "eyewear_portrait_halfbody", "accessory_hand_interaction"],
+    occlusionPenalties: ["jacket covering belt buckle", "arms blocking waist view", "untucked shirt hiding belt"],
+    generationCategoryOrder: ["hero", "detail", "product_focus", "silhouette", "editorial", "motion"],
+    dnaHints: {
+      environment: "Clean studio or minimal location. Waist area must be well-lit and unobstructed.",
+      lighting: "Directional key light at waist level to define buckle hardware and leather texture.",
+      lens: "Editorial lens family: 85mm primary at f/4. Waist-level detail crops for buckle.",
+      framing: "Three-quarter and full-body for styling context. Waist-level detail crop for buckle and hardware.",
+      generationNotes: "Generate full-body hero first to show belt in outfit context. Then waist-level buckle detail. Silhouette for proportion. Editorial last.",
+    },
+  },
+
+  scarves: {
+    family: "scarves",
+    label: "Scarves",
+    sellsFocus: ["drape and fold pattern", "fabric texture and weight", "print or pattern visibility", "styling method (tied, draped, wrapped)", "colour vibrancy"],
+    preferredFramingFamily: "half_body",
+    preferredCropFamily: "chest_up",
+    preferredMovementLevel: "subtle",
+    maxMotionShots: 1,
+    brandingEmphasis: "balanced",
+    preferredArchetypeIds: ["portrait_hero_clean", "relaxed_contrapposto", "torso_turn_editorial", "detail_crop_logo_focus", "mood_portrait_jewelry"],
+    restrictedArchetypeIds: ["footwear_ground_focus", "bag_carry_profile", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "eyewear_portrait_halfbody", "accessory_hand_interaction"],
+    occlusionPenalties: ["scarf bunched and unreadable", "print hidden by tight wrapping"],
+    generationCategoryOrder: ["hero", "product_focus", "detail", "silhouette", "editorial", "motion"],
+    dnaHints: {
+      environment: "Clean studio or minimal location. Background should not compete with scarf pattern or colour.",
+      lighting: "Even, soft directional light to show fabric texture and print detail. Avoid harsh shadows that obscure the pattern.",
+      lens: "Portrait lens family: 85mm primary at f/4. Half-body framing to show drape and styling.",
+      framing: "Half-body and portrait crops as primary. Detail crop for fabric texture and print.",
+      generationNotes: "Generate portrait hero first showing the scarf drape and styling. Then detail crop for print/texture. Editorial mood last.",
+    },
+  },
+
+  small_accessories: {
+    family: "small_accessories",
+    label: "Small Accessories",
+    sellsFocus: ["product detail and craftsmanship", "scale in hand or on body", "material and finish quality", "functional context", "gift appeal"],
+    preferredFramingFamily: "close_up",
+    preferredCropFamily: "product_zone",
+    preferredMovementLevel: "static",
+    maxMotionShots: 0,
+    brandingEmphasis: "product_first",
+    preferredArchetypeIds: ["accessory_hand_interaction", "detail_crop_logo_focus", "portrait_hero_clean", "mood_portrait_jewelry"],
+    restrictedArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "back_view_shape", "controlled_half_stride", "pivot_step", "bag_carry_profile", "footwear_ground_focus", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation"],
+    occlusionPenalties: ["fingers covering product detail", "product lost in wide framing"],
+    generationCategoryOrder: ["product_focus", "detail", "hero", "editorial", "silhouette", "motion"],
+    dnaHints: {
+      environment: "Clean studio with neutral surface. Product should be the only visual focus.",
+      lighting: "Focused directional light to catch material detail and finish. Macro-style lighting for small objects.",
+      lens: "Portrait/macro lens family: 85mm primary, f/2.8 for shallow depth isolating the product.",
+      framing: "Close-up and product-zone crops as primary. Half-body only for lifestyle context.",
+      generationNotes: "Generate hand-interaction shot first to validate product rendering. Then detail crop for craftsmanship. Lifestyle context last.",
+    },
+  },
+
+  full_look: {
+    family: "full_look",
+    label: "Full Look",
+    sellsFocus: ["outfit coordination and proportion", "styling story across pieces", "head-to-toe visual coherence", "layering and interaction", "brand world and lifestyle"],
+    preferredFramingFamily: "full_body",
+    preferredCropFamily: "full",
+    preferredMovementLevel: "moderate",
+    maxMotionShots: 2,
+    brandingEmphasis: "balanced",
+    preferredArchetypeIds: ["hero_full_body_seller", "relaxed_contrapposto", "clean_silhouette_fullbody", "torso_turn_editorial", "controlled_half_stride", "mood_environmental_hero"],
+    restrictedArchetypeIds: ["bag_carry_profile", "footwear_ground_focus", "eyewear_portrait_halfbody", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "accessory_hand_interaction"],
     occlusionPenalties: [],
-    sellsLanguage: [
-      "complete outfit coordination",
-      "proportions and styling story",
-      "garment interaction and layering",
-      "movement and fabric behaviour together",
-    ],
+    generationCategoryOrder: ["hero", "silhouette", "editorial", "motion", "product_focus", "detail"],
+    dnaHints: {
+      environment: "Environmental location or clean studio depending on style. The setting should support the outfit story.",
+      lighting: "Soft directional natural light. Full-body illumination with controlled shadow depth.",
+      lens: "Editorial lens family: 85mm for most shots, 35mm for environmental context. f/5.6 baseline.",
+      framing: "Full-body dominant. Every shot must show the complete outfit. Detail crops only for specific construction details.",
+      generationNotes: "Generate full-body hero first. Then silhouette for proportion confirmation. Editorial mood for styling story. Motion last.",
+    },
+  },
+};
+
+// ═══════════════════════════════════════════════
+// LAYER 3: ITEM OVERRIDES
+// ═══════════════════════════════════════════════
+
+const ITEM_OVERRIDES: ItemShotOverride[] = [
+  // ── Jewelry Items ──
+  {
+    items: ["earrings", "earring", "ear cuff", "hoop", "stud", "drop earring"],
+    family: "jewelry",
+    label: "Earrings",
+    sellsFocus: ["ear visibility and placement", "scale near face and jawline", "sparkle and metal finish", "skin and neckline relationship", "pair readability and symmetry", "elegance near jawline and neck"],
+    requiredArchetypeIds: ["portrait_hero_clean", "three_quarter_ear_reveal", "ear_detail_crop"],
+    addPreferredArchetypeIds: ["pair_symmetry_validation", "profile_jewelry_focus"],
+    addRestrictedArchetypeIds: ["accessory_hand_interaction", "mood_environmental_hero"],
+    preferredCropFamily: "face_detail",
+    addOcclusionPenalties: ["hands covering ear area", "hair blocking earrings", "chin occluding earring", "crop cutting the jewelry awkwardly"],
+    whatItSellsByCategory: {
+      hero: "Ear visibility and placement against the face. The buyer sees scale, sparkle, and how the piece frames the jawline.",
+      product_focus: "Earring dimension, drop length, and how it catches light from different angles near the jaw and neck.",
+      detail: "Stone setting, metal finish, clasp quality, and earring construction at full magnification.",
+      editorial: "Aspirational mood showing the earring in context. The buyer sees who wears this piece and when.",
+      silhouette: "Earring outline and drop shape against negative space. Shows the exact profile and movement potential.",
+    },
+    additionalNegativeCues: ["hair covering earrings", "hands near ear area", "earring floating off earlobe", "mismatched earring sizes"],
+    deltaBriefSuffix: "Hair swept behind the featured ear. No hands near ear or jaw area.",
+  },
+
+  {
+    items: ["necklace", "pendant", "choker", "chain"],
+    family: "jewelry",
+    label: "Necklace",
+    sellsFocus: ["chain drape and pendant position", "scale against collarbone and chest", "metal finish and clasp detail", "neckline relationship", "layering potential"],
+    requiredArchetypeIds: ["portrait_hero_clean", "jewelry_neckline_focus"],
+    addPreferredArchetypeIds: ["profile_jewelry_focus"],
+    preferredCropFamily: "chest_up",
+    addOcclusionPenalties: ["hands covering neckline", "hair covering pendant", "clothing collar hiding chain"],
+    whatItSellsByCategory: {
+      hero: "Chain drape and pendant position against the collarbone. The buyer sees scale, length, and how the piece sits on skin.",
+      detail: "Chain link quality, pendant setting, clasp mechanism, and metal finish at full magnification.",
+      product_focus: "Close view of pendant detail, chain links, and clasp with skin context.",
+      editorial: "The necklace in lifestyle context, showing how it completes a look while remaining visible.",
+    },
+    additionalNegativeCues: ["necklace floating above skin", "chain links merging", "pendant clipping through clothing"],
+    deltaBriefSuffix: "Neckline area clear and unobstructed. Chin slightly lifted to expose the chain.",
+  },
+
+  {
+    items: ["bracelet", "bangle", "cuff bracelet"],
+    family: "jewelry",
+    label: "Bracelet",
+    sellsFocus: ["wrist placement and fit", "clasp and closure detail", "metal or bead finish", "stacking potential", "hand elegance context"],
+    requiredArchetypeIds: ["accessory_hand_interaction"],
+    addPreferredArchetypeIds: ["portrait_hero_clean"],
+    addRestrictedArchetypeIds: ["ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation"],
+    preferredCropFamily: "product_zone",
+    addOcclusionPenalties: ["sleeve covering bracelet", "hand position hiding clasp"],
+    whatItSellsByCategory: {
+      hero: "Wrist-level visibility showing the bracelet's scale, fit, and relationship to the hand.",
+      product_focus: "Close interaction showing the bracelet on the wrist with natural hand positioning.",
+      detail: "Clasp detail, link quality, stone setting, and metalwork finish at close range.",
+      editorial: "The bracelet in styling context, showing how it pairs with clothing and other accessories.",
+    },
+    additionalNegativeCues: ["bracelet floating above wrist", "clasp rendering errors", "warped hand anatomy near bracelet"],
+    deltaBriefSuffix: "Wrist area fully visible. Sleeve pulled back if present.",
+  },
+
+  {
+    items: ["ring", "signet ring", "engagement ring", "band"],
+    family: "jewelry",
+    label: "Ring",
+    sellsFocus: ["stone visibility and setting", "finger framing and hand posture", "band width and profile", "metal finish", "scale on hand"],
+    requiredArchetypeIds: ["accessory_hand_interaction"],
+    addPreferredArchetypeIds: ["portrait_hero_clean"],
+    addRestrictedArchetypeIds: ["ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "jewelry_neckline_focus"],
+    preferredCropFamily: "product_zone",
+    addOcclusionPenalties: ["other fingers covering ring", "hand clenched hiding the stone"],
+    whatItSellsByCategory: {
+      hero: "Ring visibility on the finger, showing scale, stone setting, and band width.",
+      product_focus: "Close view of the ring on the hand with natural finger positioning for scale.",
+      detail: "Stone facets, prong setting, band engravings, and metal finish at full magnification.",
+      editorial: "The ring in a lifestyle moment, showing occasion and styling context.",
+    },
+    additionalNegativeCues: ["ring floating off finger", "warped finger anatomy", "incorrect finger count near ring"],
+    deltaBriefSuffix: "Hand posed elegantly with fingers naturally spread. Ring finger prominent.",
+  },
+
+  // ── Eyewear Items ──
+  {
+    items: ["sunglasses", "aviators", "wayfarers"],
+    family: "eyewear",
+    label: "Sunglasses",
+    sellsFocus: ["frame shape on face", "lens tint and reflection", "temple arm profile", "bridge fit", "style and attitude"],
+    requiredArchetypeIds: ["eyewear_portrait_halfbody"],
+    addPreferredArchetypeIds: ["portrait_hero_clean", "profile_jewelry_focus"],
+    addOcclusionPenalties: ["harsh glare hiding frame detail", "hair covering temple arms"],
+    whatItSellsByCategory: {
+      hero: "Frame shape and lens tint on the face. Buyer sees fit, style, and face-framing effect.",
+      product_focus: "Three-quarter view showing frame depth, temple arm, and lens profile.",
+      detail: "Frame construction, hinge detail, lens coating, and brand markings close-up.",
+      editorial: "Lifestyle mood with visible sunglasses, showing attitude and occasion.",
+    },
+    additionalNegativeCues: ["lens glare hiding eyes completely", "frame floating off face", "asymmetric temple arm alignment"],
+    deltaBriefSuffix: "Controlled lighting to prevent harsh lens reflections while maintaining catchlight.",
+  },
+
+  {
+    items: ["optical glasses", "glasses", "optical frames"],
+    family: "eyewear",
+    label: "Optical Glasses",
+    sellsFocus: ["frame shape and face compatibility", "bridge and nose pad fit", "temple arm design", "lens clarity", "intellectual/professional styling"],
+    requiredArchetypeIds: ["eyewear_portrait_halfbody"],
+    addPreferredArchetypeIds: ["portrait_hero_clean", "profile_jewelry_focus"],
+    addOcclusionPenalties: ["lens reflection hiding eyes", "frame distortion at angle"],
+    whatItSellsByCategory: {
+      hero: "Frame shape and fit on the face. Buyer sees how the glasses frame their features.",
+      product_focus: "Angled view showing frame thickness, temple design, and nose bridge fit.",
+      detail: "Hinge mechanism, material finish, and any branded temple details.",
+      editorial: "Professional or lifestyle context showing who wears these frames and when.",
+    },
+    additionalNegativeCues: ["lens glare obscuring eyes", "frame asymmetry on face"],
+    deltaBriefSuffix: "Even lighting on both sides of the face for frame symmetry comparison.",
+  },
+
+  // ── Apparel Items ──
+  {
+    items: ["blazer", "suit jacket", "sport coat", "tuxedo"],
+    family: "apparel",
+    label: "Blazer",
+    sellsFocus: ["lapel construction and shoulder line", "fabric drape and button stance", "interior lining glimpse", "layering and styling versatility", "silhouette and proportion"],
+    requiredArchetypeIds: ["hero_full_body_seller", "tailoring_lapel_touch"],
+    addPreferredArchetypeIds: ["open_jacket_ease", "cuff_adjustment_tailoring", "clean_silhouette_fullbody"],
+    preferredCropFamily: "full",
+    whatItSellsByCategory: {
+      hero: "Complete blazer visibility: shoulder line, button stance, length, and proportions at a glance.",
+      product_focus: "Lapel construction, stitching detail, and button quality close-up.",
+      detail: "Interior lining, label, and construction quality. Craftsmanship validation.",
+      editorial: "The blazer in a styled context, showing how it elevates the look.",
+      silhouette: "Garment outline showing drape, shoulder structure, and length from a side angle.",
+    },
+    additionalNegativeCues: ["lapel shape distortion", "button misalignment", "shoulder line asymmetry"],
+    deltaBriefSuffix: "Shoulders and lapels must be crisp and symmetrical.",
+  },
+
+  {
+    items: ["dress", "gown", "maxi dress", "midi dress"],
+    family: "apparel",
+    label: "Dress",
+    sellsFocus: ["silhouette and length", "fabric drape and movement", "neckline and bodice detail", "waist definition", "hem line and finishing"],
+    addPreferredArchetypeIds: ["clean_silhouette_fullbody", "controlled_half_stride"],
+    preferredFramingFamily: "full_body",
+    whatItSellsByCategory: {
+      hero: "Complete dress visibility: silhouette, length, neckline, and waist definition at a glance.",
+      silhouette: "Dress outline and drape from a side angle, showing how the fabric falls on the body.",
+      motion: "Fabric movement and hem behaviour during a controlled stride. Buyers see the dress in motion.",
+      editorial: "The dress in an aspirational context, showing occasion and styling.",
+      detail: "Neckline construction, fabric texture, and any embellishment detail.",
+    },
+    additionalNegativeCues: ["hem clipped by frame edge", "waist definition lost", "neckline distortion"],
+    deltaBriefSuffix: "Full hem must be visible in hero shots. Show the complete length.",
+  },
+
+  // ── Footwear Items ──
+  {
+    items: ["sneakers", "trainers"],
+    family: "footwear",
+    label: "Sneakers",
+    sellsFocus: ["sole design and profile", "upper construction and material", "lacing system", "on-foot stance and energy", "ground presence and movement"],
+    requiredArchetypeIds: ["footwear_ground_focus"],
+    addPreferredArchetypeIds: ["controlled_half_stride", "hero_full_body_seller"],
+    maxMotionShots: 2,
+    whatItSellsByCategory: {
+      hero: "Complete sneaker visibility on foot: shape, lacing, sole profile, and material at a glance.",
+      product_focus: "Low-angle close-up of sole design, material texture, and construction quality.",
+      motion: "Sneaker in stride showing sole flex, upper movement, and ground energy.",
+      detail: "Lacing detail, tongue construction, heel tab, and material close-up.",
+      editorial: "Street or lifestyle context showing the sneaker's attitude and styling.",
+    },
+    additionalNegativeCues: ["shoe floating above ground", "lace rendering errors", "sole-ground gap"],
+    deltaBriefSuffix: "Both shoes grounded and in contact with the surface. Laces naturally rendered.",
+  },
+
+  // ── Bag Items ──
+  {
+    items: ["tote", "tote bag", "shopper"],
+    family: "bags",
+    label: "Tote Bag",
+    sellsFocus: ["bag shape and structure when carried", "handle drop length", "interior depth glimpse", "scale against the body", "material and stitching"],
+    requiredArchetypeIds: ["bag_carry_profile"],
+    addPreferredArchetypeIds: ["hero_full_body_seller", "detail_crop_logo_focus"],
+    whatItSellsByCategory: {
+      hero: "Complete tote visibility: shape, handles, and scale against the body.",
+      product_focus: "Profile carry showing handle drop, bag depth, and how it sits at the side.",
+      detail: "Stitching quality, hardware, interior pocket detail, and brand label.",
+      editorial: "Lifestyle context showing who carries this tote and where.",
+    },
+    additionalNegativeCues: ["bag shape collapsed", "handle floating off shoulder", "interior rendering artifacts"],
+    deltaBriefSuffix: "Bag should maintain its structure and not appear collapsed or floppy.",
+  },
+
+  // ── Watch Items ──
+  {
+    items: ["sport watch", "dive watch", "digital watch"],
+    family: "watches",
+    label: "Sport Watch",
+    sellsFocus: ["case size and presence on wrist", "dial legibility and markers", "bezel function and detail", "strap durability and material", "active lifestyle context"],
+    requiredArchetypeIds: ["accessory_hand_interaction"],
+    maxMotionShots: 1,
+    whatItSellsByCategory: {
+      hero: "Watch on wrist showing case size, dial, and strap in a natural position.",
+      product_focus: "Wrist-level close-up of dial, bezel, and case construction.",
+      detail: "Crown, pushers, bezel markings, and strap closure at full magnification.",
+      editorial: "Active or outdoor lifestyle context with visible watch.",
+    },
+    additionalNegativeCues: ["watch floating off wrist", "dial text illegible", "crown misplaced"],
+    deltaBriefSuffix: "Wrist angled to present the dial face toward camera. Sleeve pulled back fully.",
+  },
+
+  {
+    items: ["dress watch", "luxury watch", "automatic watch"],
+    family: "watches",
+    label: "Dress Watch",
+    sellsFocus: ["case elegance and thinness", "dial craftsmanship", "strap leather or metal quality", "formal wrist presence", "understated luxury"],
+    requiredArchetypeIds: ["accessory_hand_interaction"],
+    whatItSellsByCategory: {
+      hero: "Watch on wrist in a refined, formal context. Case shape and strap quality visible.",
+      product_focus: "Wrist-level close-up showing dial detail, case profile, and strap finish.",
+      detail: "Dial complications, case edge finishing, and clasp mechanism at close range.",
+      editorial: "Formal or luxury lifestyle context with the watch as the focal accessory.",
+    },
+    additionalNegativeCues: ["watch floating off wrist", "dial rendering errors", "strap clasp artifacts"],
+    deltaBriefSuffix: "Shirt cuff positioned to frame the watch elegantly. Wrist angled for dial visibility.",
+  },
+
+  // ── Belt Items ──
+  {
+    items: ["leather belt", "dress belt"],
+    family: "belts",
+    label: "Leather Belt",
+    sellsFocus: ["buckle design and hardware", "leather grain and finish", "width and proportion at waist", "stitching and edge detail", "outfit anchoring effect"],
+    requiredArchetypeIds: ["detail_crop_logo_focus"],
+    addPreferredArchetypeIds: ["hero_full_body_seller"],
+    whatItSellsByCategory: {
+      hero: "Belt visible at the waist, anchoring the outfit. Buckle, width, and leather finish all readable.",
+      detail: "Buckle hardware, leather grain, edge stitching, and keeper loop at close range.",
+      product_focus: "Waist-level view showing how the belt defines the midsection and interacts with clothing.",
+      editorial: "The belt as part of a styled look, showing how it completes the outfit.",
+    },
+    additionalNegativeCues: ["buckle hardware distortion", "leather texture lost", "belt floating off waist"],
+    deltaBriefSuffix: "Shirt tucked to expose the belt fully. Buckle facing camera.",
+  },
+
+  {
+    items: ["statement belt", "chain belt", "wide belt"],
+    family: "belts",
+    label: "Statement Belt",
+    sellsFocus: ["buckle or hardware as focal point", "width and visual impact", "styling as a feature piece", "outfit transformation effect"],
+    requiredArchetypeIds: ["detail_crop_logo_focus"],
+    addPreferredArchetypeIds: ["hero_full_body_seller", "relaxed_contrapposto"],
+    whatItSellsByCategory: {
+      hero: "Statement belt visible as a styling centrepiece. Full outfit context with belt as focal point.",
+      detail: "Hardware, chain links, or decorative elements at full magnification.",
+      editorial: "The belt transforming a simple outfit into a styled look.",
+    },
+    additionalNegativeCues: ["hardware chain links merging", "belt proportions distorted"],
+    deltaBriefSuffix: "Belt positioned as the outfit's visual anchor point. Waist area well-lit.",
   },
 ];
 
-// ── Blueprint Selection Logic ──
+// ═══════════════════════════════════════════════
+// RESOLVER: Merge item > family > universal
+// ═══════════════════════════════════════════════
 
-export function selectBlueprint(input: LookbookInput): ShotBlueprint | null {
-  const { productFamily, specificItem, targetStyle, campaignGoal, creativityLevel } = input;
-  const item = (specificItem || "").toLowerCase();
+function findItemOverride(input: LookbookInput): ItemShotOverride | null {
+  const itemLower = (input.specificItem || "").toLowerCase();
+  if (!itemLower) return null;
 
-  // Earrings
-  if (productFamily === "jewelry" && (item === "earrings" || item === "earring" || item === "ear cuff" || item === "hoop" || item === "stud" || item === "drop earring")) {
-    if (creativityLevel === "directional" || targetStyle === "editorial" || targetStyle === "avant_garde") {
-      return findBlueprint("earrings_editorial_directional");
-    }
-    return findBlueprint("earrings_commercial_balanced");
-  }
-
-  // Necklace
-  if (productFamily === "jewelry" && (item === "necklace" || item === "pendant" || item === "choker" || item === "chain")) {
-    return findBlueprint("necklace_commercial");
-  }
-
-  // Bracelet
-  if (productFamily === "jewelry" && (item === "bracelet" || item === "bangle" || item === "cuff bracelet")) {
-    return findBlueprint("bracelet_detail_focus");
-  }
-
-  // Ring (no specific blueprint; falls through to generic jewelry handling)
-  if (productFamily === "jewelry" && item === "ring") {
-    return findBlueprint("bracelet_detail_focus"); // rings use similar hand-focused approach
-  }
-
-  // Generic jewelry without specific item
-  if (productFamily === "jewelry") {
-    return findBlueprint("earrings_commercial_balanced"); // default jewelry blueprint
-  }
-
-  // Eyewear
-  if (productFamily === "eyewear") {
-    return findBlueprint("eyewear_minimal_branding");
-  }
-
-  // Blazer / suit jacket
-  if (productFamily === "apparel" && (item === "blazer" || item === "suit jacket" || item === "sport coat" || item === "tuxedo")) {
-    if (targetStyle === "luxury" || targetStyle === "tailoring") {
-      return findBlueprint("blazer_luxury_balanced");
-    }
-  }
-
-  // Full look
-  if (productFamily === "full_look") {
-    return findBlueprint("full_look_editorial_balanced");
-  }
-
-  // No specific blueprint; engine will use generic scoring
-  return null;
+  return ITEM_OVERRIDES.find((o) =>
+    o.family === input.productFamily &&
+    o.items.some((i) => itemLower.includes(i) || i.includes(itemLower))
+  ) || null;
 }
 
-function findBlueprint(id: string): ShotBlueprint | null {
-  return BLUEPRINTS.find((b) => b.id === id) || null;
+export function resolveBlueprint(input: LookbookInput): ResolvedBlueprint {
+  const familyBP = FAMILY_BLUEPRINTS[input.productFamily];
+  const itemOverride = findItemOverride(input);
+
+  const sourceParts = [itemOverride?.label, familyBP.label, "universal"].filter(Boolean);
+
+  return {
+    source: sourceParts.join(" > "),
+    family: input.productFamily,
+
+    sellsFocus: itemOverride?.sellsFocus ?? familyBP.sellsFocus,
+
+    preferredFramingFamily: itemOverride?.preferredFramingFamily ?? familyBP.preferredFramingFamily,
+    preferredCropFamily: itemOverride?.preferredCropFamily ?? familyBP.preferredCropFamily,
+    preferredMovementLevel: itemOverride?.maxMotionShots !== undefined
+      ? (itemOverride.maxMotionShots === 0 ? "static" : familyBP.preferredMovementLevel)
+      : familyBP.preferredMovementLevel,
+    maxMotionShots: itemOverride?.maxMotionShots ?? familyBP.maxMotionShots,
+    brandingEmphasis: itemOverride?.brandingEmphasis ?? familyBP.brandingEmphasis,
+
+    preferredArchetypeIds: [
+      ...familyBP.preferredArchetypeIds,
+      ...(itemOverride?.addPreferredArchetypeIds ?? []),
+    ],
+    restrictedArchetypeIds: [
+      ...familyBP.restrictedArchetypeIds,
+      ...(itemOverride?.addRestrictedArchetypeIds ?? []),
+    ],
+    requiredArchetypeIds: itemOverride?.requiredArchetypeIds ?? [],
+
+    occlusionPenalties: [
+      ...familyBP.occlusionPenalties,
+      ...(itemOverride?.addOcclusionPenalties ?? []),
+    ],
+
+    generationCategoryOrder: itemOverride?.generationCategoryOrder ?? familyBP.generationCategoryOrder,
+
+    whatItSellsByCategory: itemOverride?.whatItSellsByCategory ?? {},
+
+    additionalNegativeCues: itemOverride?.additionalNegativeCues ?? [],
+    deltaBriefSuffix: itemOverride?.deltaBriefSuffix ?? "",
+  };
 }
 
-export { BLUEPRINTS };
+/** Get the family blueprint for DNA resolver use. */
+export function getFamilyBlueprint(family: ProductFamily): FamilyShotBlueprint {
+  return FAMILY_BLUEPRINTS[family];
+}
+
+export { FAMILY_BLUEPRINTS, ITEM_OVERRIDES, UNIVERSAL_RULES as UNIVERSAL };

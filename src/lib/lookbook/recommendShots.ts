@@ -4,14 +4,14 @@ import type {
   ScoredArchetype,
   MasterShootDNA,
   CoverageSummary,
-  ShotBlueprint,
+  ResolvedBlueprint,
 } from "./types";
 import { ALL_ARCHETYPES } from "./shotArchetypes";
 import { scoreArchetype, computeCoverage, filterArchetypesByBlueprint } from "./scoring";
 import { buildMasterShootDNA } from "./shootDNA";
 import { buildRecommendedShot } from "./buildShotDelta";
 import { formatExportText } from "./exportShotPlan";
-import { selectBlueprint } from "./shotBlueprints";
+import { resolveBlueprint, UNIVERSAL_RULES } from "./shotBlueprints";
 
 // ── Selection with Hard Constraints ──
 
@@ -19,7 +19,7 @@ function selectShots(
   scored: ScoredArchetype[],
   input: LookbookInput,
   count: number,
-  blueprint: ShotBlueprint | null,
+  blueprint: ResolvedBlueprint,
   dna: MasterShootDNA
 ): ScoredArchetype[] {
   const sorted = [...scored].sort((a, b) => b.score - a.score);
@@ -28,21 +28,20 @@ function selectShots(
   const categoryCount: Record<string, number> = {};
   let motionCount = 0;
 
-  const maxMotion = blueprint?.maxMotionShots ?? 2;
+  const maxPerCategory = UNIVERSAL_RULES.maxShotsPerCategory;
+  const maxMotion = blueprint.maxMotionShots;
 
-  // Phase 1: if blueprint exists, satisfy required roles first
-  if (blueprint) {
-    for (const requiredId of blueprint.requiredRoles) {
-      if (selected.length >= count) break;
-      const candidate = sorted.find(
-        (s) => s.archetype.id === requiredId && !selected.includes(s)
-      );
-      if (candidate) {
-        selected.push(candidate);
-        const cat = candidate.archetype.shotCategory;
-        categoryCount[cat] = (categoryCount[cat] || 0) + 1;
-        if (cat === "motion") motionCount++;
-      }
+  // Phase 1: satisfy required archetypes first
+  for (const requiredId of blueprint.requiredArchetypeIds) {
+    if (selected.length >= count) break;
+    const candidate = sorted.find(
+      (s) => s.archetype.id === requiredId && !selected.includes(s)
+    );
+    if (candidate) {
+      selected.push(candidate);
+      const cat = candidate.archetype.shotCategory;
+      categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+      if (cat === "motion") motionCount++;
     }
   }
 
@@ -53,18 +52,22 @@ function selectShots(
 
     const cat = candidate.archetype.shotCategory;
 
-    // Max 2 per category
-    if ((categoryCount[cat] || 0) >= 2) continue;
+    // Max per category
+    if ((categoryCount[cat] || 0) >= maxPerCategory) continue;
 
     // Motion cap
     if (cat === "motion" && motionCount >= maxMotion) continue;
 
-    // DNA enforcement: if DNA says portrait/detail framing, limit full-body shots
-    const dnaFraming = dna.framingFamily.toLowerCase();
-    const isPortraitDNA = dnaFraming.includes("half-body") || dnaFraming.includes("close-up") || dnaFraming.includes("mixed");
+    // No duplicate archetypes
+    if (UNIVERSAL_RULES.noDuplicateArchetypes) {
+      if (selected.some((s) => s.archetype.id === candidate.archetype.id)) continue;
+    }
+
+    // DNA enforcement: if blueprint prefers portrait/detail framing, limit full-body shots
+    const prefFraming = blueprint.preferredFramingFamily;
+    const isPortraitPreference = prefFraming === "half_body" || prefFraming === "close_up";
     const isFullBodyArchetype = candidate.archetype.defaultFraming.toLowerCase().includes("full body");
-    if (isPortraitDNA && isFullBodyArchetype) {
-      // Allow at most 1 full-body shot when DNA prefers portrait/detail framing
+    if (isPortraitPreference && isFullBodyArchetype) {
       const existingFullBody = selected.filter(
         (s) => s.archetype.defaultFraming.toLowerCase().includes("full body")
       ).length;
@@ -77,21 +80,23 @@ function selectShots(
   }
 
   // Guarantee: at least 1 clarity-driven shot
-  const hasClarityShot = selected.some(
-    (s) => s.archetype.productClaritySuitability === "high"
-  );
-  if (!hasClarityShot && selected.length >= count) {
-    const clarityCandidate = sorted.find(
-      (s) =>
-        s.archetype.productClaritySuitability === "high" &&
-        !selected.includes(s)
+  if (UNIVERSAL_RULES.guaranteeClarityShot) {
+    const hasClarityShot = selected.some(
+      (s) => s.archetype.productClaritySuitability === "high"
     );
-    if (clarityCandidate) {
-      selected[selected.length - 1] = clarityCandidate;
+    if (!hasClarityShot && selected.length >= count) {
+      const clarityCandidate = sorted.find(
+        (s) =>
+          s.archetype.productClaritySuitability === "high" &&
+          !selected.includes(s)
+      );
+      if (clarityCandidate) {
+        selected[selected.length - 1] = clarityCandidate;
+      }
     }
   }
 
-  // Guarantee: at least 1 detail shot for accessories
+  // Guarantee: at least 1 detail/product_focus shot for accessories
   const isAccessory = ["jewelry", "eyewear", "watches", "bags", "footwear", "small_accessories"].includes(
     input.productFamily
   );
@@ -115,20 +120,22 @@ function selectShots(
   }
 
   // Guarantee: at least 1 editorial shot when creativity is balanced or directional
-  if (
-    input.creativityLevel === "balanced" ||
-    input.creativityLevel === "directional"
-  ) {
-    const hasEditorial = selected.some(
-      (s) => s.archetype.shotCategory === "editorial"
-    );
-    if (!hasEditorial && selected.length >= count) {
-      const editorialCandidate = sorted.find(
-        (s) =>
-          s.archetype.shotCategory === "editorial" && !selected.includes(s)
+  if (UNIVERSAL_RULES.guaranteeEditorialWhenCreative) {
+    if (
+      input.creativityLevel === "balanced" ||
+      input.creativityLevel === "directional"
+    ) {
+      const hasEditorial = selected.some(
+        (s) => s.archetype.shotCategory === "editorial"
       );
-      if (editorialCandidate) {
-        selected[selected.length - 1] = editorialCandidate;
+      if (!hasEditorial && selected.length >= count) {
+        const editorialCandidate = sorted.find(
+          (s) =>
+            s.archetype.shotCategory === "editorial" && !selected.includes(s)
+        );
+        if (editorialCandidate) {
+          selected[selected.length - 1] = editorialCandidate;
+        }
       }
     }
   }
@@ -137,12 +144,11 @@ function selectShots(
 }
 
 // ── Generation Order ──
-// Blueprint-aware: for jewelry/accessories, prioritise portrait heroes first, then detail, then editorial.
-// For apparel, keep the original order: reliability then difficulty.
+// Blueprint-aware: uses the resolved blueprint's generationCategoryOrder.
 
 function computeGenerationOrder(
   selected: ScoredArchetype[],
-  blueprint: ShotBlueprint | null
+  blueprint: ResolvedBlueprint
 ): number[] {
   const indexed = selected.map((s, i) => ({
     index: i,
@@ -150,42 +156,31 @@ function computeGenerationOrder(
     category: s.archetype.shotCategory,
     reliability: s.archetype.higgsfieldReliability,
     difficulty: s.archetype.difficulty,
-    isRequired: blueprint ? blueprint.requiredRoles.includes(s.archetype.id) : false,
+    isRequired: blueprint.requiredArchetypeIds.includes(s.archetype.id),
   }));
 
-  if (blueprint) {
-    // Blueprint-aware ordering: required first, then by category priority, then reliability
-    const categoryPriority: Record<string, number> = {
-      hero: 0,
-      product_focus: 1,
-      detail: 2,
-      editorial: 3,
-      silhouette: 4,
-      motion: 5,
-    };
-    const reliabilityOrder = { high: 0, medium: 1, low: 2 };
+  // Build category priority from the blueprint's generation order
+  const categoryPriority: Record<string, number> = {};
+  blueprint.generationCategoryOrder.forEach((cat, idx) => {
+    categoryPriority[cat] = idx;
+  });
 
-    indexed.sort((a, b) => {
-      // Required roles first
-      if (a.isRequired && !b.isRequired) return -1;
-      if (!a.isRequired && b.isRequired) return 1;
-      // Then by category priority
-      const catDiff = (categoryPriority[a.category] ?? 3) - (categoryPriority[b.category] ?? 3);
-      if (catDiff !== 0) return catDiff;
-      // Then by reliability
-      return reliabilityOrder[a.reliability] - reliabilityOrder[b.reliability];
-    });
-  } else {
-    // Generic ordering: reliability first, then difficulty
-    const reliabilityOrder = { high: 0, medium: 1, low: 2 };
-    const difficultyOrder = { easy: 0, moderate: 1, hard: 2 };
+  const reliabilityOrder = { high: 0, medium: 1, low: 2 };
+  const difficultyOrder = { easy: 0, moderate: 1, hard: 2 };
 
-    indexed.sort((a, b) => {
-      const rDiff = reliabilityOrder[a.reliability] - reliabilityOrder[b.reliability];
-      if (rDiff !== 0) return rDiff;
-      return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
-    });
-  }
+  indexed.sort((a, b) => {
+    // Required archetypes first
+    if (a.isRequired && !b.isRequired) return -1;
+    if (!a.isRequired && b.isRequired) return 1;
+    // Then by category priority from blueprint
+    const catDiff = (categoryPriority[a.category] ?? 5) - (categoryPriority[b.category] ?? 5);
+    if (catDiff !== 0) return catDiff;
+    // Then by reliability
+    const rDiff = reliabilityOrder[a.reliability] - reliabilityOrder[b.reliability];
+    if (rDiff !== 0) return rDiff;
+    // Then by difficulty
+    return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+  });
 
   return indexed.map((item) => item.index);
 }
@@ -193,16 +188,14 @@ function computeGenerationOrder(
 // ── Main Entry Point ──
 
 export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
-  // Step 1: Build Master Shoot DNA
+  // Step 1: Resolve the 3-layer blueprint
+  const blueprint = resolveBlueprint(input);
+
+  // Step 2: Build Master Shoot DNA (uses family blueprint hints)
   const dna = buildMasterShootDNA(input);
 
-  // Step 2: Select blueprint (may be null for generic items)
-  const blueprint = selectBlueprint(input);
-
-  // Step 3: Filter archetypes through blueprint, then score
-  const archetypePool = blueprint
-    ? filterArchetypesByBlueprint(ALL_ARCHETYPES, blueprint)
-    : ALL_ARCHETYPES;
+  // Step 3: Filter archetypes through blueprint restrictions, then score
+  const archetypePool = filterArchetypesByBlueprint(ALL_ARCHETYPES, blueprint);
 
   const scored = archetypePool.map((arch) => scoreArchetype(arch, input, blueprint));
 

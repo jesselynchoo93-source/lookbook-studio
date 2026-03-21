@@ -1,78 +1,75 @@
 import type {
   LookbookInput,
   MasterShootDNA,
-  ProductFamily,
   TargetStyle,
   CampaignGoal,
   LogoVisibilityPriority,
 } from "./types";
 import { PRODUCT_FAMILY_LABELS, GOAL_LABELS, STYLE_LABELS } from "./types";
 import { getRealismProfile } from "./realismRules";
+import { getFamilyBlueprint } from "./shotBlueprints";
 
-function resolveEnvironment(style: TargetStyle, goal: CampaignGoal, family?: ProductFamily): string {
-  // Jewelry-specific: clean backdrop to let the piece stand out against skin
-  if (family === "jewelry" || family === "eyewear" || family === "watches") {
-    if (goal === "mood" || goal === "styling_story") {
-      return "Minimal environmental setting with soft natural light. Background falls away to keep focus on face and product zone.";
-    }
-    return "Clean neutral studio: seamless backdrop or solid matte surface. No competing patterns or textures. The product and skin are the only visual elements.";
-  }
+// ── DNA Resolvers ──
+// Each resolver checks the family blueprint's dnaHints first.
+// Falls back to style/goal/family heuristics only when hints are generic.
 
-  if (goal === "mood" || goal === "styling_story") {
+function resolveEnvironment(input: LookbookInput): string {
+  const bp = getFamilyBlueprint(input.productFamily);
+  if (bp.dnaHints.environment) return bp.dnaHints.environment;
+
+  // Fallback heuristics
+  if (input.campaignGoal === "mood" || input.campaignGoal === "styling_story") {
     return "Environmental location: urban architecture, natural landscape, or curated interior that supports the brand narrative.";
   }
-  if (style === "street" || style === "contemporary") {
+  if (input.targetStyle === "street" || input.targetStyle === "contemporary") {
     return "Urban exterior: clean concrete, minimal signage, neutral walls with natural light.";
   }
-  if (style === "resort") {
+  if (input.targetStyle === "resort") {
     return "Natural exterior: warm-toned architecture, soft greenery, open air with golden-hour quality light.";
   }
-  if (style === "editorial" || style === "avant_garde") {
+  if (input.targetStyle === "editorial" || input.targetStyle === "avant_garde") {
     return "Controlled studio or minimalist location: clean backdrop, no distracting elements, focus on the model and garment.";
   }
   return "Clean neutral studio or minimal location: seamless backdrop or simple architectural surface, no competing visual elements.";
 }
 
-function resolveLighting(style: TargetStyle, goal: CampaignGoal, family?: ProductFamily): string {
-  // Jewelry-specific: directional light to catch reflections and sparkle
-  if (family === "jewelry") {
-    if (style === "editorial" || style === "avant_garde") {
-      return "Directional key light from camera-right with controlled fill. Designed to catch metal reflections and gemstone sparkle. Allow intentional shadow play on skin for editorial depth.";
-    }
-    return "Soft directional key light from camera-right with catchlight on metal and stone surfaces. Gentle fill to prevent harsh shadows on skin. Avoid flat overhead lighting that kills sparkle.";
-  }
-  if (style === "editorial" || style === "avant_garde") {
+function resolveLighting(input: LookbookInput): string {
+  const bp = getFamilyBlueprint(input.productFamily);
+  if (bp.dnaHints.lighting) return bp.dnaHints.lighting;
+
+  // Fallback heuristics
+  if (input.targetStyle === "editorial" || input.targetStyle === "avant_garde") {
     return "Directional studio light with controlled contrast. Key light from camera-right, subtle fill. Allow dramatic shadow play when it supports the editorial mood.";
   }
-  if (goal === "mood") {
+  if (input.campaignGoal === "mood") {
     return "Golden-hour natural light or warm directional light. Preserved shadow depth with soft transitions. Backlight edge separation when compositionally useful.";
   }
-  if (style === "luxury" || style === "tailoring") {
+  if (input.targetStyle === "luxury" || input.targetStyle === "tailoring") {
     return "Soft directional late-morning light from camera-right. Clean highlights on fabric surfaces. Gentle bounce fill to open shadows without flattening contrast.";
   }
   return "Soft directional natural light from camera-right with natural bounce fill. Late-morning quality. Controlled highlights, preserved shadow depth.";
 }
 
-function resolveLens(family: ProductFamily, goal: CampaignGoal): string {
-  const isAccessory = ["jewelry", "eyewear", "watches", "small_accessories"].includes(family);
-  if (isAccessory || goal === "detail_focus") {
+function resolveLens(input: LookbookInput): string {
+  const bp = getFamilyBlueprint(input.productFamily);
+  if (bp.dnaHints.lens) return bp.dnaHints.lens;
+
+  // Fallback heuristics
+  if (input.campaignGoal === "detail_focus") {
     return "Portrait/detail lens family: 85mm primary, f/2.8-f/4 for shallow depth on product. Tighter crops encouraged.";
   }
-  if (goal === "mood" || goal === "styling_story") {
+  if (input.campaignGoal === "mood" || input.campaignGoal === "styling_story") {
     return "Environmental lens family: 35mm-50mm for wider context shots, 85mm for closer frames. f/4-f/5.6 baseline.";
   }
   return "Editorial lens family: 85mm primary at f/5.6 baseline. Natural optical falloff. No forced bokeh.";
 }
 
-function resolveFraming(family: ProductFamily, goal: CampaignGoal): string {
-  const isAccessory = ["jewelry", "eyewear", "watches", "small_accessories"].includes(family);
-  if (isAccessory) {
-    return "Mixed framing: half-body and close-up crops as primary. Full-body only for context shots.";
-  }
-  if (family === "footwear") {
-    return "Mixed framing: full-body for context, low-angle crops for product emphasis. Ground-level detail shots.";
-  }
-  if (goal === "silhouette") {
+function resolveFraming(input: LookbookInput): string {
+  const bp = getFamilyBlueprint(input.productFamily);
+  if (bp.dnaHints.framing) return bp.dnaHints.framing;
+
+  // Fallback heuristics
+  if (input.campaignGoal === "silhouette") {
     return "Full-body dominant: prioritise complete figure framing to show garment proportions and line.";
   }
   return "Full-body primary with 3/4 and half-body variations. Detail crops for branding and construction.";
@@ -130,21 +127,16 @@ function resolveCampaignDirection(input: LookbookInput): string {
 }
 
 function resolveGenerationNotes(input: LookbookInput): string {
+  const bp = getFamilyBlueprint(input.productFamily);
+  if (bp.dnaHints.generationNotes) return bp.dnaHints.generationNotes;
+
+  // Fallback
   const notes: string[] = [];
-  const isJewelry = ["jewelry", "eyewear", "watches"].includes(input.productFamily);
+  notes.push("Generate the safest anchor shots first (hero, clarity, branding).");
+  notes.push("Then generate medium-risk editorial and silhouette variations.");
+  notes.push("Save the most directional or motion-heavy shots for last.");
 
-  if (isJewelry) {
-    notes.push("Generate the clean portrait hero first to validate product rendering on skin.");
-    notes.push("Then generate the angled/profile views to confirm dimensional detail.");
-    notes.push("Save mood and editorial portraits for last.");
-    notes.push("For each shot, confirm the product is visible and catching light before proceeding.");
-  } else {
-    notes.push("Generate the safest anchor shots first (hero, clarity, branding).");
-    notes.push("Then generate medium-risk editorial and silhouette variations.");
-    notes.push("Save the most directional or motion-heavy shots for last.");
-  }
-
-  if (input.logoVisibilityPriority === "high" && !isJewelry) {
+  if (input.logoVisibilityPriority === "high") {
     notes.push("Prioritise front-facing shots to validate branding rendering before attempting angled shots.");
   }
   if (input.creativityLevel === "directional") {
@@ -163,10 +155,10 @@ export function buildMasterShootDNA(input: LookbookInput): MasterShootDNA {
     campaignGoal: input.campaignGoal,
     logoVisibilityPriority: input.logoVisibilityPriority,
     creativityLevel: input.creativityLevel,
-    environmentFamily: resolveEnvironment(input.targetStyle, input.campaignGoal, input.productFamily),
-    lightingFamily: resolveLighting(input.targetStyle, input.campaignGoal, input.productFamily),
-    lensFamily: resolveLens(input.productFamily, input.campaignGoal),
-    framingFamily: resolveFraming(input.productFamily, input.campaignGoal),
+    environmentFamily: resolveEnvironment(input),
+    lightingFamily: resolveLighting(input),
+    lensFamily: resolveLens(input),
+    framingFamily: resolveFraming(input),
     realismProfile: getRealismProfile(input.targetStyle),
     brandingVisibilityRules: resolveBrandingRules(input.logoVisibilityPriority),
     motionAllowance: resolveMotion(input.campaignGoal, input.creativityLevel),

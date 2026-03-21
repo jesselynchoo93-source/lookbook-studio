@@ -195,37 +195,104 @@ export interface ShotArchetype {
   deltaBlueprint: string;
 }
 
-// ── Shot Blueprint ──
+// ── 3-Layer Blueprint System ──
 
 export type FramingFamily = "full_body" | "three_quarter" | "half_body" | "close_up" | "mixed";
 export type MovementLevel = "static" | "subtle" | "moderate" | "active";
 export type CropFamily = "full" | "waist_up" | "chest_up" | "face_detail" | "product_zone";
 export type BrandingEmphasis = "logo_first" | "product_first" | "balanced" | "secondary";
 
-export interface ShotBlueprint {
-  id: string;
+/** Layer 1: Universal rules that apply to every lookbook regardless of product. */
+export interface UniversalBlueprintRules {
+  maxShotsPerCategory: number;
+  guaranteeClarityShot: boolean;
+  guaranteeEditorialWhenCreative: boolean;
+  defaultMaxMotionShots: number;
+  noDuplicateArchetypes: boolean;
+  generationOrderStrategy: "reliability_first" | "category_priority";
+}
+
+/** Layer 2: Family-level blueprint. One per ProductFamily. */
+export interface FamilyShotBlueprint {
+  family: ProductFamily;
   label: string;
-  description: string;
-  /** Archetype roles the blueprint requires (at least one of each must appear) */
-  requiredRoles: string[];
-  /** Optional roles that enhance the set but aren't mandatory */
-  optionalRoles: string[];
-  /** Archetype IDs that must never appear in this blueprint's set */
-  bannedArchetypeIds: string[];
-  /** Preferred framing family; archetypes matching this get a bonus */
+  /** What this family is mainly trying to sell */
+  sellsFocus: string[];
   preferredFramingFamily: FramingFamily;
-  /** Preferred movement level; shots exceeding this get penalised */
-  preferredMovementLevel: MovementLevel;
-  /** Preferred crop family; archetypes matching this get a bonus */
   preferredCropFamily: CropFamily;
-  /** Hard cap on motion shots in the set */
+  preferredMovementLevel: MovementLevel;
   maxMotionShots: number;
-  /** How branding should be handled for this product type */
   brandingEmphasis: BrandingEmphasis;
-  /** Item-specific occlusion zones that should be penalised */
+  /** Archetype IDs that are strongly preferred for this family */
+  preferredArchetypeIds: string[];
+  /** Archetype IDs that should never appear for this family */
+  restrictedArchetypeIds: string[];
+  /** Occlusion zones that penalise archetypes for this family */
   occlusionPenalties: string[];
-  /** Item-specific "what it sells" language hints */
-  sellsLanguage: string[];
+  /** Category priority for generation order (lower index = generate first) */
+  generationCategoryOrder: ShotCategory[];
+  /** DNA resolver hints */
+  dnaHints: {
+    environment: string;
+    lighting: string;
+    lens: string;
+    framing: string;
+    generationNotes: string;
+  };
+}
+
+/** Layer 3: Item-level override. Overrides specific fields from the family blueprint. */
+export interface ItemShotOverride {
+  /** Items this override applies to (lowercase, matched loosely) */
+  items: string[];
+  family: ProductFamily;
+  label: string;
+  /** Override sells focus (replaces family-level) */
+  sellsFocus?: string[];
+  /** Additional archetype IDs to prefer (merged with family) */
+  addPreferredArchetypeIds?: string[];
+  /** Additional archetype IDs to ban (merged with family) */
+  addRestrictedArchetypeIds?: string[];
+  /** Archetype IDs that must appear in the set */
+  requiredArchetypeIds?: string[];
+  /** Override preferred crop family */
+  preferredCropFamily?: CropFamily;
+  /** Override framing family */
+  preferredFramingFamily?: FramingFamily;
+  /** Override branding emphasis */
+  brandingEmphasis?: BrandingEmphasis;
+  /** Override max motion shots */
+  maxMotionShots?: number;
+  /** Additional occlusion penalties (merged with family) */
+  addOcclusionPenalties?: string[];
+  /** Override generation category order */
+  generationCategoryOrder?: ShotCategory[];
+  /** Category-keyed "what it sells" language */
+  whatItSellsByCategory?: Partial<Record<ShotCategory, string>>;
+  /** Additional negative cues for this item */
+  additionalNegativeCues?: string[];
+  /** Delta brief suffix appended to every shot for this item */
+  deltaBriefSuffix?: string;
+}
+
+/** The resolved blueprint after merging item override > family > universal. */
+export interface ResolvedBlueprint {
+  source: string; // e.g. "earrings > jewelry > universal"
+  family: ProductFamily;
+  sellsFocus: string[];
+  preferredFramingFamily: FramingFamily;
+  preferredCropFamily: CropFamily;
+  preferredMovementLevel: MovementLevel;
+  maxMotionShots: number;
+  brandingEmphasis: BrandingEmphasis;
+  preferredArchetypeIds: string[];
+  restrictedArchetypeIds: string[];
+  requiredArchetypeIds: string[];
+  occlusionPenalties: string[];
+  generationCategoryOrder: ShotCategory[];
+  whatItSellsByCategory: Partial<Record<ShotCategory, string>>;
+  additionalNegativeCues: string[];
+  deltaBriefSuffix: string;
 }
 
 // ── Output Types ──
