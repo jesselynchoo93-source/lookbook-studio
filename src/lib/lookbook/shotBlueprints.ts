@@ -7,6 +7,7 @@ import type {
   ProductFamily,
   ShotCategory,
 } from "./types";
+import { resolveEvidencePlan } from "./productEvidence";
 
 // ═══════════════════════════════════════════════
 // LAYER 1: UNIVERSAL RULES
@@ -35,8 +36,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "moderate",
     maxMotionShots: 2,
     brandingEmphasis: "balanced",
-    preferredArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "torso_turn_editorial", "detail_crop_logo_focus"],
-    restrictedArchetypeIds: ["bag_carry_profile", "footwear_ground_focus", "eyewear_portrait_halfbody", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation"],
     occlusionPenalties: ["garment hidden by arm crossing", "logo covered by hand placement"],
     generationCategoryOrder: ["hero", "silhouette", "product_focus", "detail", "editorial", "motion"],
     dnaHints: {
@@ -57,8 +56,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "moderate",
     maxMotionShots: 2,
     brandingEmphasis: "balanced",
-    preferredArchetypeIds: ["hero_full_body_seller", "footwear_ground_focus", "controlled_half_stride", "clean_silhouette_fullbody", "detail_crop_logo_focus"],
-    restrictedArchetypeIds: ["jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "eyewear_portrait_halfbody", "bag_carry_profile", "tailoring_lapel_touch", "cuff_adjustment_tailoring"],
     occlusionPenalties: ["trouser hem covering shoe detail", "shoe floating above ground surface"],
     generationCategoryOrder: ["hero", "product_focus", "silhouette", "motion", "detail", "editorial"],
     dnaHints: {
@@ -79,8 +76,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "subtle",
     maxMotionShots: 1,
     brandingEmphasis: "balanced",
-    preferredArchetypeIds: ["hero_full_body_seller", "bag_carry_profile", "bag_hardware_detail", "bag_construction_detail", "torso_turn_editorial", "side_silhouette"],
-    restrictedArchetypeIds: ["jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "eyewear_portrait_halfbody", "footwear_ground_focus", "tailoring_lapel_touch", "cuff_adjustment_tailoring"],
     occlusionPenalties: ["bag hidden behind body", "strap occluded by arm", "hardware covered by hand grip"],
     generationCategoryOrder: ["hero", "product_focus", "detail", "silhouette", "editorial", "motion"],
     dnaHints: {
@@ -101,8 +96,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "static",
     maxMotionShots: 0,
     brandingEmphasis: "product_first",
-    preferredArchetypeIds: ["portrait_hero_clean", "jewelry_neckline_focus", "three_quarter_ear_reveal", "profile_jewelry_focus", "ear_detail_crop", "mood_portrait_jewelry", "pair_symmetry_validation", "accessory_hand_interaction"],
-    restrictedArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "open_jacket_ease", "tailoring_lapel_touch", "cuff_adjustment_tailoring", "back_view_shape", "controlled_half_stride", "pivot_step", "seated_edge_pose", "seated_forward_lean", "bag_carry_profile", "footwear_ground_focus", "side_silhouette", "detail_crop_logo_focus"],
     occlusionPenalties: ["hands covering product zone", "hair blocking jewelry", "clothing covering the piece", "strong rotation hiding the product"],
     generationCategoryOrder: ["hero", "product_focus", "detail", "editorial", "silhouette", "motion"],
     dnaHints: {
@@ -123,8 +116,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "static",
     maxMotionShots: 0,
     brandingEmphasis: "product_first",
-    preferredArchetypeIds: ["eyewear_portrait_halfbody", "portrait_hero_clean", "three_quarter_ear_reveal", "profile_jewelry_focus", "mood_portrait_jewelry"],
-    restrictedArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "open_jacket_ease", "tailoring_lapel_touch", "cuff_adjustment_tailoring", "back_view_shape", "controlled_half_stride", "pivot_step", "bag_carry_profile", "footwear_ground_focus", "jewelry_neckline_focus", "ear_detail_crop", "pair_symmetry_validation", "accessory_hand_interaction", "detail_crop_logo_focus"],
     occlusionPenalties: ["hands touching frames", "hair covering temple arms", "lens glare hiding eyes"],
     generationCategoryOrder: ["hero", "product_focus", "detail", "editorial", "silhouette", "motion"],
     dnaHints: {
@@ -145,8 +136,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "static",
     maxMotionShots: 0,
     brandingEmphasis: "product_first",
-    preferredArchetypeIds: ["accessory_hand_interaction", "portrait_hero_clean", "mood_portrait_jewelry"],
-    restrictedArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "open_jacket_ease", "tailoring_lapel_touch", "back_view_shape", "controlled_half_stride", "pivot_step", "bag_carry_profile", "footwear_ground_focus", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "detail_crop_logo_focus"],
     occlusionPenalties: ["sleeve covering watch face", "hand position hiding dial", "wrist angle hiding case profile"],
     generationCategoryOrder: ["product_focus", "hero", "detail", "editorial", "silhouette", "motion"],
     dnaHints: {
@@ -167,8 +156,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "subtle",
     maxMotionShots: 1,
     brandingEmphasis: "balanced",
-    preferredArchetypeIds: ["portrait_hero_clean", "eyewear_portrait_halfbody", "three_quarter_ear_reveal", "profile_jewelry_focus", "mood_portrait_jewelry", "detail_crop_logo_focus"],
-    restrictedArchetypeIds: ["footwear_ground_focus", "bag_carry_profile", "jewelry_neckline_focus", "ear_detail_crop", "pair_symmetry_validation", "accessory_hand_interaction", "back_view_shape", "cuff_adjustment_tailoring", "tailoring_lapel_touch"],
     occlusionPenalties: ["hair hiding hat structure", "hand covering brim detail"],
     generationCategoryOrder: ["hero", "product_focus", "silhouette", "detail", "editorial", "motion"],
     dnaHints: {
@@ -189,8 +176,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "static",
     maxMotionShots: 0,
     brandingEmphasis: "balanced",
-    preferredArchetypeIds: ["hero_full_body_seller", "detail_crop_logo_focus", "relaxed_contrapposto", "torso_turn_editorial"],
-    restrictedArchetypeIds: ["footwear_ground_focus", "bag_carry_profile", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "eyewear_portrait_halfbody", "accessory_hand_interaction"],
     occlusionPenalties: ["jacket covering belt buckle", "arms blocking waist view", "untucked shirt hiding belt"],
     generationCategoryOrder: ["hero", "detail", "product_focus", "silhouette", "editorial", "motion"],
     dnaHints: {
@@ -211,8 +196,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "subtle",
     maxMotionShots: 1,
     brandingEmphasis: "balanced",
-    preferredArchetypeIds: ["portrait_hero_clean", "relaxed_contrapposto", "torso_turn_editorial", "detail_crop_logo_focus", "mood_portrait_jewelry"],
-    restrictedArchetypeIds: ["footwear_ground_focus", "bag_carry_profile", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "eyewear_portrait_halfbody", "accessory_hand_interaction"],
     occlusionPenalties: ["scarf bunched and unreadable", "print hidden by tight wrapping"],
     generationCategoryOrder: ["hero", "product_focus", "detail", "silhouette", "editorial", "motion"],
     dnaHints: {
@@ -233,8 +216,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "static",
     maxMotionShots: 0,
     brandingEmphasis: "product_first",
-    preferredArchetypeIds: ["accessory_hand_interaction", "detail_crop_logo_focus", "portrait_hero_clean", "mood_portrait_jewelry"],
-    restrictedArchetypeIds: ["hero_full_body_seller", "clean_silhouette_fullbody", "relaxed_contrapposto", "back_view_shape", "controlled_half_stride", "pivot_step", "bag_carry_profile", "footwear_ground_focus", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation"],
     occlusionPenalties: ["fingers covering product detail", "product lost in wide framing"],
     generationCategoryOrder: ["product_focus", "detail", "hero", "editorial", "silhouette", "motion"],
     dnaHints: {
@@ -255,8 +236,6 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     preferredMovementLevel: "moderate",
     maxMotionShots: 2,
     brandingEmphasis: "balanced",
-    preferredArchetypeIds: ["hero_full_body_seller", "relaxed_contrapposto", "clean_silhouette_fullbody", "torso_turn_editorial", "controlled_half_stride", "mood_environmental_hero"],
-    restrictedArchetypeIds: ["bag_carry_profile", "footwear_ground_focus", "eyewear_portrait_halfbody", "jewelry_neckline_focus", "ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "accessory_hand_interaction"],
     occlusionPenalties: [],
     generationCategoryOrder: ["hero", "silhouette", "editorial", "motion", "product_focus", "detail"],
     dnaHints: {
@@ -280,9 +259,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "jewelry",
     label: "Earrings",
     sellsFocus: ["ear visibility and placement", "scale near face and jawline", "sparkle and metal finish", "skin and neckline relationship", "pair readability and symmetry", "elegance near jawline and neck"],
-    requiredArchetypeIds: ["portrait_hero_clean", "three_quarter_ear_reveal", "ear_detail_crop"],
-    addPreferredArchetypeIds: ["pair_symmetry_validation", "profile_jewelry_focus"],
-    addRestrictedArchetypeIds: ["accessory_hand_interaction", "mood_environmental_hero"],
     preferredCropFamily: "face_detail",
     addOcclusionPenalties: ["hands covering ear area", "hair blocking earrings", "chin occluding earring", "crop cutting the jewelry awkwardly"],
     whatItSellsByCategory: {
@@ -301,8 +277,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "jewelry",
     label: "Necklace",
     sellsFocus: ["chain drape and pendant position", "scale against collarbone and chest", "metal finish and clasp detail", "neckline relationship", "layering potential"],
-    requiredArchetypeIds: ["portrait_hero_clean", "jewelry_neckline_focus"],
-    addPreferredArchetypeIds: ["profile_jewelry_focus"],
     preferredCropFamily: "chest_up",
     addOcclusionPenalties: ["hands covering neckline", "hair covering pendant", "clothing collar hiding chain"],
     whatItSellsByCategory: {
@@ -320,9 +294,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "jewelry",
     label: "Bracelet",
     sellsFocus: ["wrist placement and fit", "clasp and closure detail", "metal or bead finish", "stacking potential", "hand elegance context"],
-    requiredArchetypeIds: ["accessory_hand_interaction"],
-    addPreferredArchetypeIds: ["portrait_hero_clean"],
-    addRestrictedArchetypeIds: ["ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation"],
     preferredCropFamily: "product_zone",
     addOcclusionPenalties: ["sleeve covering bracelet", "hand position hiding clasp"],
     whatItSellsByCategory: {
@@ -340,9 +311,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "jewelry",
     label: "Ring",
     sellsFocus: ["stone visibility and setting", "finger framing and hand posture", "band width and profile", "metal finish", "scale on hand"],
-    requiredArchetypeIds: ["accessory_hand_interaction"],
-    addPreferredArchetypeIds: ["portrait_hero_clean"],
-    addRestrictedArchetypeIds: ["ear_detail_crop", "three_quarter_ear_reveal", "profile_jewelry_focus", "pair_symmetry_validation", "jewelry_neckline_focus"],
     preferredCropFamily: "product_zone",
     addOcclusionPenalties: ["other fingers covering ring", "hand clenched hiding the stone"],
     whatItSellsByCategory: {
@@ -361,8 +329,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "eyewear",
     label: "Sunglasses",
     sellsFocus: ["frame shape on face", "lens tint and reflection", "temple arm profile", "bridge fit", "style and attitude"],
-    requiredArchetypeIds: ["eyewear_portrait_halfbody"],
-    addPreferredArchetypeIds: ["portrait_hero_clean", "profile_jewelry_focus"],
     addOcclusionPenalties: ["harsh glare hiding frame detail", "hair covering temple arms"],
     whatItSellsByCategory: {
       hero: "Frame shape and lens tint on the face. Buyer sees fit, style, and face-framing effect.",
@@ -379,8 +345,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "eyewear",
     label: "Optical Glasses",
     sellsFocus: ["frame shape and face compatibility", "bridge and nose pad fit", "temple arm design", "lens clarity", "intellectual/professional styling"],
-    requiredArchetypeIds: ["eyewear_portrait_halfbody"],
-    addPreferredArchetypeIds: ["portrait_hero_clean", "profile_jewelry_focus"],
     addOcclusionPenalties: ["lens reflection hiding eyes", "frame distortion at angle"],
     whatItSellsByCategory: {
       hero: "Frame shape and fit on the face. Buyer sees how the glasses frame their features.",
@@ -398,8 +362,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "apparel",
     label: "Blazer",
     sellsFocus: ["lapel construction and shoulder line", "fabric drape and button stance", "interior lining glimpse", "layering and styling versatility", "silhouette and proportion"],
-    requiredArchetypeIds: ["hero_full_body_seller", "tailoring_lapel_touch"],
-    addPreferredArchetypeIds: ["open_jacket_ease", "cuff_adjustment_tailoring", "clean_silhouette_fullbody"],
     preferredCropFamily: "full",
     whatItSellsByCategory: {
       hero: "Complete blazer visibility: shoulder line, button stance, length, and proportions at a glance.",
@@ -417,7 +379,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "apparel",
     label: "Dress",
     sellsFocus: ["silhouette and length", "fabric drape and movement", "neckline and bodice detail", "waist definition", "hem line and finishing"],
-    addPreferredArchetypeIds: ["clean_silhouette_fullbody", "controlled_half_stride"],
     preferredFramingFamily: "full_body",
     whatItSellsByCategory: {
       hero: "Complete dress visibility: silhouette, length, neckline, and waist definition at a glance.",
@@ -436,8 +397,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "footwear",
     label: "Sneakers",
     sellsFocus: ["sole design and profile", "upper construction and material", "lacing system", "on-foot stance and energy", "ground presence and movement"],
-    requiredArchetypeIds: ["footwear_ground_focus"],
-    addPreferredArchetypeIds: ["controlled_half_stride", "hero_full_body_seller"],
     maxMotionShots: 2,
     whatItSellsByCategory: {
       hero: "Complete sneaker visibility on foot: shape, lacing, sole profile, and material at a glance.",
@@ -456,8 +415,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "bags",
     label: "Shoulder Bag",
     sellsFocus: ["bag shape and structure on the shoulder", "strap drop and carry position", "body scale and proportion", "hardware and closure visibility", "profile readability and opening"],
-    requiredArchetypeIds: ["bag_carry_profile", "bag_hardware_detail"],
-    addPreferredArchetypeIds: ["hero_full_body_seller", "bag_construction_detail", "side_silhouette", "torso_turn_editorial"],
     generationCategoryOrder: ["hero", "product_focus", "detail", "silhouette", "editorial", "motion"],
     whatItSellsByCategory: {
       hero: "Complete shoulder bag visibility: shape, strap drop, and scale against the body at a glance.",
@@ -475,8 +432,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "bags",
     label: "Tote Bag",
     sellsFocus: ["bag shape and structure when carried", "handle drop length", "interior depth glimpse", "body scale and proportion", "material and stitching"],
-    requiredArchetypeIds: ["bag_carry_profile"],
-    addPreferredArchetypeIds: ["hero_full_body_seller", "bag_hardware_detail", "bag_construction_detail"],
     whatItSellsByCategory: {
       hero: "Complete tote visibility: shape, handles, and scale against the body.",
       product_focus: "Profile carry showing handle drop, bag depth, and how it sits at the side.",
@@ -493,7 +448,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "watches",
     label: "Sport Watch",
     sellsFocus: ["case size and presence on wrist", "dial legibility and markers", "bezel function and detail", "strap durability and material", "active lifestyle context"],
-    requiredArchetypeIds: ["accessory_hand_interaction"],
     maxMotionShots: 1,
     whatItSellsByCategory: {
       hero: "Watch on wrist showing case size, dial, and strap in a natural position.",
@@ -510,7 +464,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "watches",
     label: "Dress Watch",
     sellsFocus: ["case elegance and thinness", "dial craftsmanship", "strap leather or metal quality", "formal wrist presence", "understated luxury"],
-    requiredArchetypeIds: ["accessory_hand_interaction"],
     whatItSellsByCategory: {
       hero: "Watch on wrist in a refined, formal context. Case shape and strap quality visible.",
       product_focus: "Wrist-level close-up showing dial detail, case profile, and strap finish.",
@@ -527,8 +480,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "belts",
     label: "Leather Belt",
     sellsFocus: ["buckle design and hardware", "leather grain and finish", "width and proportion at waist", "stitching and edge detail", "outfit anchoring effect"],
-    requiredArchetypeIds: ["detail_crop_logo_focus"],
-    addPreferredArchetypeIds: ["hero_full_body_seller"],
     whatItSellsByCategory: {
       hero: "Belt visible at the waist, anchoring the outfit. Buckle, width, and leather finish all readable.",
       detail: "Buckle hardware, leather grain, edge stitching, and keeper loop at close range.",
@@ -544,8 +495,6 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     family: "belts",
     label: "Statement Belt",
     sellsFocus: ["buckle or hardware as focal point", "width and visual impact", "styling as a feature piece", "outfit transformation effect"],
-    requiredArchetypeIds: ["detail_crop_logo_focus"],
-    addPreferredArchetypeIds: ["hero_full_body_seller", "relaxed_contrapposto"],
     whatItSellsByCategory: {
       hero: "Statement belt visible as a styling centrepiece. Full outfit context with belt as focal point.",
       detail: "Hardware, chain links, or decorative elements at full magnification.",
@@ -590,16 +539,6 @@ export function resolveBlueprint(input: LookbookInput): ResolvedBlueprint {
     maxMotionShots: itemOverride?.maxMotionShots ?? familyBP.maxMotionShots,
     brandingEmphasis: itemOverride?.brandingEmphasis ?? familyBP.brandingEmphasis,
 
-    preferredArchetypeIds: [
-      ...familyBP.preferredArchetypeIds,
-      ...(itemOverride?.addPreferredArchetypeIds ?? []),
-    ],
-    restrictedArchetypeIds: [
-      ...familyBP.restrictedArchetypeIds,
-      ...(itemOverride?.addRestrictedArchetypeIds ?? []),
-    ],
-    requiredArchetypeIds: itemOverride?.requiredArchetypeIds ?? [],
-
     occlusionPenalties: [
       ...familyBP.occlusionPenalties,
       ...(itemOverride?.addOcclusionPenalties ?? []),
@@ -611,6 +550,9 @@ export function resolveBlueprint(input: LookbookInput): ResolvedBlueprint {
 
     additionalNegativeCues: itemOverride?.additionalNegativeCues ?? [],
     deltaBriefSuffix: itemOverride?.deltaBriefSuffix ?? "",
+
+    // ── Evidence-based planning ──
+    evidencePlan: resolveEvidencePlan(input),
   };
 }
 

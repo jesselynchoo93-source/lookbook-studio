@@ -5,9 +5,14 @@ import type {
   RecommendedShot,
   ScoredArchetype,
   ResolvedBlueprint,
+  EvidenceType,
 } from "./types";
 import { PRODUCT_FAMILY_LABELS } from "./types";
 import { NEGATIVE_DEFAULTS } from "./realismRules";
+import {
+  composeEvidenceSells,
+  FAMILY_FALLBACK_SELLS,
+} from "./productEvidence";
 
 // ── Delta Brief Builder ──
 
@@ -85,10 +90,6 @@ function buildBadges(
 ): string[] {
   const badges: string[] = [];
 
-  if (blueprint.requiredArchetypeIds.includes(archetype.id)) {
-    badges.push("Blueprint required");
-  }
-
   if (input.creativityLevel === "safe" && archetype.creativityBand.includes("safe")) {
     badges.push("Safe");
   }
@@ -136,11 +137,18 @@ function deriveShotPurpose(archetype: ShotArchetype, _input: LookbookInput): str
 function deriveWhatItSells(archetype: ShotArchetype, input: LookbookInput, blueprint: ResolvedBlueprint): string {
   const item = input.specificItem || PRODUCT_FAMILY_LABELS[input.productFamily].toLowerCase();
 
-  // Blueprint category-specific "what it sells" language (highest priority)
+  // Tier 1: Blueprint category-specific "what it sells" language (hand-written, highest priority)
   const blueprintSells = blueprint.whatItSellsByCategory[archetype.shotCategory];
   if (blueprintSells) return blueprintSells;
 
-  // Blueprint sells focus hints
+  // Tier 2: Compose from intersection of archetype capabilities and evidence plan
+  const planEvidence = blueprint.evidencePlan.orderedEvidence.map((e) => e.evidence);
+  const matchedEvidence = archetype.evidenceCapabilities.filter((e) => planEvidence.includes(e));
+  if (matchedEvidence.length >= 2) {
+    return composeEvidenceSells(matchedEvidence, item, archetype.shotCategory);
+  }
+
+  // Tier 3: Blueprint sells focus hints (unchanged)
   if (blueprint.sellsFocus.length > 0) {
     const sellsHints = blueprint.sellsFocus.slice(0, 3).join("; ");
     if (archetype.shotCategory === "hero") {
@@ -151,22 +159,13 @@ function deriveWhatItSells(archetype: ShotArchetype, input: LookbookInput, bluep
     }
   }
 
-  // Generic fallback (product-neutral wording)
-  if (archetype.shotCategory === "hero") {
-    return `Complete visibility of the ${item}. The buyer sees shape, scale, and the full product at a glance.`;
+  // Tier 4: Family-aware generic fallback (replaces old apparel-centric wording)
+  const familyFallback = FAMILY_FALLBACK_SELLS[input.productFamily];
+  if (familyFallback) {
+    const fallbackText = familyFallback[archetype.shotCategory];
+    if (fallbackText) return fallbackText;
   }
-  if (archetype.shotCategory === "silhouette") {
-    return `The shape and profile of the ${item}. Shows how the product looks from a different angle and its overall line.`;
-  }
-  if (archetype.shotCategory === "detail") {
-    return `Construction and material detail of the ${item}. Texture, craftsmanship, and finish quality.`;
-  }
-  if (archetype.shotCategory === "motion") {
-    return `How the ${item} behaves in motion. Buyers see movement and material behaviour that static shots cannot show.`;
-  }
-  if (archetype.shotCategory === "editorial") {
-    return `Lifestyle context and brand aspiration for the ${item}. Elevates the product from an item to a story.`;
-  }
+
   return `The ${item} in its intended use context. Buyers see the product as it would be worn or carried.`;
 }
 
@@ -206,6 +205,12 @@ export function buildRecommendedShot(
 ): RecommendedShot {
   const archetype = scored.archetype;
 
+  // Compute evidence this shot provides (intersection of capabilities and product plan)
+  const planEvidence = blueprint.evidencePlan.orderedEvidence.map((e) => e.evidence);
+  const evidenceProvided: EvidenceType[] = archetype.evidenceCapabilities.filter(
+    (e) => planEvidence.includes(e)
+  );
+
   return {
     position,
     archetype,
@@ -226,5 +231,6 @@ export function buildRecommendedShot(
     badges: buildBadges(archetype, input, blueprint),
     deltaBrief: buildDeltaBrief(archetype, dna, input, blueprint),
     negativeCues: buildNegativeCues(archetype, input, blueprint),
+    evidenceProvided,
   };
 }

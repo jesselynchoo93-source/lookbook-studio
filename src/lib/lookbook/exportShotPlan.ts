@@ -2,6 +2,7 @@ import type {
   MasterShootDNA,
   RecommendedShot,
   LookbookInput,
+  PlanDiagnostics,
 } from "./types";
 import {
   PRODUCT_FAMILY_LABELS,
@@ -16,7 +17,8 @@ export function formatExportText(
   dna: MasterShootDNA,
   shots: RecommendedShot[],
   generationOrder: number[],
-  input: LookbookInput
+  input: LookbookInput,
+  diagnostics?: PlanDiagnostics
 ): string {
   const lines: string[] = [];
 
@@ -61,6 +63,9 @@ export function formatExportText(
     lines.push(`   Role: ${shot.archetype.role}`);
     lines.push(`   Category: ${shot.archetype.shotCategory}`);
     lines.push(`   What it sells: ${shot.whatItSells}`);
+    if (shot.evidenceProvided.length > 0) {
+      lines.push(`   Evidence: ${shot.evidenceProvided.join(", ")}`);
+    }
     lines.push(`   Framing: ${shot.framingDelta}`);
     lines.push(`   Pose: ${shot.poseDelta}`);
     lines.push(`   Branding: ${shot.brandingSafety}`);
@@ -72,6 +77,79 @@ export function formatExportText(
     lines.push("");
     lines.push(`   NEGATIVE CUES:`);
     lines.push(`   ${shot.negativeCues}`);
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+  }
+
+  // Evidence coverage diagnostics
+  if (diagnostics) {
+    lines.push("EVIDENCE COVERAGE DIAGNOSTICS");
+    lines.push("=============================");
+    lines.push("");
+
+    lines.push(`Required evidence covered (${diagnostics.requiredEvidenceCovered.length}):`);
+    if (diagnostics.requiredEvidenceCovered.length > 0) {
+      lines.push(`  ${diagnostics.requiredEvidenceCovered.join(", ")}`);
+    } else {
+      lines.push("  (none)");
+    }
+    lines.push("");
+
+    lines.push(`Recommended evidence covered (${diagnostics.recommendedEvidenceCovered.length}):`);
+    if (diagnostics.recommendedEvidenceCovered.length > 0) {
+      lines.push(`  ${diagnostics.recommendedEvidenceCovered.join(", ")}`);
+    } else {
+      lines.push("  (none)");
+    }
+    lines.push("");
+
+    if (diagnostics.uncoveredEvidence.length > 0) {
+      lines.push(`UNCOVERED evidence (${diagnostics.uncoveredEvidence.length}):`);
+      lines.push(`  ${diagnostics.uncoveredEvidence.join(", ")}`);
+      lines.push("");
+    } else {
+      lines.push("All required and recommended evidence is covered.");
+      lines.push("");
+    }
+
+    // Redundancy warnings
+    const criticalWarnings = diagnostics.redundancyWarnings.filter((w) => w.severity === "critical");
+    const warningWarnings = diagnostics.redundancyWarnings.filter((w) => w.severity === "warning");
+
+    if (criticalWarnings.length > 0) {
+      lines.push("CRITICAL redundancy:");
+      for (const w of criticalWarnings) {
+        lines.push(`  ${w.message}`);
+      }
+      lines.push("");
+    }
+
+    if (warningWarnings.length > 0) {
+      lines.push("Redundancy warnings:");
+      for (const w of warningWarnings) {
+        lines.push(`  ${w.message}`);
+      }
+      lines.push("");
+    }
+
+    if (criticalWarnings.length === 0 && warningWarnings.length === 0) {
+      lines.push("No significant redundancy detected.");
+      lines.push("");
+    }
+
+    // Role mix
+    lines.push("Role mix:");
+    const allCategories = new Set([
+      ...Object.keys(diagnostics.roleMixTarget),
+      ...Object.keys(diagnostics.roleMixActual),
+    ]);
+    for (const cat of allCategories) {
+      const target = (diagnostics.roleMixTarget as Record<string, number>)[cat] ?? 0;
+      const actual = (diagnostics.roleMixActual as Record<string, number>)[cat] ?? 0;
+      const status = actual >= target ? "OK" : "BELOW TARGET";
+      lines.push(`  ${cat}: ${actual}/${target} ${status}`);
+    }
     lines.push("");
     lines.push("---");
     lines.push("");

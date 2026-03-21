@@ -68,6 +68,19 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "Front-facing full body is the industry standard for product clarity because buyers can see the entire garment, fit, and branding in a single frame.",
     deltaBlueprint:
       "Override framing to full-body centred, head to toe. Lock camera straight-on at chest height. Model stands square to lens, weight even, hands relaxed at sides. Prioritise garment visibility over editorial mood. No rotation, no crop. This is the anchor shot.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "full_silhouette",
+      "fit_on_body",
+      "logo_placement",
+      "fabric_drape",
+      "body_scale",
+      "face_scale",
+    ],
+    primaryDisplayZones: ["full_body"],
+    secondaryDisplayZones: ["face", "foot"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -125,6 +138,19 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A clean silhouette reveals garment proportions, drape, and construction that a front-facing shot cannot, giving buyers a three-dimensional understanding of the piece.",
     deltaBlueprint:
       "Shift camera 30-45 degrees to side. Model turns body to three-quarter angle, head rotated slightly back toward lens. Add backlight for edge definition. Hands stay below garment outline. Full body framing with extra negative space behind the model to isolate the shape.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "full_silhouette",
+      "side_profile",
+      "fit_on_body",
+      "fabric_drape",
+      "profile_depth",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body", "side_body"],
+    secondaryDisplayZones: ["face", "shoulder"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -195,6 +221,19 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "Contrapposto adds visual energy and a premium feel to what is still a product-first shot, making the garment look worn rather than displayed.",
     deltaBlueprint:
       "Keep framing and camera from hero setup. Shift model weight onto one leg, drop opposite hip, counter-tilt shoulders for S-curve. One hand rests on hip or thigh. Relaxed knee creates asymmetry. Maintain front-facing orientation for product visibility.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "full_silhouette",
+      "fit_on_body",
+      "logo_placement",
+      "fabric_drape",
+      "body_scale",
+      "face_scale",
+    ],
+    primaryDisplayZones: ["full_body"],
+    secondaryDisplayZones: ["face", "hip", "foot"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -244,6 +283,18 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "Showing the jacket open communicates styling versatility and construction quality, making the product feel more premium and giving buyers a sense of how it wears in real life.",
     deltaBlueprint:
       "Tighten framing to three-quarter body. Model opens jacket with one hand on lapel, revealing the layer underneath. Angle camera 10-20 degrees to show depth inside the jacket. Soften aperture to f/4 for shallow focus on the opening. Editorial gaze, not direct to camera.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "fit_on_body",
+      "fabric_drape",
+      "construction_quality",
+      "styling_context",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["upper_body", "torso_front"],
+    secondaryDisplayZones: ["face", "hip", "hand"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -293,6 +344,17 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "The lapel touch is a classic tailoring gesture that immediately signals craftsmanship, directing the buyer's eye to construction quality.",
     deltaBlueprint:
       "Crop to half body, chest and above. Move camera to eye level at ~2m. Model places one hand on lapel with fingers naturally curved. Slight chin-down angle. Open aperture to f/4 for shallow focus on the lapel zone. Lighting emphasises fabric texture and stitching detail.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "texture_detail",
+      "construction_quality",
+      "fit_on_body",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["upper_body", "torso_front"],
+    secondaryDisplayZones: ["face", "hand", "shoulder"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -342,6 +404,17 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "The cuff adjustment is a universal gesture of refinement that communicates attention to detail and elevates perceived garment quality.",
     deltaBlueprint:
       "Tight crop: wrist and cuff only. Drop camera to waist height, close distance to ~1.5m. Open aperture to f/2.8 for shallow depth isolating the cuff. One hand adjusts opposite cuff. Focused directional light on the detail area. Everything outside the cuff zone falls away.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "texture_detail",
+      "hardware_detail",
+      "construction_quality",
+      "scale_reference",
+    ],
+    primaryDisplayZones: ["wrist", "hand"],
+    secondaryDisplayZones: [],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -403,6 +476,17 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "The torso turn introduces controlled dynamism that breaks the static look of standard product photography, making the set feel editorially cohesive.",
     deltaBlueprint:
       "Reframe to three-quarter body. Model twists upper body 20-40 degrees from hips, head turned further over the leading shoulder. Camera follows rotation at 15-30 degrees off-centre. Increase lighting contrast to define fabric folds in the twist. Arms follow naturally, no rigid posing.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "fit_on_body",
+      "fabric_drape",
+      "styling_context",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["upper_body", "torso_front"],
+    secondaryDisplayZones: ["face", "waist", "shoulder"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -452,6 +536,17 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "The lean communicates effortless confidence and makes the garment look lived-in rather than displayed, which resonates with editorial and lifestyle audiences.",
     deltaBlueprint:
       "Add a wall or architectural surface. Model leans back against it, one foot up against the surface. Shift gaze off-camera. Open framing to include the lean context. One hand in pocket for casual energy. Slightly warmer, natural lighting. Camera catches the relaxed angle from 10-25 degrees to the side.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "fit_on_body",
+      "fabric_drape",
+      "styling_context",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body", "upper_body"],
+    secondaryDisplayZones: ["face", "hip", "foot"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -509,6 +604,19 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A true side profile isolates the garment's silhouette in a way no other angle can, making it the definitive shape reference for the lookbook.",
     deltaBlueprint:
       "Rotate camera to 90 degrees for true profile. Model stands side-on, chin parallel to floor. Add backlight for strong edge separation. Maximise negative space on both sides. Hands stay at sides to preserve the unbroken silhouette line. No body rotation.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "full_silhouette",
+      "side_profile",
+      "fit_on_body",
+      "fabric_drape",
+      "profile_depth",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body", "side_body"],
+    secondaryDisplayZones: [],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -558,6 +666,18 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "The back view completes the 360-degree product story, showing construction details and proportions that buyers cannot see from front or side angles.",
     deltaBlueprint:
       "Move camera behind the model. Full body framing from the rear. Model stands naturally with slight hip offset. Head turned 15-20 degrees over shoulder for subtle editorial quality. Lighting defines shoulder line and back construction. Hands relaxed at sides, not tucked.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "full_silhouette",
+      "back_shape",
+      "fit_on_body",
+      "construction_quality",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body", "torso_back"],
+    secondaryDisplayZones: ["shoulder", "hip"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -607,6 +727,19 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A controlled stride shows how the garment behaves in motion, adding energy and realism that static poses cannot achieve.",
     deltaBlueprint:
       "Model mid-stride with one foot forward, natural arm swing. Drop camera to waist height for slight low-angle energy. Add negative space in the walking direction. Keep stride small and controlled; this is a walk, not a run. Fabric should show subtle movement. Slight angle off straight-on.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "full_silhouette",
+      "fit_on_body",
+      "fabric_drape",
+      "movement_behavior",
+      "on_foot_presence",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body"],
+    secondaryDisplayZones: ["face", "foot", "hip"],
+    showsProductInMotion: true,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -656,6 +789,17 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "The pivot is the highest-energy motion shot, showing how fabric responds to rotational force and creating the most visually dramatic frame in the set.",
     deltaBlueprint:
       "Model caught mid-pivot, one foot planted. Body and fabric trail the rotation. Camera offset 20-30 degrees to catch the spiral. Drop to waist height, open to f/4. Arms flow outward. Generous framing to contain the full arc of movement. This is the most directional shot in the set.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "movement_behavior",
+      "fabric_drape",
+      "fit_on_body",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body"],
+    secondaryDisplayZones: ["face", "hip", "foot"],
+    showsProductInMotion: true,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -705,6 +849,17 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "Seated poses break the standing-pose rhythm and show how the garment behaves in a relaxed state, communicating versatility and effortless style.",
     deltaBlueprint:
       "Add a low surface (bench, step, ledge). Model sits on edge, one leg extended. Torso upright, one hand on knee. Camera at seated eye level, ~3m back. Gaze off-camera for editorial mood. Show how fabric drapes and pools when seated. Warm fill light for relaxed atmosphere.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "fit_on_body",
+      "fabric_drape",
+      "styling_context",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["upper_body", "hip"],
+    secondaryDisplayZones: ["face", "hand", "knee_down"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -754,6 +909,17 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "The forward lean creates psychological intimacy and editorial gravitas, making the viewer feel drawn into the image rather than observing from a distance.",
     deltaBlueprint:
       "Seated setup with model leaning forward, elbows on knees. Drop camera slightly below seated eye level. Open aperture to f/2.8 for shallow depth. Deepen shadows with minimal fill. Hands clasped or loose between legs. This is a mood-first shot; product visibility is secondary to editorial atmosphere.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "fit_on_body",
+      "fabric_drape",
+      "styling_context",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["upper_body", "torso_front"],
+    secondaryDisplayZones: ["face", "hand", "knee_down"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -821,6 +987,16 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A dedicated logo crop validates the product's brand authenticity and gives buyers the close-up brand assurance that wide shots cannot provide.",
     deltaBlueprint:
       "Extreme close-up: crop to the logo or branding zone only. Camera perpendicular to the branding surface. Open aperture to f/2.8 for shallow focus isolating the logo. Even, glare-free lighting. No hands, no face. The brand mark fills the frame. This is a branding validation shot.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "logo_placement",
+      "texture_detail",
+      "label_detail",
+    ],
+    primaryDisplayZones: ["product_only"],
+    secondaryDisplayZones: [],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -870,6 +1046,19 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "Hand interaction provides scale context and styling inspiration for small accessories, making the product feel wearable rather than isolated on a flat surface.",
     deltaBlueprint:
       "Tight crop on the hand and accessory. Camera at accessory height, ~1.5m. Open to f/2.8 for shallow depth isolating the piece. Focused directional light to catch metallic or textured surfaces. One hand presents or adjusts the accessory with fingers naturally curved. Background falls away completely.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "texture_detail",
+      "hardware_detail",
+      "surface_reflection",
+      "wrist_visibility",
+      "finger_visibility",
+      "scale_reference",
+    ],
+    primaryDisplayZones: ["hand", "wrist"],
+    secondaryDisplayZones: [],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -919,6 +1108,18 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A half-body portrait lets buyers see how the eyewear frames the face, which is the primary purchase decision factor for eyewear products.",
     deltaBlueprint:
       "Crop to half body, face and chest. Camera at eye level, ~2m, straight on. Open to f/2.8 for shallow depth on the frames. Soft overhead beauty light with controlled fill to prevent lens glare. Model faces camera directly, hands away from face. The eyewear is the hero, not the outfit.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "face_framing",
+      "fit_on_body",
+      "logo_placement",
+      "surface_reflection",
+      "face_scale",
+    ],
+    primaryDisplayZones: ["face", "upper_body"],
+    secondaryDisplayZones: ["shoulder", "neckline"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -968,6 +1169,18 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A neckline or ear crop shows the jewelry in its wearing context at a scale where buyers can appreciate the craftsmanship, metal finish, and gemstone detail.",
     deltaBlueprint:
       "Crop to neckline area (chin to collarbone) or ear zone. Camera at eye level, ~1.5m, angled 10-15 degrees. Open to f/2.8 for shallow depth on the jewelry. Directional light to catch metal reflections. Chin lifted to expose the neckline. No hands near the jewelry. The piece sits against skin as the focal point.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "neckline_visibility",
+      "texture_detail",
+      "surface_reflection",
+      "hardware_detail",
+      "attachment_point",
+    ],
+    primaryDisplayZones: ["neckline", "collarbone"],
+    secondaryDisplayZones: ["face", "ear", "shoulder"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -1026,6 +1239,19 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A profile carry shot shows the bag's real-world proportions against the body, strap drop length, and silhouette shape, which are the primary purchase considerations for bags.",
     deltaBlueprint:
       "Rotate camera to profile angle (60-90 degrees) with bag side facing lens. Model carries the bag naturally at the intended position. Camera height matches the bag. Open to f/4 with directional light defining bag shape and hardware. Three-quarter to full body framing, with the bag as the visual anchor.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "carry_method",
+      "side_profile",
+      "dimensional_depth",
+      "logo_placement",
+      "attachment_point",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["side_body", "hip", "shoulder"],
+    secondaryDisplayZones: ["hand", "full_body"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -1085,6 +1311,18 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A low-angle footwear shot shows the shoe's design language, sole construction, and material quality from the perspective that best communicates its presence and craftsmanship.",
     deltaBlueprint:
       "Drop camera to ground level, 10-20 degrees up. Crop at knee, both shoes in frame. One foot forward to show profile. Use 35mm lens for slight wide-angle presence. Directional side light at ground level to define sole edges and material texture. Trouser hem visible but the shoe is the hero.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "on_foot_presence",
+      "sole_profile",
+      "texture_detail",
+      "pair_symmetry",
+      "logo_placement",
+    ],
+    primaryDisplayZones: ["foot", "ankle"],
+    secondaryDisplayZones: ["knee_down"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -1146,6 +1384,16 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "An environmental hero places the product in a world, transforming the lookbook from a product catalogue into a brand story that buyers emotionally connect with.",
     deltaBlueprint:
       "Switch to 35mm lens, pull camera back to ~6m for a wide environmental frame. Model occupies 30-40% of the image, environment provides context and mood. Natural or golden-hour lighting. Relaxed pose within the space. This is the editorial bookend of the set; product detail is secondary to atmosphere and brand world.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "styling_context",
+      "fit_on_body",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body"],
+    secondaryDisplayZones: ["face"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -1194,6 +1442,19 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A clean portrait hero gives buyers immediate visibility of jewelry scale, sparkle, and placement against the face and neck, the primary context for purchase decisions.",
     deltaBlueprint:
       "Override framing to half-body portrait, shoulders up. Camera at eye level, ~2m, straight on. Model faces camera, chin neutral, both ears visible. Hands below frame. Soft directional light with catchlight on {item}. Product is the focal point against clean skin. No rotation, no crop below chest.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "fit_on_body",
+      "ear_visibility",
+      "neckline_visibility",
+      "face_framing",
+      "logo_placement",
+      "face_scale",
+    ],
+    primaryDisplayZones: ["face", "neckline", "ear"],
+    secondaryDisplayZones: ["upper_body", "shoulder", "collarbone"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -1242,6 +1503,18 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A three-quarter angle reveals the earring's dimension, drop length, and how it catches light, things a front-on shot cannot fully show. The jawline and neck provide scale context.",
     deltaBlueprint:
       "Shift camera 30-40 degrees toward the featured ear. Model turns head away from camera, chin slightly up, exposing the near ear fully. Hair swept behind the featured ear. Key light from the ear side to catch {item} reflections. Tight portrait crop, face and neck. f/2.8 for shallow depth isolating the earring.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "ear_visibility",
+      "profile_depth",
+      "surface_reflection",
+      "attachment_point",
+      "face_scale",
+    ],
+    primaryDisplayZones: ["face", "ear"],
+    secondaryDisplayZones: ["neckline", "shoulder_line"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -1252,8 +1525,8 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     title: "Profile Jewelry Focus",
     role: "Full profile showing earring silhouette against the jawline and neck.",
     shotCategory: "detail",
-    suitableFamilies: ["jewelry"],
-    suitableItems: ["earrings", "earring", "ear cuff", "drop earring", "hoop", "stud", "necklace"],
+    suitableFamilies: ["jewelry", "eyewear"],
+    suitableItems: ["earrings", "earring", "ear cuff", "drop earring", "hoop", "stud", "necklace", "sunglasses", "glasses", "optical frames"],
     suitableGoals: ["detail_focus", "product_clarity", "silhouette"],
     suitableStyles: ["luxury", "editorial", "minimal", "contemporary", "commercial"],
     suitableGenderPresentation: ["womenswear", "unisex"],
@@ -1290,6 +1563,18 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A clean profile isolates the earring's silhouette against negative space, letting buyers see the exact shape, drop, and movement of the piece against the jawline.",
     deltaBlueprint:
       "Camera at 90-degree profile. Model faces perpendicular to lens, chin slightly lifted, neck elongated. Hair fully behind the ear. Rim light or backlight to separate {item} silhouette from background. Tight crop, ear to shoulder. f/2.8 for shallow depth. The earring's outline against skin and negative space is the entire composition.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "ear_visibility",
+      "side_profile",
+      "neckline_visibility",
+      "attachment_point",
+      "surface_reflection",
+    ],
+    primaryDisplayZones: ["ear", "neckline"],
+    secondaryDisplayZones: ["face", "shoulder_line", "collarbone"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -1338,6 +1623,20 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A detail crop lets buyers examine the craftsmanship, stone quality, and finish that they would inspect in a store. It replaces the logo-crop archetype for jewelry that has no visible text branding.",
     deltaBlueprint:
       "Extreme close-up on the ear zone. {item} fills 60-70% of the frame. Camera at ear level, ~0.8m, angled 15-20 degrees off profile. Focused directional light to catch sparkle and metal finish. Only ear, skin, and the piece are visible. f/2.8 for shallow depth. This is the craftsmanship validation shot.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "ear_visibility",
+      "texture_detail",
+      "hardware_detail",
+      "surface_reflection",
+      "construction_quality",
+      "attachment_point",
+      "pair_symmetry",
+    ],
+    primaryDisplayZones: ["ear"],
+    secondaryDisplayZones: [],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -1386,6 +1685,16 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "An editorial mood portrait elevates the jewelry from a product shot to a brand story, showing who the wearer is and the occasion the piece belongs to, while keeping the product visible.",
     deltaBlueprint:
       "Shift to editorial mood: atmospheric light, slight angle, off-camera gaze. Model relaxed, slight lean or turn. {item} visible and catching light despite the moodier setup. Hands away from the jewelry. Half-body or chest-up crop. The piece reads clearly but the mood tells the brand story.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "fit_on_body",
+      "styling_context",
+      "face_scale",
+    ],
+    primaryDisplayZones: ["face", "upper_body"],
+    secondaryDisplayZones: ["ear", "neckline", "shoulder"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -1434,6 +1743,18 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "A symmetrical front-on shot is the only way to prove the pair matches. It reduces purchase anxiety for e-commerce buyers who cannot inspect both earrings in person.",
     deltaBlueprint:
       "Dead-straight front portrait, 0-degree angle. Both ears fully visible, hair cleared from both sides. Even bilateral lighting for identical illumination on both {item}. Model faces camera squarely, chin neutral. Close crop at collarbone. This is a pair-validation shot: symmetry and matching are the priority.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "pair_symmetry",
+      "symmetry_validation",
+      "ear_visibility",
+      "logo_placement",
+      "face_scale",
+    ],
+    primaryDisplayZones: ["face", "ear"],
+    secondaryDisplayZones: ["neckline", "collarbone"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -1491,6 +1812,18 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "Hardware is how buyers judge bag quality online. A dedicated hardware crop shows craftsmanship, metal finish, and functional details that wider shots lose entirely.",
     deltaBlueprint:
       "Extreme close-up: crop to the bag's primary hardware zone. Camera perpendicular to the metal surface. Directional light to catch metal reflections and define hardware dimension. f/2.8 for shallow focus isolating the hardware against leather or fabric. No face visible. This is a construction quality validation shot for the {item}.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "hardware_detail",
+      "surface_reflection",
+      "closure_mechanism",
+      "texture_detail",
+      "logo_placement",
+    ],
+    primaryDisplayZones: ["hand"],
+    secondaryDisplayZones: ["hip"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 
   // ────────────────────────────────────────────
@@ -1548,5 +1881,16 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
       "Construction close-ups prove quality to buyers who cannot touch the bag in person. Stitching, edge finishing, and material grain are the primary quality signals for bags online.",
     deltaBlueprint:
       "Extreme close-up: crop to the bag's stitching, edge, or interior zone. Raking light from camera-left to reveal texture depth. f/2.8 for shallow focus on the construction detail. Show material grain, stitch quality, and edge finishing. No face visible. This is a craftsmanship validation shot for the {item}.",
+    // ── Evidence capability annotations ──
+    evidenceCapabilities: [
+      "construction_quality",
+      "texture_detail",
+      "interior_capacity",
+      "label_detail",
+    ],
+    primaryDisplayZones: ["hand"],
+    secondaryDisplayZones: ["hip"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
   },
 ];

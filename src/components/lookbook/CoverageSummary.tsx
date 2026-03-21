@@ -27,7 +27,7 @@ export default function CoverageSummaryComponent({
       </p>
       <div className="space-y-2.5">
         {DIMENSIONS.map(({ key, label, color }) => {
-          const value = coverage[key];
+          const value = coverage[key] as number;
           return (
             <div key={key} className="flex items-center gap-3">
               <span className="text-xs text-gray-400 w-20 text-right">

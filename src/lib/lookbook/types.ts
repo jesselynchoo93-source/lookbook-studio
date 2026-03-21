@@ -51,6 +51,145 @@ export type ShotCategory =
   | "editorial"
   | "product_focus";
 
+// ── Evidence & Capability Model ──
+
+/**
+ * What a photograph can prove about a product. Each type is a distinct
+ * visual claim that helps a buyer evaluate the product.
+ *
+ * Scale evidence precedence:
+ * - `face_scale`: preferred when face is materially visible in the frame
+ * - `body_scale`: preferred when torso or full body is visible
+ * - `scale_reference`: generic fallback only when neither face nor torso is visible
+ */
+export type EvidenceType =
+  // Shape and structure
+  | "full_silhouette"       // complete outline of the product, head to toe
+  | "side_profile"          // product shape from ~90-degree angle
+  | "back_shape"            // rear view showing construction
+  // Wear and carry
+  | "fit_on_body"           // how the product sits when worn
+  | "carry_method"          // how a bag is held, slung, or gripped
+  | "wrist_visibility"      // product on wrist, visible
+  | "ear_visibility"        // product on ear, visible
+  | "neckline_visibility"   // product at neckline/collarbone, visible
+  | "finger_visibility"     // product on finger, visible
+  | "face_framing"          // how eyewear/headwear frames the face
+  | "on_foot_presence"      // shoe on foot in context
+  | "waist_anchoring"       // belt at waist, visible
+  // Material and construction
+  | "fabric_drape"          // how fabric falls and moves
+  | "texture_detail"        // close-up material grain, weave, leather
+  | "hardware_detail"       // buckles, clasps, zippers, chain links
+  | "sole_profile"          // shoe sole from low angle
+  | "interior_capacity"     // bag interior, lining, pockets
+  | "construction_quality"  // stitching, edge finishing, joints
+  | "closure_mechanism"     // how a bag/watch/belt closes (clasp, buckle, snap, zipper)
+  | "surface_reflection"    // how light plays on metal, glass, patent leather, gemstones
+  // Branding
+  | "logo_placement"        // brand mark visibility
+  | "label_detail"          // interior label, tag
+  // Dynamic
+  | "movement_behavior"     // how the product moves (stride, swing, drape)
+  // Context
+  | "styling_context"       // product in a lifestyle/editorial setting
+  // Scale (ordered by specificity: face_scale > body_scale > scale_reference)
+  | "scale_reference"       // product size relative to ANY body part (generic fallback only)
+  | "face_scale"            // product size relative to face (preferred when face visible)
+  | "body_scale"            // product size relative to full body/torso (preferred when torso visible)
+  // Depth and dimension
+  | "profile_depth"         // 3D depth/thickness visible from side angle
+  | "dimensional_depth"     // product volume and 3D form (bag structure, watch case thickness)
+  | "attachment_point"      // where the product connects to the body (strap drop, ear hook, clasp)
+  // Symmetry
+  | "pair_symmetry"         // visual confirmation that a matched pair looks balanced (buyer-facing claim)
+  | "symmetry_validation";  // AI rendered both halves correctly (generation quality check)
+
+/** Body region that a camera framing can prominently or partially show. */
+export type DisplayZone =
+  | "full_body"
+  | "upper_body"
+  | "lower_body"
+  | "face"
+  | "ear"
+  | "neckline"
+  | "collarbone"       // distinct from neckline; relevant for necklace chain length
+  | "shoulder"
+  | "shoulder_line"    // neck-to-shoulder-tip line; relevant for bag straps, scarves
+  | "wrist"
+  | "hand"
+  | "waist"
+  | "waist_front"      // front waist specifically; relevant for belt buckle visibility
+  | "hip"
+  | "side_body"        // lateral torso/hip view; relevant for bag carry profiles
+  | "torso_front"
+  | "torso_back"
+  | "knee_down"
+  | "foot"
+  | "ankle"            // between knee_down and foot; ankle boots, ankle bracelets
+  | "product_only";    // no body context; pure product shot (flat lay, isolated)
+
+export type EvidencePriority = "required" | "recommended" | "optional" | "discouraged";
+
+export interface EvidenceRequirement {
+  evidence: EvidenceType;
+  priority: EvidencePriority;
+  /** Scoring weight. Defaults: required=10, recommended=6, optional=3, discouraged=-5 */
+  weight?: number;
+}
+
+/** Family-level evidence specification. */
+export interface FamilyEvidenceSpec {
+  family: ProductFamily;
+  evidenceRequirements: EvidenceRequirement[];
+  /** Target category distribution, e.g. { hero: 1, detail: 1, product_focus: 2 } */
+  categoryRoleMix: Partial<Record<ShotCategory, number>>;
+  /** Display zones where the product lives (used for redundancy detection) */
+  productZones: DisplayZone[];
+}
+
+/** Item-level evidence override. Merged on top of family spec. */
+export interface ItemEvidenceOverride {
+  items: string[];
+  family: ProductFamily;
+  label: string;
+  /** Add or override specific evidence requirements */
+  evidenceOverrides?: EvidenceRequirement[];
+  /** Override category role mix */
+  categoryRoleMix?: Partial<Record<ShotCategory, number>>;
+  /** Override product zones */
+  productZones?: DisplayZone[];
+}
+
+/** Resolved evidence plan after merging item override > family. */
+export interface ResolvedEvidencePlan {
+  /** Ordered list: required evidence first, then recommended, then optional */
+  orderedEvidence: EvidenceRequirement[];
+  /** Target category distribution */
+  categoryRoleMix: Partial<Record<ShotCategory, number>>;
+  /** Zones where the product is worn/carried */
+  productZones: DisplayZone[];
+}
+
+export type RedundancySeverity = "critical" | "warning" | "info";
+
+export interface RedundancyWarning {
+  severity: RedundancySeverity;
+  shotA: number; // position (1-based)
+  shotB: number;
+  sharedEvidence: EvidenceType[];
+  message: string;
+}
+
+export interface PlanDiagnostics {
+  requiredEvidenceCovered: EvidenceType[];
+  recommendedEvidenceCovered: EvidenceType[];
+  uncoveredEvidence: EvidenceType[];
+  redundancyWarnings: RedundancyWarning[];
+  roleMixActual: Partial<Record<ShotCategory, number>>;
+  roleMixTarget: Partial<Record<ShotCategory, number>>;
+}
+
 // ── Label Maps ──
 
 export const PRODUCT_FAMILY_LABELS: Record<ProductFamily, string> = {
@@ -193,6 +332,12 @@ export interface ShotArchetype {
   realismNotes: string;
   whyItWorks: string;
   deltaBlueprint: string;
+  // ── Evidence capability fields ──
+  evidenceCapabilities: EvidenceType[];
+  primaryDisplayZones: DisplayZone[];
+  secondaryDisplayZones: DisplayZone[];
+  showsProductInMotion: boolean;
+  showsFullProduct: boolean;
 }
 
 // ── 3-Layer Blueprint System ──
@@ -223,10 +368,6 @@ export interface FamilyShotBlueprint {
   preferredMovementLevel: MovementLevel;
   maxMotionShots: number;
   brandingEmphasis: BrandingEmphasis;
-  /** Archetype IDs that are strongly preferred for this family */
-  preferredArchetypeIds: string[];
-  /** Archetype IDs that should never appear for this family */
-  restrictedArchetypeIds: string[];
   /** Occlusion zones that penalise archetypes for this family */
   occlusionPenalties: string[];
   /** Category priority for generation order (lower index = generate first) */
@@ -249,12 +390,6 @@ export interface ItemShotOverride {
   label: string;
   /** Override sells focus (replaces family-level) */
   sellsFocus?: string[];
-  /** Additional archetype IDs to prefer (merged with family) */
-  addPreferredArchetypeIds?: string[];
-  /** Additional archetype IDs to ban (merged with family) */
-  addRestrictedArchetypeIds?: string[];
-  /** Archetype IDs that must appear in the set */
-  requiredArchetypeIds?: string[];
   /** Override preferred crop family */
   preferredCropFamily?: CropFamily;
   /** Override framing family */
@@ -285,14 +420,13 @@ export interface ResolvedBlueprint {
   preferredMovementLevel: MovementLevel;
   maxMotionShots: number;
   brandingEmphasis: BrandingEmphasis;
-  preferredArchetypeIds: string[];
-  restrictedArchetypeIds: string[];
-  requiredArchetypeIds: string[];
   occlusionPenalties: string[];
   generationCategoryOrder: ShotCategory[];
   whatItSellsByCategory: Partial<Record<ShotCategory, string>>;
   additionalNegativeCues: string[];
   deltaBriefSuffix: string;
+  // ── Evidence-based planning ──
+  evidencePlan: ResolvedEvidencePlan;
 }
 
 // ── Output Types ──
@@ -318,6 +452,7 @@ export interface RecommendedShot {
   badges: string[];
   deltaBrief: string;
   negativeCues: string;
+  evidenceProvided: EvidenceType[];
 }
 
 export interface CoverageSummary {
@@ -327,6 +462,7 @@ export interface CoverageSummary {
   editorial: number;
   detail: number;
   motion: number;
+  evidenceCoverage: Partial<Record<EvidenceType, number>>;
 }
 
 export interface LookbookPlanResult {
@@ -336,4 +472,5 @@ export interface LookbookPlanResult {
   coverage: CoverageSummary;
   generationOrder: number[];
   exportText: string;
+  diagnostics: PlanDiagnostics;
 }
