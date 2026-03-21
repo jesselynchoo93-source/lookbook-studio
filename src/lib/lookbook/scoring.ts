@@ -3,6 +3,7 @@ import type {
   LookbookInput,
   ScoredArchetype,
   SuitabilityRating,
+  ShotBlueprint,
 } from "./types";
 
 function ratingToNumber(r: SuitabilityRating): number {
@@ -11,19 +12,82 @@ function ratingToNumber(r: SuitabilityRating): number {
   return 20;
 }
 
+// ── Occlusion Rules ──
+
+interface OcclusionRule {
+  items: string[];
+  penalties: { archetypeIdPattern?: string; fieldMatch?: Partial<Record<keyof ShotArchetype, string>>; reason: string; penalty: number }[];
+}
+
+const OCCLUSION_RULES: OcclusionRule[] = [
+  {
+    items: ["earrings", "earring", "ear cuff", "hoop", "stud", "drop earring"],
+    penalties: [
+      { archetypeIdPattern: "hand_interaction", reason: "hands likely cover ear area", penalty: -50 },
+      { archetypeIdPattern: "back_view", reason: "back angle hides earrings completely", penalty: -60 },
+      { archetypeIdPattern: "full_body", reason: "earrings too small to read at full-body scale", penalty: -40 },
+      { archetypeIdPattern: "silhouette_fullbody", reason: "full-body silhouette does not show earring detail", penalty: -50 },
+      { archetypeIdPattern: "contrapposto", reason: "full-body pose loses earring at this scale", penalty: -40 },
+      { archetypeIdPattern: "half_stride", reason: "motion makes earring unreadable", penalty: -40 },
+      { archetypeIdPattern: "pivot_step", reason: "rotation hides the featured ear", penalty: -40 },
+      { archetypeIdPattern: "seated", reason: "seated poses often angle head away from optimal earring visibility", penalty: -25 },
+      { archetypeIdPattern: "logo_focus", reason: "earrings have no logo zone for a logo crop", penalty: -60 },
+    ],
+  },
+  {
+    items: ["necklace", "pendant", "choker", "chain"],
+    penalties: [
+      { archetypeIdPattern: "full_body", reason: "necklace too small at full-body scale", penalty: -30 },
+      { archetypeIdPattern: "back_view", reason: "necklace not visible from behind", penalty: -60 },
+      { archetypeIdPattern: "half_stride", reason: "motion bounces necklace unpredictably", penalty: -25 },
+    ],
+  },
+];
+
+function getOcclusionPenalty(archetype: ShotArchetype, input: LookbookInput): { penalty: number; reasons: string[] } {
+  const item = (input.specificItem || "").toLowerCase();
+  let totalPenalty = 0;
+  const reasons: string[] = [];
+
+  for (const rule of OCCLUSION_RULES) {
+    if (!rule.items.some((i) => item.includes(i) || i.includes(item))) continue;
+
+    for (const p of rule.penalties) {
+      if (p.archetypeIdPattern && archetype.id.includes(p.archetypeIdPattern)) {
+        totalPenalty += p.penalty;
+        reasons.push(p.reason);
+      }
+    }
+  }
+
+  return { penalty: totalPenalty, reasons };
+}
+
+// ── Blueprint-Aware Filtering ──
+
+export function filterArchetypesByBlueprint(
+  archetypes: ShotArchetype[],
+  blueprint: ShotBlueprint
+): ShotArchetype[] {
+  return archetypes.filter((a) => !blueprint.bannedArchetypeIds.includes(a.id));
+}
+
+// ── Scoring ──
+
 export function scoreArchetype(
   archetype: ShotArchetype,
-  input: LookbookInput
+  input: LookbookInput,
+  blueprint: ShotBlueprint | null
 ): ScoredArchetype {
   let score = 0;
   const reasons: string[] = [];
 
-  // Family match (+20)
+  // Family match (+20 / -40)
   if (archetype.suitableFamilies.includes(input.productFamily)) {
     score += 20;
     reasons.push("product family match");
   } else {
-    score -= 40; // strong penalty for family mismatch
+    score -= 40;
   }
 
   // Specific item match (+10)
@@ -128,6 +192,49 @@ export function scoreArchetype(
   ) {
     score += 10;
     reasons.push("branding-safe archetype");
+  }
+
+  // Blueprint bonuses
+  if (blueprint) {
+    // Required role bonus (+30)
+    if (blueprint.requiredRoles.includes(archetype.id)) {
+      score += 30;
+      reasons.push("blueprint required role");
+    }
+
+    // Optional role bonus (+15)
+    if (blueprint.optionalRoles.includes(archetype.id)) {
+      score += 15;
+      reasons.push("blueprint optional role");
+    }
+
+    // Framing family match (+10)
+    const framingLower = archetype.defaultFraming.toLowerCase();
+    if (
+      (blueprint.preferredFramingFamily === "close_up" && (framingLower.includes("close") || framingLower.includes("crop"))) ||
+      (blueprint.preferredFramingFamily === "half_body" && (framingLower.includes("half") || framingLower.includes("chest"))) ||
+      (blueprint.preferredFramingFamily === "full_body" && framingLower.includes("full body"))
+    ) {
+      score += 10;
+      reasons.push("preferred framing match");
+    }
+
+    // Movement level penalty (-20 for exceeding preferred)
+    const movementLevels = { static: 0, subtle: 1, moderate: 2, active: 3 };
+    const archetypeMovement = archetype.movementSuitability === "high" ? 3
+      : archetype.movementSuitability === "medium" ? 2
+      : archetype.shotCategory === "motion" ? 3 : 0;
+    if (archetypeMovement > movementLevels[blueprint.preferredMovementLevel]) {
+      score -= 20;
+      reasons.push("exceeds preferred movement level");
+    }
+  }
+
+  // Occlusion penalties (item-specific)
+  const occlusion = getOcclusionPenalty(archetype, input);
+  if (occlusion.penalty < 0) {
+    score += occlusion.penalty;
+    reasons.push(...occlusion.reasons);
   }
 
   return { archetype, score, matchReasons: reasons };

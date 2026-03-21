@@ -195,6 +195,39 @@ export interface ShotArchetype {
   deltaBlueprint: string;
 }
 
+// ── Shot Blueprint ──
+
+export type FramingFamily = "full_body" | "three_quarter" | "half_body" | "close_up" | "mixed";
+export type MovementLevel = "static" | "subtle" | "moderate" | "active";
+export type CropFamily = "full" | "waist_up" | "chest_up" | "face_detail" | "product_zone";
+export type BrandingEmphasis = "logo_first" | "product_first" | "balanced" | "secondary";
+
+export interface ShotBlueprint {
+  id: string;
+  label: string;
+  description: string;
+  /** Archetype roles the blueprint requires (at least one of each must appear) */
+  requiredRoles: string[];
+  /** Optional roles that enhance the set but aren't mandatory */
+  optionalRoles: string[];
+  /** Archetype IDs that must never appear in this blueprint's set */
+  bannedArchetypeIds: string[];
+  /** Preferred framing family; archetypes matching this get a bonus */
+  preferredFramingFamily: FramingFamily;
+  /** Preferred movement level; shots exceeding this get penalised */
+  preferredMovementLevel: MovementLevel;
+  /** Preferred crop family; archetypes matching this get a bonus */
+  preferredCropFamily: CropFamily;
+  /** Hard cap on motion shots in the set */
+  maxMotionShots: number;
+  /** How branding should be handled for this product type */
+  brandingEmphasis: BrandingEmphasis;
+  /** Item-specific occlusion zones that should be penalised */
+  occlusionPenalties: string[];
+  /** Item-specific "what it sells" language hints */
+  sellsLanguage: string[];
+}
+
 // ── Output Types ──
 
 export interface ScoredArchetype {
