@@ -12,6 +12,12 @@ export const STARTER_PRESETS: StarterPreset[] = [
       targetStyle: "commercial",
       shotCount: 6,
     },
+    explanation: {
+      shotMix: "Hero and product-focus shots dominate. Minimal editorial.",
+      brandingPriority: "High. Logos and brand marks stay readable.",
+      creativityPosture: "Safe. Clean, proven poses only.",
+      balance: "Fully commercial. Every shot is a selling image.",
+    },
   },
   {
     id: "balanced_lookbook",
@@ -23,6 +29,12 @@ export const STARTER_PRESETS: StarterPreset[] = [
       creativityLevel: "balanced",
       targetStyle: "luxury",
       shotCount: 6,
+    },
+    explanation: {
+      shotMix: "Even spread of hero, silhouette, detail, and editorial.",
+      brandingPriority: "Medium. Branding appears naturally, not forced.",
+      creativityPosture: "Balanced. Mix of commercial and fashion-forward.",
+      balance: "Half commercial, half editorial. Versatile set.",
     },
   },
   {
@@ -36,6 +48,12 @@ export const STARTER_PRESETS: StarterPreset[] = [
       targetStyle: "editorial",
       shotCount: 6,
     },
+    explanation: {
+      shotMix: "Editorial and motion shots lead. Fewer product-focus shots.",
+      brandingPriority: "Low. Branding is subtle or hidden.",
+      creativityPosture: "Directional. Fashion-forward poses, higher risk.",
+      balance: "Mostly editorial. Mood and identity over product detail.",
+    },
   },
   {
     id: "accessory_focus",
@@ -47,6 +65,12 @@ export const STARTER_PRESETS: StarterPreset[] = [
       creativityLevel: "balanced",
       targetStyle: "luxury",
       shotCount: 6,
+    },
+    explanation: {
+      shotMix: "Heavy on detail and product-focus. Fewer full-body shots.",
+      brandingPriority: "Medium. Branding where naturally visible.",
+      creativityPosture: "Balanced. Clean crops with some editorial flair.",
+      balance: "Product-led. Craftsmanship and texture take priority.",
     },
   },
   {
@@ -60,6 +84,12 @@ export const STARTER_PRESETS: StarterPreset[] = [
       targetStyle: "tailoring",
       shotCount: 6,
     },
+    explanation: {
+      shotMix: "Silhouette and detail shots prominent. Construction emphasis.",
+      brandingPriority: "Medium. Quality speaks for itself.",
+      creativityPosture: "Balanced. Refined poses, no streetwear energy.",
+      balance: "Premium commercial. Sophisticated, not flashy.",
+    },
   },
   {
     id: "brand_heavy_merch",
@@ -71,6 +101,12 @@ export const STARTER_PRESETS: StarterPreset[] = [
       creativityLevel: "safe",
       targetStyle: "street",
       shotCount: 6,
+    },
+    explanation: {
+      shotMix: "Hero-heavy. Logo and brand mark always visible.",
+      brandingPriority: "High. Every shot must show the brand clearly.",
+      creativityPosture: "Safe. Straightforward streetwear poses.",
+      balance: "Fully commercial. Brand identity is the product.",
     },
   },
 ];

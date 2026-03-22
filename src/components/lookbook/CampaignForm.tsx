@@ -1,7 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import type { LookbookInput, ProductFamily, CampaignGoal, TargetStyle, GenderPresentation, LogoVisibilityPriority, CreativityLevel } from "@/lib/lookbook/types";
+import { useState, useEffect, useRef, useCallback } from "react";
+import type {
+  LookbookInput,
+  ProductFamily,
+  CampaignGoal,
+  TargetStyle,
+  GenderPresentation,
+  LogoVisibilityPriority,
+  CreativityLevel,
+  SettingsDriver,
+} from "@/lib/lookbook/types";
 import type { RecommendedSettings } from "@/lib/lookbook/recommendSettings";
 import { getRecommendedSettings } from "@/lib/lookbook/recommendSettings";
 import { STARTER_PRESETS } from "@/lib/lookbook/starterPresets";
@@ -27,13 +36,20 @@ const DEFAULT_INPUT: LookbookInput = {
 
 export default function CampaignForm({ onSubmit }: CampaignFormProps) {
   const [input, setInput] = useState<LookbookInput>(DEFAULT_INPUT);
+
+  // ── Settings driver: tracks what is currently controlling goal/logo/creativity ──
+  // "preset"           = user selected a creative direction
+  // "ai_recommended"   = AI auto-applied based on product/style
+  // "custom"           = user manually edited without a preset base
+  // "modified_preset"  = user started from a preset then changed something
+  const [settingsDriver, setSettingsDriver] = useState<SettingsDriver>("ai_recommended");
   const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
 
-  // Track whether the user has manually changed goal/logo/creativity
-  // Once they have, we stop auto-applying recommendations on context changes.
-  const [hasManualOverride, setHasManualOverride] = useState(false);
+  // When a preset is active and product changes, the recommendation becomes a
+  // pending suggestion rather than auto-applying. This stores it.
+  const [pendingRecommendation, setPendingRecommendation] = useState<RecommendedSettings | null>(null);
 
-  // Track the context keys that drive recommendations (for auto-apply on change)
+  // Track the context keys that drive recommendations (for detecting changes)
   const prevContextRef = useRef({
     productFamily: input.productFamily,
     specificItem: input.specificItem,
@@ -41,7 +57,7 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
     genderPresentation: input.genderPresentation,
   });
 
-  // Auto-apply recommendation when context changes (unless user has manually overridden)
+  // ── Auto-apply or suggest recommendation when context changes ──
   useEffect(() => {
     const prev = prevContextRef.current;
     const contextChanged =
@@ -50,19 +66,27 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
       prev.targetStyle !== input.targetStyle ||
       prev.genderPresentation !== input.genderPresentation;
 
-    if (contextChanged && !hasManualOverride) {
+    if (contextChanged) {
       const rec = getRecommendedSettings({
         productFamily: input.productFamily,
         specificItem: input.specificItem,
         genderPresentation: input.genderPresentation,
         targetStyle: input.targetStyle,
       });
-      setInput(prev => ({
-        ...prev,
-        campaignGoal: rec.campaignGoal,
-        logoVisibilityPriority: rec.logoVisibilityPriority,
-        creativityLevel: rec.creativityLevel,
-      }));
+
+      if (settingsDriver === "ai_recommended") {
+        // No preset active, no manual edits: auto-apply freely
+        setInput(prev => ({
+          ...prev,
+          campaignGoal: rec.campaignGoal,
+          logoVisibilityPriority: rec.logoVisibilityPriority,
+          creativityLevel: rec.creativityLevel,
+        }));
+        setPendingRecommendation(null);
+      } else {
+        // Preset, custom, or modified_preset active: show as suggestion, don't override
+        setPendingRecommendation(rec);
+      }
     }
 
     prevContextRef.current = {
@@ -71,73 +95,118 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
       targetStyle: input.targetStyle,
       genderPresentation: input.genderPresentation,
     };
-  }, [input.productFamily, input.specificItem, input.targetStyle, input.genderPresentation, hasManualOverride]);
+  }, [input.productFamily, input.specificItem, input.targetStyle, input.genderPresentation, settingsDriver]);
 
-  const handlePresetSelect = (defaults: Partial<LookbookInput>) => {
+  // ── Preset selection ──
+  const handlePresetSelect = useCallback((defaults: Partial<LookbookInput>) => {
     setInput(prev => ({ ...prev, ...defaults }));
-    setHasManualOverride(false); // Presets reset manual override
+    setSettingsDriver("preset");
+    setPendingRecommendation(null);
     const match = STARTER_PRESETS.find(
       (p) => JSON.stringify(p.defaults) === JSON.stringify(defaults)
     );
     setSelectedPresetId(match?.id);
-  };
+  }, []);
 
-  const handleApplyRecommendation = (rec: RecommendedSettings) => {
+  // ── Clear preset (deselect) ──
+  const handleClearPreset = useCallback(() => {
+    setSelectedPresetId(undefined);
+    setSettingsDriver("ai_recommended");
+    // Auto-apply current recommendation
+    const rec = getRecommendedSettings({
+      productFamily: input.productFamily,
+      specificItem: input.specificItem,
+      genderPresentation: input.genderPresentation,
+      targetStyle: input.targetStyle,
+    });
     setInput(prev => ({
       ...prev,
       campaignGoal: rec.campaignGoal,
       logoVisibilityPriority: rec.logoVisibilityPriority,
       creativityLevel: rec.creativityLevel,
     }));
-    setHasManualOverride(false); // Explicitly applying recommendation resets override
-  };
+    setPendingRecommendation(null);
+  }, [input.productFamily, input.specificItem, input.genderPresentation, input.targetStyle]);
 
-  // When the user manually changes goal/logo/creativity, mark as overridden
-  const handleGoalChange = (v: CampaignGoal) => {
+  // ── Apply recommendation (user clicks "Apply recommendation") ──
+  const handleApplyRecommendation = useCallback((rec: RecommendedSettings) => {
+    setInput(prev => ({
+      ...prev,
+      campaignGoal: rec.campaignGoal,
+      logoVisibilityPriority: rec.logoVisibilityPriority,
+      creativityLevel: rec.creativityLevel,
+    }));
+    setSettingsDriver("ai_recommended");
+    setSelectedPresetId(undefined);
+    setPendingRecommendation(null);
+  }, []);
+
+  // ── Keep preset (dismiss the pending recommendation) ──
+  const handleKeepPreset = useCallback(() => {
+    setPendingRecommendation(null);
+  }, []);
+
+  // ── Manual edits to goal/logo/creativity ──
+  const handleGoalChange = useCallback((v: CampaignGoal) => {
     setInput(prev => ({ ...prev, campaignGoal: v }));
-    setHasManualOverride(true);
-    setSelectedPresetId(undefined);
-  };
-  const handleLogoChange = (v: LogoVisibilityPriority) => {
-    setInput(prev => ({ ...prev, logoVisibilityPriority: v }));
-    setHasManualOverride(true);
-    setSelectedPresetId(undefined);
-  };
-  const handleCreativityChange = (v: CreativityLevel) => {
-    setInput(prev => ({ ...prev, creativityLevel: v }));
-    setHasManualOverride(true);
-    setSelectedPresetId(undefined);
-  };
+    setSettingsDriver(prev =>
+      prev === "preset" || prev === "modified_preset" ? "modified_preset" : "custom"
+    );
+    setPendingRecommendation(null);
+  }, []);
 
-  // Context changes (product, item, style, gender) do NOT set manual override
-  const handleFamilyChange = (f: ProductFamily) => {
+  const handleLogoChange = useCallback((v: LogoVisibilityPriority) => {
+    setInput(prev => ({ ...prev, logoVisibilityPriority: v }));
+    setSettingsDriver(prev =>
+      prev === "preset" || prev === "modified_preset" ? "modified_preset" : "custom"
+    );
+    setPendingRecommendation(null);
+  }, []);
+
+  const handleCreativityChange = useCallback((v: CreativityLevel) => {
+    setInput(prev => ({ ...prev, creativityLevel: v }));
+    setSettingsDriver(prev =>
+      prev === "preset" || prev === "modified_preset" ? "modified_preset" : "custom"
+    );
+    setPendingRecommendation(null);
+  }, []);
+
+  // ── Context changes (product, item, style, gender) ──
+  // These do NOT change the driver directly; the useEffect above handles the logic.
+  const handleFamilyChange = useCallback((f: ProductFamily) => {
     setInput(prev => ({ ...prev, productFamily: f, specificItem: "" }));
-    setSelectedPresetId(undefined);
-  };
-  const handleItemChange = (item: string) => {
+  }, []);
+
+  const handleItemChange = useCallback((item: string) => {
     setInput(prev => ({ ...prev, specificItem: item }));
-    setSelectedPresetId(undefined);
-  };
-  const handleStyleChange = (v: TargetStyle) => {
+  }, []);
+
+  const handleStyleChange = useCallback((v: TargetStyle) => {
     setInput(prev => ({ ...prev, targetStyle: v }));
-    setSelectedPresetId(undefined);
-  };
-  const handleGenderChange = (v: GenderPresentation) => {
+  }, []);
+
+  const handleGenderChange = useCallback((v: GenderPresentation) => {
     setInput(prev => ({ ...prev, genderPresentation: v }));
-    setSelectedPresetId(undefined);
-  };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(input);
   };
 
+  // Find the active preset object for explanation display
+  const activePreset = selectedPresetId
+    ? STARTER_PRESETS.find(p => p.id === selectedPresetId)
+    : undefined;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Starter Presets */}
+      {/* Creative Direction Presets */}
       <StarterPresetPicker
         onSelect={handlePresetSelect}
+        onClear={handleClearPreset}
         selectedId={selectedPresetId}
+        activePreset={activePreset}
       />
 
       {/* Divider */}
@@ -167,7 +236,9 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
         notes={input.notes || ""}
         productFamily={input.productFamily}
         specificItem={input.specificItem}
-        hasManualOverride={hasManualOverride}
+        settingsDriver={settingsDriver}
+        selectedPresetId={selectedPresetId}
+        pendingRecommendation={pendingRecommendation}
         onGoalChange={handleGoalChange}
         onStyleChange={handleStyleChange}
         onGenderChange={handleGenderChange}
@@ -175,6 +246,7 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
         onCreativityChange={handleCreativityChange}
         onNotesChange={(v: string) => setInput(prev => ({ ...prev, notes: v }))}
         onApplyRecommendation={handleApplyRecommendation}
+        onKeepPreset={handleKeepPreset}
       />
 
       {/* Submit */}

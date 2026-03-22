@@ -511,46 +511,49 @@ export function runBriefQualityPass(shots: RecommendedShot[]): BriefQualityIssue
     }
   }
 
-  // Cross-shot trailing sentence repetition: CORRECTIVE
-  // Extract the last sentence from each brief. If repeated across 3+ shots,
-  // strip it from all but the first occurrence and log the correction.
-  const trailingSentences = shots.map((s) => {
-    const sentences = s.deltaBrief.split(/\.\s+/).filter(Boolean);
-    const last = sentences[sentences.length - 1]?.toLowerCase().trim() || "";
-    return { position: s.position, sentence: last, shotRef: s };
-  });
-  const trailingCounts = new Map<string, { positions: number[]; shotRefs: RecommendedShot[]; rawSentence: string }>();
-  for (const { position, sentence, shotRef } of trailingSentences) {
-    if (sentence.length > 15) {
-      const entry = trailingCounts.get(sentence) || { positions: [], shotRefs: [], rawSentence: "" };
-      entry.positions.push(position);
-      entry.shotRefs.push(shotRef);
-      // Keep the original-case version from the first occurrence
-      if (!entry.rawSentence) {
-        const sentences = shotRef.deltaBrief.split(/\.\s+/).filter(Boolean);
-        entry.rawSentence = sentences[sentences.length - 1]?.trim() || "";
-      }
-      trailingCounts.set(sentence, entry);
-    }
-  }
-  for (const [, { positions, shotRefs, rawSentence }] of trailingCounts) {
-    if (positions.length >= 3) {
-      // Keep the trailing sentence on the first shot, strip from the rest
-      for (let i = 1; i < shotRefs.length; i++) {
-        const shot = shotRefs[i];
-        // Remove the trailing sentence (case-insensitive match at end of brief)
-        const escaped = rawSentence.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const pattern = new RegExp(`\\.?\\s*${escaped}\\.?\\s*$`, "i");
-        const cleaned = shot.deltaBrief.replace(pattern, "").trim();
-        if (cleaned !== shot.deltaBrief && cleaned.length > 20) {
-          shot.deltaBrief = cleaned.endsWith(".") ? cleaned : cleaned + ".";
+  // Cross-shot trailing sentence repetition: CORRECTIVE (iterative)
+  // Stripping one repeated trailing phrase may expose the next sentence as the new
+  // trailing phrase, which itself may be repeated. Loop until stable.
+  const MAX_TRAILING_PASSES = 4;
+  for (let pass = 0; pass < MAX_TRAILING_PASSES; pass++) {
+    const trailingSentences = shots.map((s) => {
+      const sentences = s.deltaBrief.split(/\.\s+/).filter(Boolean);
+      const last = sentences[sentences.length - 1]?.toLowerCase().trim() || "";
+      return { position: s.position, sentence: last, shotRef: s };
+    });
+    const trailingCounts = new Map<string, { positions: number[]; shotRefs: RecommendedShot[]; rawSentence: string }>();
+    for (const { position, sentence, shotRef } of trailingSentences) {
+      if (sentence.length > 15) {
+        const entry = trailingCounts.get(sentence) || { positions: [], shotRefs: [], rawSentence: "" };
+        entry.positions.push(position);
+        entry.shotRefs.push(shotRef);
+        if (!entry.rawSentence) {
+          const sentences = shotRef.deltaBrief.split(/\.\s+/).filter(Boolean);
+          entry.rawSentence = sentences[sentences.length - 1]?.trim() || "";
         }
+        trailingCounts.set(sentence, entry);
       }
-      issues.push({
-        shotPosition: positions[0],
-        issue: `[CORRECTED] Trailing phrase "${rawSentence.slice(0, 50)}..." was repeated in ${positions.length} shots; stripped from shots ${positions.slice(1).join(", ")}`,
-      });
     }
+    let correctedThisPass = false;
+    for (const [, { positions, shotRefs, rawSentence }] of trailingCounts) {
+      if (positions.length >= 3) {
+        for (let i = 1; i < shotRefs.length; i++) {
+          const shot = shotRefs[i];
+          const escaped = rawSentence.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const pattern = new RegExp(`\\.?\\s*${escaped}\\.?\\s*$`, "i");
+          const cleaned = shot.deltaBrief.replace(pattern, "").trim();
+          if (cleaned !== shot.deltaBrief && cleaned.length > 20) {
+            shot.deltaBrief = cleaned.endsWith(".") ? cleaned : cleaned + ".";
+            correctedThisPass = true;
+          }
+        }
+        issues.push({
+          shotPosition: positions[0],
+          issue: `[CORRECTED] Trailing phrase "${rawSentence.slice(0, 50)}..." was repeated in ${positions.length} shots; stripped from shots ${positions.slice(1).join(", ")}`,
+        });
+      }
+    }
+    if (!correctedThisPass) break;
   }
 
   // Cross-shot realism guardrail uniqueness (all guardrails should be shot-specific, not identical)

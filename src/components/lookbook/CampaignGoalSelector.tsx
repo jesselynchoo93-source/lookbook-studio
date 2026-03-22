@@ -7,6 +7,7 @@ import type {
   LogoVisibilityPriority,
   CreativityLevel,
   ProductFamily,
+  SettingsDriver,
 } from "@/lib/lookbook/types";
 import {
   GOAL_LABELS,
@@ -43,6 +44,27 @@ const CREATIVITY_DESCRIPTIONS: Record<CreativityLevel, string> = {
   directional: "More fashion-forward, higher risk",
 };
 
+// ── Driver badge labels and styles ──
+
+const DRIVER_BADGE: Record<SettingsDriver, { label: string; className: string }> = {
+  preset: {
+    label: "Preset Active",
+    className: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  },
+  ai_recommended: {
+    label: "AI Recommended",
+    className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  },
+  custom: {
+    label: "Custom",
+    className: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  },
+  modified_preset: {
+    label: "Modified from Preset",
+    className: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  },
+};
+
 // ── Props ──
 
 interface CampaignGoalSelectorProps {
@@ -54,7 +76,9 @@ interface CampaignGoalSelectorProps {
   notes: string;
   productFamily: ProductFamily;
   specificItem?: string;
-  hasManualOverride: boolean;
+  settingsDriver: SettingsDriver;
+  selectedPresetId?: string;
+  pendingRecommendation: RecommendedSettings | null;
   onGoalChange: (v: CampaignGoal) => void;
   onStyleChange: (v: TargetStyle) => void;
   onGenderChange: (v: GenderPresentation) => void;
@@ -62,6 +86,7 @@ interface CampaignGoalSelectorProps {
   onCreativityChange: (v: CreativityLevel) => void;
   onNotesChange: (v: string) => void;
   onApplyRecommendation: (rec: RecommendedSettings) => void;
+  onKeepPreset: () => void;
 }
 
 // ── Generic Select Field with descriptions ──
@@ -115,42 +140,27 @@ const genderOptions = Object.keys(GENDER_LABELS) as GenderPresentation[];
 const logoOptions = Object.keys(LOGO_LABELS) as LogoVisibilityPriority[];
 const creativityOptions = Object.keys(CREATIVITY_LABELS) as CreativityLevel[];
 
-// ── Recommendation Card ──
+// ── Active Recommendation Card (currently applied) ──
 
-function RecommendationCard({
+function ActiveRecommendationCard({
   recommendation,
-  isActive,
-  onApply,
 }: {
   recommendation: RecommendedSettings;
-  isActive: boolean;
-  onApply: () => void;
 }) {
   return (
     <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
-            Suggested settings
+            Recommended Settings for This Product
           </p>
           <p className="text-sm font-medium text-white">
             {recommendation.title}
           </p>
         </div>
-        {!isActive && (
-          <button
-            type="button"
-            onClick={onApply}
-            className="shrink-0 text-xs bg-white text-gray-900 font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
-          >
-            Use suggested
-          </button>
-        )}
-        {isActive && (
-          <span className="shrink-0 text-xs text-green-400 font-medium px-3 py-1.5">
-            Applied
-          </span>
-        )}
+        <span className="shrink-0 text-xs text-emerald-400 font-medium px-3 py-1.5">
+          Active
+        </span>
       </div>
 
       <div className="flex gap-4 text-xs text-gray-300 mb-2">
@@ -159,9 +169,97 @@ function RecommendationCard({
         <span>Creativity: <span className="text-white">{CREATIVITY_LABELS[recommendation.creativityLevel]}</span></span>
       </div>
 
-      <p className="text-xs text-gray-400 leading-relaxed">
+      <p className="text-xs text-gray-500 leading-relaxed">
+        Based on your selected product, style, and model presentation.
+      </p>
+      <p className="text-xs text-gray-400 leading-relaxed mt-1">
         {recommendation.reason}
       </p>
+    </div>
+  );
+}
+
+// ── Pending Recommendation Card (suggestion with keep/apply buttons) ──
+
+function PendingRecommendationCard({
+  recommendation,
+  onApply,
+  onKeep,
+}: {
+  recommendation: RecommendedSettings;
+  onApply: () => void;
+  onKeep: () => void;
+}) {
+  return (
+    <div className="bg-emerald-950/30 border border-emerald-700/40 rounded-xl p-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <p className="text-xs text-emerald-400 uppercase tracking-wider mb-1">
+            Recommended Settings for This Product
+          </p>
+          <p className="text-sm font-medium text-white">
+            {recommendation.title}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-4 text-xs text-gray-300 mb-2">
+        <span>Goal: <span className="text-white">{GOAL_LABELS[recommendation.campaignGoal]}</span></span>
+        <span>Branding: <span className="text-white">{LOGO_LABELS[recommendation.logoVisibilityPriority]}</span></span>
+        <span>Creativity: <span className="text-white">{CREATIVITY_LABELS[recommendation.creativityLevel]}</span></span>
+      </div>
+
+      <p className="text-xs text-gray-500 leading-relaxed mb-1">
+        Based on your selected product, style, and model presentation.
+      </p>
+      <p className="text-xs text-gray-400 leading-relaxed mb-3">
+        <span className="text-emerald-400/80">Why: </span>{recommendation.reason}
+      </p>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onApply}
+          className="text-xs bg-white text-gray-900 font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
+        >
+          Apply recommendation
+        </button>
+        <button
+          type="button"
+          onClick={onKeep}
+          className="text-xs bg-gray-700 text-gray-300 font-medium px-3 py-1.5 rounded-md hover:bg-gray-600 transition-colors"
+        >
+          Keep current settings
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Passive Recommendation (shown when driver is custom/modified and no pending) ──
+
+function PassiveRecommendationHint({
+  recommendation,
+  onApply,
+}: {
+  recommendation: RecommendedSettings;
+  onApply: () => void;
+}) {
+  return (
+    <div className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-xs text-gray-500">
+          AI suggestion: <span className="text-gray-400">{recommendation.title}</span>
+          {" "}&mdash;{" "}{GOAL_LABELS[recommendation.campaignGoal]}, {LOGO_LABELS[recommendation.logoVisibilityPriority].toLowerCase()} branding, {CREATIVITY_LABELS[recommendation.creativityLevel].toLowerCase()} creativity
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onApply}
+        className="shrink-0 text-xs text-gray-400 hover:text-white transition-colors underline underline-offset-2"
+      >
+        Apply
+      </button>
     </div>
   );
 }
@@ -192,7 +290,9 @@ export default function CampaignGoalSelector({
   notes,
   productFamily,
   specificItem,
-  hasManualOverride,
+  settingsDriver,
+  selectedPresetId,
+  pendingRecommendation,
   onGoalChange,
   onStyleChange,
   onGenderChange,
@@ -200,6 +300,7 @@ export default function CampaignGoalSelector({
   onCreativityChange,
   onNotesChange,
   onApplyRecommendation,
+  onKeepPreset,
 }: CampaignGoalSelectorProps) {
   const recommendation = useMemo(
     () => getRecommendedSettings({ productFamily, specificItem, genderPresentation: gender, targetStyle: style }),
@@ -212,12 +313,38 @@ export default function CampaignGoalSelector({
   );
 
   const isRecommendationActive =
+    settingsDriver === "ai_recommended" &&
     goal === recommendation.campaignGoal &&
     logo === recommendation.logoVisibilityPriority &&
     creativity === recommendation.creativityLevel;
 
+  // Determine which recommendation card to show
+  const showPendingCard = pendingRecommendation !== null;
+  const showActiveCard = isRecommendationActive && !showPendingCard;
+  const showPassiveHint = !showPendingCard && !showActiveCard &&
+    (settingsDriver === "custom" || settingsDriver === "modified_preset");
+
+  const badge = DRIVER_BADGE[settingsDriver];
+
   return (
     <div className="space-y-5">
+      {/* Settings driver badge */}
+      <div className="flex items-center gap-3">
+        <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full border ${badge.className}`}>
+          {badge.label}
+        </span>
+        {settingsDriver === "modified_preset" && selectedPresetId && (
+          <span className="text-xs text-gray-500">
+            Started from preset, then customised
+          </span>
+        )}
+        {settingsDriver === "custom" && (
+          <span className="text-xs text-gray-500">
+            Manually configured
+          </span>
+        )}
+      </div>
+
       {/* Gender + Style (context selectors, outside the recommendation scope) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SelectField
@@ -238,12 +365,25 @@ export default function CampaignGoalSelector({
         />
       </div>
 
-      {/* Recommendation Card */}
-      <RecommendationCard
-        recommendation={recommendation}
-        isActive={isRecommendationActive}
-        onApply={() => onApplyRecommendation(recommendation)}
-      />
+      {/* Recommendation cards (mutually exclusive) */}
+      {showPendingCard && (
+        <PendingRecommendationCard
+          recommendation={pendingRecommendation!}
+          onApply={() => onApplyRecommendation(pendingRecommendation!)}
+          onKeep={onKeepPreset}
+        />
+      )}
+
+      {showActiveCard && (
+        <ActiveRecommendationCard recommendation={recommendation} />
+      )}
+
+      {showPassiveHint && (
+        <PassiveRecommendationHint
+          recommendation={recommendation}
+          onApply={() => onApplyRecommendation(recommendation)}
+        />
+      )}
 
       {/* Goal / Logo / Creativity fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

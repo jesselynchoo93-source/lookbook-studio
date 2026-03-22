@@ -266,13 +266,29 @@ export interface LookbookInput {
   notes?: string;
 }
 
+// ── Settings Driver ──
+
+export type SettingsDriver =
+  | "preset"          // User selected a creative direction preset
+  | "ai_recommended"  // AI recommendation auto-applied (no preset selected)
+  | "custom"          // User manually edited goal/logo/creativity from scratch
+  | "modified_preset"; // User started from a preset then manually changed settings
+
 // ── Starter Presets ──
+
+export interface PresetExplanation {
+  shotMix: string;
+  brandingPriority: string;
+  creativityPosture: string;
+  balance: string;
+}
 
 export interface StarterPreset {
   id: string;
   label: string;
   description: string;
   defaults: Partial<LookbookInput>;
+  explanation: PresetExplanation;
 }
 
 // ── Master Shoot DNA ──
