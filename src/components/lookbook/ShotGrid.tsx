@@ -6,11 +6,13 @@ import ShotCard from "./ShotCard";
 interface ShotGridProps {
   shots: RecommendedShot[];
   topPriorityPositions: Set<number>;
+  compact?: boolean;
 }
 
 export default function ShotGrid({
   shots,
   topPriorityPositions,
+  compact,
 }: ShotGridProps) {
   return (
     <div>
@@ -28,6 +30,7 @@ export default function ShotGrid({
             key={shot.archetype.id}
             shot={shot}
             isTopPriority={topPriorityPositions.has(shot.position)}
+            compact={compact}
           />
         ))}
       </div>

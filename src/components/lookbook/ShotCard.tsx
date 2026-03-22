@@ -6,6 +6,7 @@ import type { RecommendedShot } from "@/lib/lookbook/types";
 interface ShotCardProps {
   shot: RecommendedShot;
   isTopPriority: boolean;
+  compact?: boolean;
 }
 
 function Badge({ label }: { label: string }) {
@@ -40,7 +41,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
+export default function ShotCard({ shot, isTopPriority, compact }: ShotCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const a = shot.archetype;
@@ -74,17 +75,12 @@ export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
           </span>
         </div>
         <h3 className="text-[--text-primary] font-semibold text-base mb-1">{a.title}</h3>
-        <p className="text-[--text-secondary] text-sm">{shot.shotPurpose}</p>
+        {!compact && (
+          <p className="text-[--text-secondary] text-sm">{shot.shotPurpose}</p>
+        )}
       </div>
 
-      {/* Badges */}
-      <div className="px-4 pb-3 flex flex-wrap gap-1.5">
-        {shot.badges.map((badge) => (
-          <Badge key={badge} label={badge} />
-        ))}
-      </div>
-
-      {/* What It Sells */}
+      {/* What It Sells (always visible) */}
       <div className="px-4 pb-3">
         <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
           What it sells
@@ -92,47 +88,66 @@ export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
         <p className="text-sm text-[--text-primary] mt-1">{shot.whatItSells}</p>
       </div>
 
-      {/* Key Specs */}
-      <div className="px-4 pb-3 space-y-0.5">
-        <DetailRow label="Framing" value={a.defaultFraming} />
-        <DetailRow
-          label="Lens"
-          value={`${a.defaultLens} @ ${a.defaultAperture}`}
-        />
-        <DetailRow label="Reliability" value={a.higgsfieldReliability} />
-        <DetailRow label="Difficulty" value={a.difficulty} />
-        <DetailRow label="Risk" value={shot.riskSummary} />
-      </div>
-
-      {/* Delta Brief */}
-      <div className="mx-4 mb-3 bg-[--surface-inset] rounded-lg p-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
-            Delta Brief
-          </span>
-          <button
-            onClick={handleCopyBrief}
-            className="text-xs text-[--accent] hover:opacity-80 transition-opacity"
-          >
-            {copied ? "Copied" : "Copy"}
-          </button>
+      {/* Compact mode: stop here */}
+      {compact && (
+        <div className="px-4 pb-3 flex flex-wrap gap-1.5">
+          {shot.badges.map((badge) => (
+            <Badge key={badge} label={badge} />
+          ))}
         </div>
-        <p className="text-sm text-[--text-primary] leading-relaxed">
-          {shot.deltaBrief}
-        </p>
-      </div>
+      )}
 
-      {/* Expandable Details */}
-      <div className="mx-4 mb-3">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-xs text-[--text-tertiary] hover:text-[--text-secondary] transition-colors flex items-center gap-1"
-        >
-          <span>{expanded ? "Hide" : "Show"} details</span>
-          <span className="text-[10px]">{expanded ? "\u25B2" : "\u25BC"}</span>
-        </button>
+      {/* Full content (hidden in compact mode) */}
+      {!compact && (
+        <>
+          {/* Badges */}
+          <div className="px-4 pb-3 flex flex-wrap gap-1.5">
+            {shot.badges.map((badge) => (
+              <Badge key={badge} label={badge} />
+            ))}
+          </div>
 
-        {expanded && (
+          {/* Key Specs */}
+          <div className="px-4 pb-3 space-y-0.5">
+            <DetailRow label="Framing" value={a.defaultFraming} />
+            <DetailRow
+              label="Lens"
+              value={`${a.defaultLens} @ ${a.defaultAperture}`}
+            />
+            <DetailRow label="Reliability" value={a.higgsfieldReliability} />
+            <DetailRow label="Difficulty" value={a.difficulty} />
+            <DetailRow label="Risk" value={shot.riskSummary} />
+          </div>
+
+          {/* Delta Brief */}
+          <div className="mx-4 mb-3 bg-[--surface-inset] rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
+                Delta Brief
+              </span>
+              <button
+                onClick={handleCopyBrief}
+                className="text-xs text-[--accent] hover:opacity-80 transition-opacity"
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="text-sm text-[--text-primary] leading-relaxed">
+              {shot.deltaBrief}
+            </p>
+          </div>
+
+          {/* Expandable Details */}
+          <div className="mx-4 mb-3">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-xs text-[--text-tertiary] hover:text-[--text-secondary] transition-colors flex items-center gap-1"
+            >
+              <span>{expanded ? "Hide" : "Show"} details</span>
+              <span className="text-[10px]">{expanded ? "\u25B2" : "\u25BC"}</span>
+            </button>
+
+            {expanded && (
           <div className="mt-3 space-y-3">
             {/* Pose Details */}
             <div className="space-y-0.5">
@@ -187,6 +202,8 @@ export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

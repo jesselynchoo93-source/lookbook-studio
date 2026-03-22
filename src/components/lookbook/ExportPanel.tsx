@@ -4,17 +4,30 @@ import { useState } from "react";
 
 interface ExportPanelProps {
   exportText: string;
+  collapsed?: boolean;
 }
 
-export default function ExportPanel({ exportText }: ExportPanelProps) {
+export default function ExportPanel({ exportText, collapsed }: ExportPanelProps) {
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [open, setOpen] = useState(!collapsed);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(exportText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="text-sm text-[--text-tertiary] hover:text-[--text-secondary] transition-colors"
+      >
+        Export plan &darr;
+      </button>
+    );
+  }
 
   return (
     <div

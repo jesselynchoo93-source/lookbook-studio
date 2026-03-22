@@ -48,8 +48,15 @@ export default function StarterPresetPicker({
             }`}
             style={{ boxShadow: selectedId === preset.id ? "var(--shadow-card-active)" : "var(--shadow-card)" }}
           >
-            <span className="block text-sm font-medium text-[--text-primary] mb-1">
-              {preset.label}
+            <span className="flex items-center gap-1.5 mb-1">
+              <span className="text-sm font-medium text-[--text-primary]">
+                {preset.label}
+              </span>
+              {preset.id === "balanced_lookbook" && (
+                <span className="text-[10px] text-[--accent] bg-[--accent-soft] px-1.5 py-0.5 rounded-full">
+                  Recommended
+                </span>
+              )}
             </span>
             <span className="block text-xs text-[--text-secondary] leading-relaxed">
               {preset.description}

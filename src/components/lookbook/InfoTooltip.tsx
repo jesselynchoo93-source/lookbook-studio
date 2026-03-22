@@ -19,7 +19,11 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
         className="text-[--text-tertiary] hover:text-[--text-secondary] transition-colors ml-1 text-xs"
         aria-label="More info"
       >
-        ?
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1" />
+          <path d="M8 7V11" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+          <circle cx="8" cy="5" r="0.5" fill="currentColor" />
+        </svg>
       </button>
       {show && (
         <span

@@ -11,6 +11,23 @@ interface ProjectListPanelProps {
   onDeleteProject: (id: string) => void;
 }
 
+/**
+ * Display-friendly project title.
+ * If the user has manually edited the name, show it as-is.
+ * Otherwise, derive a clean title from the input.
+ */
+function formatProjectTitle(project: ProjectRecord): string {
+  if (project.nameEdited) return project.name;
+  const item = project.input.specificItem?.trim();
+  const family = project.input.productFamily;
+  if (item) {
+    const capitalised = item.replace(/\b\w/g, (c) => c.toUpperCase());
+    return `${capitalised} Lookbook`;
+  }
+  const familyName = PRODUCT_FAMILY_LABELS[family];
+  return `${familyName} Lookbook`;
+}
+
 function StatusBadge({ status }: { status: ProjectStatus }) {
   const config: Record<ProjectStatus, { label: string; classes: string }> = {
     draft: {
@@ -79,7 +96,7 @@ function ProjectCard({
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-medium text-[--text-primary] truncate">
-            {project.name}
+            {formatProjectTitle(project)}
           </h3>
           <p className="text-xs text-[--text-tertiary] mt-0.5">
             {item ? `${item} · ` : ""}{familyLabel} · {styleLabel}

@@ -22,6 +22,8 @@ interface CampaignFormProps {
   onSubmit: (input: LookbookInput) => void;
   /** Pre-fill form with saved input when reopening a draft project. */
   initialInput?: LookbookInput;
+  /** HTML form id. When set, the internal submit button is hidden so an external button can use form={formId}. */
+  formId?: string;
 }
 
 const DEFAULT_INPUT: LookbookInput = {
@@ -36,7 +38,7 @@ const DEFAULT_INPUT: LookbookInput = {
   notes: "",
 };
 
-export default function CampaignForm({ onSubmit, initialInput }: CampaignFormProps) {
+export default function CampaignForm({ onSubmit, initialInput, formId }: CampaignFormProps) {
   const [input, setInput] = useState<LookbookInput>(initialInput ?? DEFAULT_INPUT);
 
   // ── Settings driver: tracks what is currently controlling goal/logo/creativity ──
@@ -201,7 +203,7 @@ export default function CampaignForm({ onSubmit, initialInput }: CampaignFormPro
     : undefined;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} id={formId} className="space-y-8">
       {/* Creative Direction Presets */}
       <StarterPresetPicker
         onSelect={handlePresetSelect}
@@ -255,13 +257,15 @@ export default function CampaignForm({ onSubmit, initialInput }: CampaignFormPro
         onKeepPreset={handleKeepPreset}
       />
 
-      {/* Submit */}
-      <button
-        type="submit"
-        className="w-full bg-[--text-primary] text-[--text-inverted] font-medium py-3 rounded-lg hover:opacity-90 transition-opacity"
-      >
-        Build Lookbook Plan
-      </button>
+      {/* Submit (hidden when formId is set, allowing external submit button) */}
+      {!formId && (
+        <button
+          type="submit"
+          className="w-full bg-[--text-primary] text-[--text-inverted] font-medium py-3 rounded-lg hover:opacity-90 transition-opacity"
+        >
+          Build Lookbook Plan
+        </button>
+      )}
     </form>
   );
 }

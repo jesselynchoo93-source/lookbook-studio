@@ -46,16 +46,12 @@ import {
   restoreGeneratedImages,
   resetShotForNewImage,
 } from "@/lib/lookbook/projectStore";
-import StepHeader from "./StepHeader";
-import CampaignForm from "./CampaignForm";
-import ShootDNACard from "./ShootDNACard";
-import CoverageSummaryComponent from "./CoverageSummary";
-import GenerationOrderPanel from "./GenerationOrderPanel";
-import ShotGrid from "./ShotGrid";
-import ExportPanel from "./ExportPanel";
-import GenerationQueuePanel from "./GenerationQueuePanel";
-import ReferencePanel from "./ReferencePanel";
-import ReferenceStrip from "./ReferenceStrip";
+import ModeNavigator from "./ModeNavigator";
+import type { WorkflowMode } from "./ModeNavigator";
+import SetupMode from "./modes/SetupMode";
+import PlanMode from "./modes/PlanMode";
+import GenerateMode from "./modes/GenerateMode";
+import FinaliseMode from "./modes/FinaliseMode";
 import ProjectListPanel from "./ProjectListPanel";
 
 type View = "list" | "project";
@@ -89,6 +85,9 @@ export default function StudioShell() {
   // V4.2: Session-only generated image state (with preview URLs)
   const [generatedImages, setGeneratedImages] = useState<Record<number, GeneratedImageAsset>>({});
 
+  // F3: Workflow mode state
+  const [mode, setMode] = useState<WorkflowMode>("setup");
+
   // ── Transient error state for blob persistence failures ──
   const [blobError, setBlobError] = useState<string | null>(null);
   const blobErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,7 +101,6 @@ export default function StudioShell() {
   // Derived from active project
   const result = activeProject?.plan ?? null;
   const tracker = activeProject?.tracker ?? null;
-  const currentStep = result ? 3 : 1;
 
   // ── Load project list on mount ──
   useEffect(() => {
@@ -170,6 +168,7 @@ export default function StudioShell() {
     setActiveProject(project);
     setReferences({ model: [], product: [], styling: [] });
     setGeneratedImages({});
+    setMode("setup");
     setView("project");
   }, []);
 
@@ -201,6 +200,23 @@ export default function StudioShell() {
     setActiveProject(project);
     setReferences(restored);
     setGeneratedImages(restoredGen);
+
+    // Derive initial workflow mode from project state
+    if (!project.plan) {
+      setMode("setup");
+    } else if (!project.tracker) {
+      setMode("plan");
+    } else {
+      const shots = Object.values(project.tracker.shots);
+      if (shots.every((s) => s.status === "pending")) {
+        setMode("plan");
+      } else if (shots.every((s) => s.status === "done")) {
+        setMode("finalise");
+      } else {
+        setMode("generate");
+      }
+    }
+
     setView("project");
   }, []);
 
@@ -255,6 +271,7 @@ export default function StudioShell() {
     };
 
     setActiveProject(updated);
+    setMode("plan");
     // Save immediately; plan generation is a significant event
     saveProject(updated);
   }, []);
@@ -279,6 +296,7 @@ export default function StudioShell() {
     };
     setActiveProject(updated);
     setGeneratedImages({});
+    setMode("setup");
     saveProject(updated);
   }, []);
 
@@ -515,11 +533,6 @@ export default function StudioShell() {
     });
   }, []);
 
-  // ── Top 3 priority positions ──
-  const topPriorityPositions = new Set(
-    result ? result.generationOrder.slice(0, 3) : [],
-  );
-
   // ── Loading state ──
   if (loading) {
     return (
@@ -567,108 +580,65 @@ export default function StudioShell() {
         </div>
       )}
 
-      <StepHeader currentStep={currentStep} />
+      <ModeNavigator
+        mode={mode}
+        onModeChange={setMode}
+        hasPlan={!!result}
+        hasTracker={!!tracker}
+      />
 
-      {!result ? (
-        /* Step 1: Campaign inputs */
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-[--text-primary] mb-2">
-              Plan Your Lookbook
-            </h2>
-            <p className="text-[--text-secondary] text-sm">
-              Define your campaign, product, and creative direction. Lookbook
-              Studio will build a coherent 6-shot plan with a shared visual
-              identity.
-            </p>
-          </div>
-          <div className="bg-[--surface-card] rounded-xl p-6" style={{ boxShadow: "var(--shadow-card)" }}>
-            <CampaignForm
-              onSubmit={handleSubmit}
-              initialInput={activeProject.input}
-            />
-          </div>
+      {mode === "setup" && (
+        <SetupMode
+          initialInput={activeProject.input}
+          references={references}
+          onSubmit={handleSubmit}
+          onAddReferences={handleAddReferences}
+          onRemoveReference={handleRemoveReference}
+          onSetPrimary={handleSetPrimary}
+        />
+      )}
 
-          {/* V4.0: Reference uploads */}
-          <div className="bg-[--surface-card] rounded-xl p-6 mt-6" style={{ boxShadow: "var(--shadow-card)" }}>
-            <ReferencePanel
-              model={references.model}
-              product={references.product}
-              styling={references.styling}
-              onAdd={handleAddReferences}
-              onRemove={handleRemoveReference}
-              onSetPrimary={handleSetPrimary}
-            />
-          </div>
-        </div>
-      ) : (
-        /* Steps 2-4: Results */
-        <div className="space-y-8">
-          {/* Header + Reset */}
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-[--text-primary] mb-1">
-                Your Lookbook Plan
-              </h2>
-              <p className="text-[--text-secondary] text-sm">
-                {result.shots.length} coordinated shots sharing one Master Shoot
-                DNA. Generate the amber-marked shots first for the safest
-                results.
-              </p>
-            </div>
-            <button
-              onClick={handleReset}
-              className="text-sm text-[--text-secondary] hover:text-[--text-primary] border border-[--border-default] px-4 py-2 rounded-lg transition-colors"
-            >
-              New Plan
-            </button>
-          </div>
+      {mode === "plan" && result && (
+        <PlanMode
+          result={result}
+          references={references}
+          onModeChange={setMode}
+          onReset={handleReset}
+          onAddReferences={handleAddReferences}
+          onRemoveReference={handleRemoveReference}
+          onSetPrimary={handleSetPrimary}
+        />
+      )}
 
-          {/* V4.0: Reference strip (compact view of uploaded references) */}
-          <ReferenceStrip
-            model={references.model}
-            product={references.product}
-            styling={references.styling}
-            onAdd={handleAddReferences}
-            onRemove={handleRemoveReference}
-            onSetPrimary={handleSetPrimary}
-          />
+      {mode === "generate" && result && (
+        <GenerateMode
+          plan={result}
+          tracker={tracker}
+          generatedImages={generatedImages}
+          references={references}
+          projectName={activeProject.name}
+          onModeChange={setMode}
+          onStatusChange={handleStatusChange}
+          onContinuityChange={handleContinuityChange}
+          onSkinPolishChange={handleSkinPolishChange}
+          onUploadImage={handleUploadImage}
+          onRemoveImage={handleRemoveImage}
+          onFinalMarkChange={handleFinalMarkChange}
+          onAddReferences={handleAddReferences}
+          onRemoveReference={handleRemoveReference}
+          onSetPrimary={handleSetPrimary}
+        />
+      )}
 
-          {/* Step 2: Master Shoot DNA */}
-          <ShootDNACard dna={result.dna} />
-
-          {/* Coverage + Generation Order */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <CoverageSummaryComponent coverage={result.coverage} />
-            <GenerationOrderPanel
-              shots={result.shots}
-              generationOrder={result.generationOrder}
-            />
-          </div>
-
-          {/* Step 3: Shot Grid */}
-          <ShotGrid
-            shots={result.shots}
-            topPriorityPositions={topPriorityPositions}
-          />
-
-          {/* Step 4: Export */}
-          <ExportPanel exportText={result.exportText} />
-
-          {/* V3.1/3.2: Generation Queue with Tracker */}
-          <GenerationQueuePanel
-            plan={result}
-            tracker={tracker}
-            generatedImages={generatedImages}
-            onStatusChange={handleStatusChange}
-            onContinuityChange={handleContinuityChange}
-            onSkinPolishChange={handleSkinPolishChange}
-            onUploadImage={handleUploadImage}
-            onRemoveImage={handleRemoveImage}
-            onFinalMarkChange={handleFinalMarkChange}
-            projectName={activeProject.name}
-          />
-        </div>
+      {mode === "finalise" && result && (
+        <FinaliseMode
+          plan={result}
+          tracker={tracker}
+          generatedImages={generatedImages}
+          projectName={activeProject.name}
+          onModeChange={setMode}
+          onFinalMarkChange={handleFinalMarkChange}
+        />
       )}
     </div>
   );
