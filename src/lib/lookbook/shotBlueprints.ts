@@ -503,6 +503,93 @@ const ITEM_OVERRIDES: ItemShotOverride[] = [
     additionalNegativeCues: ["hardware chain links merging", "belt proportions distorted"],
     deltaBriefSuffix: "Belt positioned as the outfit's visual anchor point. Waist area well-lit.",
   },
+
+  // ── Headwear Items ──
+  {
+    items: ["cap", "baseball cap", "trucker cap"],
+    family: "headwear",
+    label: "Cap",
+    sellsFocus: ["crown shape and structure", "brim curve and depth", "front logo or embroidery", "fit on head", "face-framing effect"],
+    whatItSellsByCategory: {
+      hero: "Cap on head, front-facing. Buyer sees crown shape, brim curve, and face-framing effect.",
+      product_focus: "Side profile showing brim depth, crown height, and how the cap sits on the head.",
+      detail: "Embroidery, stitching, eyelets, and fabric texture at close range.",
+      editorial: "The cap in a lifestyle context, showing attitude and styling.",
+    },
+    additionalNegativeCues: ["brim shape distortion", "crown collapsing", "logo embroidery blurred"],
+    deltaBriefSuffix: "Cap sitting naturally on the head. Brim curve consistent.",
+  },
+  {
+    items: ["beanie", "knit beanie", "wool beanie"],
+    family: "headwear",
+    label: "Beanie",
+    sellsFocus: ["knit texture and density", "crown slouch or structure", "fit around hairline and ears", "warmth and cosiness appeal"],
+    whatItSellsByCategory: {
+      hero: "Beanie on head, front-facing. Buyer sees knit texture, fit, and face framing.",
+      product_focus: "Side view showing crown height, how the beanie sits, and ear coverage.",
+      detail: "Knit pattern, yarn quality, and edge ribbing at close range.",
+      editorial: "The beanie in a lifestyle context, showing warmth and styling attitude.",
+    },
+    additionalNegativeCues: ["knit pattern inconsistency", "beanie floating off head"],
+    deltaBriefSuffix: "Beanie sitting naturally, not too tight or too loose. Knit texture visible.",
+  },
+  {
+    items: ["bucket hat", "sun hat", "wide brim hat", "fedora"],
+    family: "headwear",
+    label: "Brimmed Hat",
+    sellsFocus: ["brim width and shape", "crown structure", "shade effect on face", "styling versatility", "material quality"],
+    whatItSellsByCategory: {
+      hero: "Hat on head, front-facing. Buyer sees brim width, crown shape, and face-shading effect.",
+      product_focus: "Side profile showing full brim depth, crown height, and dimensional form.",
+      detail: "Material quality, hatband, brim edge, and construction finishing.",
+      editorial: "The hat in a lifestyle context, showing occasion and styling.",
+    },
+    additionalNegativeCues: ["brim warping", "crown shape collapse", "hat floating above head"],
+    deltaBriefSuffix: "Hat sitting at natural depth on the head. Brim shape consistent all around.",
+  },
+
+  // ── Small Accessories Items ──
+  {
+    items: ["wallet", "bifold wallet", "long wallet", "zip wallet"],
+    family: "small_accessories",
+    label: "Wallet",
+    sellsFocus: ["leather or material quality", "card slot organisation", "closure type", "thickness and pocket fit", "edge and stitching detail"],
+    whatItSellsByCategory: {
+      hero: "Wallet in hand at natural scale. Buyer sees size, material quality, and form.",
+      product_focus: "Wallet presented open or partially open, showing card slots and interior layout.",
+      detail: "Leather grain, edge stitching, logo stamp, and closure mechanism at close range.",
+      editorial: "The wallet in a daily-life moment: on a desk, emerging from a pocket, or in hand.",
+    },
+    additionalNegativeCues: ["wallet scale inconsistent with hand", "card slots merging", "edge paint blurred"],
+    deltaBriefSuffix: "Wallet at natural hand scale. Leather grain clearly visible.",
+  },
+  {
+    items: ["cardholder", "card holder", "card case", "card wallet"],
+    family: "small_accessories",
+    label: "Cardholder",
+    sellsFocus: ["slim profile and pocket fit", "leather or material quality", "card slot visibility", "edge finishing", "logo placement"],
+    whatItSellsByCategory: {
+      hero: "Cardholder in hand showing slim profile and material quality.",
+      product_focus: "Cardholder with a card partially inserted to show slot depth and fit.",
+      detail: "Edge finishing, leather grain, and logo stamp at close range.",
+      editorial: "The cardholder in a minimal lifestyle setting.",
+    },
+    additionalNegativeCues: ["cardholder scale wrong relative to hand", "card floating out of slot"],
+    deltaBriefSuffix: "Cardholder at natural hand scale. Slim profile visible from the side.",
+  },
+  {
+    items: ["keychain", "key holder", "key ring", "key fob"],
+    family: "small_accessories",
+    label: "Keychain",
+    sellsFocus: ["hardware quality and weight", "attachment mechanism", "material and finish", "tactile appeal", "daily use context"],
+    whatItSellsByCategory: {
+      hero: "Keychain in hand showing scale, hardware, and material quality.",
+      detail: "Hardware mechanism, metal finish, and engraving detail at close range.",
+      editorial: "The keychain in a daily-life context, suggesting premium daily carry.",
+    },
+    additionalNegativeCues: ["hardware floating", "chain links merging", "scale inconsistent with hand"],
+    deltaBriefSuffix: "Keychain at natural scale. Hardware details sharp and readable.",
+  },
 ];
 
 // ═══════════════════════════════════════════════

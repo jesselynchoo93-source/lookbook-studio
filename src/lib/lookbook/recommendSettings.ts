@@ -252,11 +252,48 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
 
   // ── Belts ──
   if (productFamily === "belts") {
+    if (item.includes("statement") || item.includes("chain")) {
+      if (targetStyle === "editorial" || targetStyle === "avant_garde") {
+        return {
+          campaignGoal: "styling_story",
+          logoVisibilityPriority: "medium",
+          creativityLevel: "balanced",
+          title: `Editorial ${itemLabel} styling set`,
+          reason: "Statement belts sell through visual impact and how they transform an outfit. Balanced creativity allows both a clean waist hero and editorial context. Medium branding keeps any hardware marks readable.",
+        };
+      }
+      return {
+        campaignGoal: "styling_story",
+        logoVisibilityPriority: "medium",
+        creativityLevel: "safe",
+        title: `${itemLabel[0].toUpperCase() + itemLabel.slice(1)} styling set`,
+        reason: "Statement belts are bought for their visual impact. Styling story goal shows how the belt transforms the outfit. Safe creativity gives reliable waist-level product shots.",
+      };
+    }
+    if (targetStyle === "luxury" || targetStyle === "tailoring") {
+      return {
+        campaignGoal: "premium_branding",
+        logoVisibilityPriority: "high",
+        creativityLevel: "safe",
+        title: `Premium ${itemLabel} set`,
+        reason: "Luxury belts sell through buckle quality, brand recognition, and leather craftsmanship. High branding keeps the buckle logo consistently readable. Safe creativity ensures clean, reliable product shots.",
+      };
+    }
+    if (targetStyle === "editorial" || targetStyle === "avant_garde") {
+      return {
+        campaignGoal: "detail_focus",
+        logoVisibilityPriority: "medium",
+        creativityLevel: "balanced",
+        title: `Editorial ${itemLabel} detail set`,
+        reason: "Editorial belts benefit from close-up craftsmanship proof alongside styled context. Balanced creativity allows a buckle hero, leather texture shot, and one editorial styling frame.",
+      };
+    }
+    // Default commercial belt
     return {
       campaignGoal: "detail_focus",
       logoVisibilityPriority: "medium",
       creativityLevel: "safe",
-      title: "Belt detail set",
+      title: `${itemLabel[0].toUpperCase() + itemLabel.slice(1)} buckle and leather set`,
       reason: "Belts sell through buckle quality, leather texture, and waist anchoring. Medium branding keeps buckle logos visible. Safe creativity ensures clean product shots.",
     };
   }
@@ -283,23 +320,95 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
 
   // ── Headwear ──
   if (productFamily === "headwear") {
+    if (item.includes("beanie") || item.includes("knit")) {
+      return {
+        campaignGoal: "product_clarity",
+        logoVisibilityPriority: "low",
+        creativityLevel: "balanced",
+        title: `${itemLabel[0].toUpperCase() + itemLabel.slice(1)} texture and fit set`,
+        reason: "Knit headwear sells through texture, warmth, and fit. Low branding because beanies rarely feature prominent logos. Balanced creativity allows a portrait hero, profile, and texture detail.",
+      };
+    }
+    if (item.includes("bucket") || item.includes("sun hat") || item.includes("fedora") || item.includes("wide brim")) {
+      return {
+        campaignGoal: "styling_story",
+        logoVisibilityPriority: "low",
+        creativityLevel: "balanced",
+        title: `${itemLabel[0].toUpperCase() + itemLabel.slice(1)} styling set`,
+        reason: "Brimmed hats sell through shape, shade effect, and styling attitude. Low branding because brim hats are about silhouette, not logos. Balanced creativity allows a portrait hero, side profile, and lifestyle shot.",
+      };
+    }
+    if (targetStyle === "street") {
+      return {
+        campaignGoal: "styling_story",
+        logoVisibilityPriority: "high",
+        creativityLevel: "balanced",
+        title: `Street ${itemLabel} set`,
+        reason: "Street headwear is often logo-driven. High branding keeps the front logo readable. Balanced creativity allows a portrait hero and styled editorial shots.",
+      };
+    }
+    if (targetStyle === "luxury" || targetStyle === "editorial") {
+      return {
+        campaignGoal: "styling_story",
+        logoVisibilityPriority: "medium",
+        creativityLevel: "balanced",
+        title: `${itemLabel[0].toUpperCase() + itemLabel.slice(1)} styling set`,
+        reason: "Luxury and editorial headwear benefit from styled presentation. Medium branding ensures any logos are readable without forcing stiff compositions.",
+      };
+    }
     return {
       campaignGoal: "product_clarity",
       logoVisibilityPriority: "medium",
-      creativityLevel: "safe",
-      title: "Headwear product set",
-      reason: "Headwear needs face framing and fit clearly visible. Medium branding keeps any front logos readable. Safe creativity gives reliable head-and-shoulders shots.",
+      creativityLevel: "balanced",
+      title: `${itemLabel[0].toUpperCase() + itemLabel.slice(1)} face-framing set`,
+      reason: "Headwear needs face framing and fit clearly visible. Medium branding keeps any front logos readable. Balanced creativity allows a clean face portrait hero plus profile and detail shots.",
     };
   }
 
   // ── Small Accessories ──
   if (productFamily === "small_accessories") {
+    if (item.includes("wallet") || item.includes("cardholder") || item.includes("card holder")) {
+      if (targetStyle === "luxury") {
+        return {
+          campaignGoal: "premium_branding",
+          logoVisibilityPriority: "medium",
+          creativityLevel: "safe",
+          title: `Premium ${itemLabel} set`,
+          reason: "Luxury leather goods sell through material quality, logo stamp, and edge finishing. Medium branding ensures the logo is readable. Safe creativity gives reliable product shots.",
+        };
+      }
+      return {
+        campaignGoal: "detail_focus",
+        logoVisibilityPriority: "low",
+        creativityLevel: "balanced",
+        title: `${itemLabel[0].toUpperCase() + itemLabel.slice(1)} detail set`,
+        reason: "Wallets and cardholders sell through leather quality, construction detail, and slim profile. Low branding because small leather goods rarely feature large logos. Balanced creativity allows a hand-held hero, flat lay, and texture macro.",
+      };
+    }
+    if (item.includes("keychain") || item.includes("key holder") || item.includes("key fob")) {
+      return {
+        campaignGoal: "detail_focus",
+        logoVisibilityPriority: "low",
+        creativityLevel: "safe",
+        title: `${itemLabel[0].toUpperCase() + itemLabel.slice(1)} hardware set`,
+        reason: "Keychains sell through hardware quality, attachment mechanism, and tactile weight. Safe creativity gives reliable close-up product shots.",
+      };
+    }
+    if (targetStyle === "luxury" || targetStyle === "editorial") {
+      return {
+        campaignGoal: "premium_branding",
+        logoVisibilityPriority: "medium",
+        creativityLevel: "balanced",
+        title: `Premium ${itemLabel} set`,
+        reason: "Luxury small accessories benefit from premium presentation with readable branding. Balanced creativity allows a hero, detail, and lifestyle shot.",
+      };
+    }
     return {
       campaignGoal: "detail_focus",
       logoVisibilityPriority: "low",
       creativityLevel: "balanced",
-      title: "Accessory detail set",
-      reason: "Small accessories need scale reference and texture detail. Low branding because these items rarely feature large logos. Balanced creativity allows hand interaction shots.",
+      title: `${itemLabel[0].toUpperCase() + itemLabel.slice(1)} detail set`,
+      reason: "Small accessories need scale reference and texture detail. Low branding because these items rarely feature large logos. Balanced creativity allows hand interaction and flat-lay detail shots.",
     };
   }
 

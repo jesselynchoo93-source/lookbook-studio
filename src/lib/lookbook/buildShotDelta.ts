@@ -13,6 +13,7 @@ import { PRODUCT_FAMILY_LABELS } from "./types";
 import {
   composeEvidenceSells,
   FAMILY_FALLBACK_SELLS,
+  EVIDENCE_SELL_PHRASES,
 } from "./productEvidence";
 
 // ── V2 Family-Native Vocabulary ──
@@ -136,6 +137,11 @@ function buildRealismGuardrail(archetype: ShotArchetype, input: LookbookInput): 
   if (id === "three_quarter_ear_reveal") return "Check earring drop against jawline, both sides consistent if pair visible.";
   if (id === "pair_symmetry_validation") return "Check left-right earring size match, identical drop length, no asymmetric distortion.";
   if (id === "jewelry_neckline_focus") return "Check chain drape following gravity, pendant resting on skin, clasp hidden at back.";
+
+  if (id === "belt_waist_hero") return "Check buckle shape accuracy, prong alignment, leather-to-buckle junction clean, belt loop spacing even.";
+  if (id === "buckle_detail_closeup") return "Check prong alignment, tongue slot accuracy, logo stamping clarity, metal colour consistency. Leather-to-buckle junction must be clean.";
+  if (id === "belt_leather_texture") return "Check grain consistency, stitching regularity, edge paint smoothness, hole punching uniformity.";
+  if (id === "belt_waist_styling_crop") return "Check belt sitting naturally at the waist (not floating), fabric interaction at the belt line, belt width consistent.";
 
   if (id === "detail_crop_logo_focus") return "Check text legibility, no mirrored or scrambled characters, logo proportions accurate.";
 
@@ -538,6 +544,44 @@ export function runBriefQualityPass(shots: RecommendedShot[]): BriefQualityIssue
   }
 
   return issues;
+}
+
+// ── Deduplication: rewrite identical "what it sells" text across shots ──
+
+export function deduplicateSellsText(shots: RecommendedShot[], input: LookbookInput, blueprint: ResolvedBlueprint): void {
+  const item = input.specificItem || PRODUCT_FAMILY_LABELS[input.productFamily].toLowerCase();
+  const vocab = FAMILY_VOCABULARY[input.productFamily];
+  const seen = new Map<string, number>(); // sells text -> first position that used it
+
+  for (const shot of shots) {
+    const key = shot.whatItSells.toLowerCase();
+    const firstPos = seen.get(key);
+
+    if (firstPos !== undefined) {
+      // This sells text is a duplicate. Rewrite using archetype-specific evidence.
+      const planEvidence = blueprint.evidencePlan.orderedEvidence.map((e) => e.evidence);
+      const matched = shot.archetype.evidenceCapabilities.filter((e) => planEvidence.includes(e));
+      const cat = shot.archetype.shotCategory;
+
+      if (matched.length >= 2) {
+        shot.whatItSells = composeEvidenceSells(matched, item, cat);
+      } else if (matched.length === 1) {
+        // Single evidence: compose a simple sentence
+        const phrase = EVIDENCE_SELL_PHRASES[matched[0]] || matched[0].replace(/_/g, " ");
+        shot.whatItSells = `${item[0].toUpperCase() + item.slice(1)} ${cat}: ${phrase}.`;
+      } else {
+        // No matched evidence: use archetype role as differentiator
+        shot.whatItSells = `${shot.archetype.role} ${vocab.editorial_mood}.`;
+      }
+
+      // If the rewrite STILL matches, append archetype name as last resort
+      if (shot.whatItSells.toLowerCase() === key) {
+        shot.whatItSells = `${shot.whatItSells} (${shot.archetype.title.toLowerCase()})`;
+      }
+    } else {
+      seen.set(key, shot.position);
+    }
+  }
 }
 
 // ── Build Recommended Shot (V2) ──

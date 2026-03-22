@@ -14,7 +14,7 @@ import type {
 import { ALL_ARCHETYPES } from "./shotArchetypes";
 import { scoreArchetype, computeCoverage } from "./scoring";
 import { buildMasterShootDNA } from "./shootDNA";
-import { buildRecommendedShot } from "./buildShotDelta";
+import { buildRecommendedShot, deduplicateSellsText } from "./buildShotDelta";
 import { formatExportText } from "./exportShotPlan";
 import { resolveBlueprint, UNIVERSAL_RULES } from "./shotBlueprints";
 import type { ShotArchetype } from "./types";
@@ -27,7 +27,7 @@ import {
 // ── Accessory-Led Families ──
 // These families have a physical product that is NOT the full outfit.
 // Selection rules differ: fewer heroes, more product-focus and detail variety.
-const ACCESSORY_LED_FAMILIES: string[] = ["bags", "jewelry", "eyewear", "watches", "small_accessories"];
+const ACCESSORY_LED_FAMILIES: string[] = ["bags", "jewelry", "eyewear", "watches", "small_accessories", "belts", "headwear", "scarves"];
 
 // ── Evidence Relevance Gate ──
 // An archetype must provide at least 1 required OR recommended evidence type
@@ -811,27 +811,29 @@ function computeGenerationOrder(
     }
   }
 
-  // Post-sort: ensure first two generation-order shots don't share 3+ distinctive evidence
+  // Post-sort: ensure first two generation-order shots don't share 3+ evidence types
   if (result.length >= 2) {
     const firstIdx = result[0];
-    const secondIdx = result[1];
     const firstEvidence = new Set(selected[firstIdx].archetype.evidenceCapabilities);
-    const secondEvidence = selected[secondIdx].archetype.evidenceCapabilities;
-    const shared = secondEvidence.filter((e) => firstEvidence.has(e));
-    const distinctiveShared = shared.filter((e) => !AMBIENT_EVIDENCE.has(e));
+    const secondEvidence = selected[result[1]].archetype.evidenceCapabilities;
+    const sharedCount = secondEvidence.filter((e) => firstEvidence.has(e)).length;
 
-    if (distinctiveShared.length >= 3) {
+    if (sharedCount >= 3) {
       // Find the best non-redundant shot to swap into position 2
+      let bestSwap = -1;
+      let bestSharedCount = sharedCount;
       for (let swap = 2; swap < result.length; swap++) {
         const swapEvidence = selected[result[swap]].archetype.evidenceCapabilities;
-        const swapShared = swapEvidence.filter((e) => firstEvidence.has(e));
-        const swapDistinctive = swapShared.filter((e) => !AMBIENT_EVIDENCE.has(e));
-        if (swapDistinctive.length < 3) {
-          const temp = result[1];
-          result[1] = result[swap];
-          result[swap] = temp;
-          break;
+        const swapShared = swapEvidence.filter((e) => firstEvidence.has(e)).length;
+        if (swapShared < bestSharedCount) {
+          bestSharedCount = swapShared;
+          bestSwap = swap;
         }
+      }
+      if (bestSwap !== -1 && bestSharedCount < sharedCount) {
+        const temp = result[1];
+        result[1] = result[bestSwap];
+        result[bestSwap] = temp;
       }
     }
   }
@@ -1001,6 +1003,9 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
       selected,
     ),
   );
+
+  // Step 7b: Deduplicate identical "what it sells" text across shots
+  deduplicateSellsText(shots, input, blueprint);
 
   // Step 8: Coverage (including evidence coverage)
   const baseCoverage = computeCoverage(

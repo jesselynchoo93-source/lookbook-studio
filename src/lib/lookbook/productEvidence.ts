@@ -138,6 +138,8 @@ export const FAMILY_EVIDENCE: Record<ProductFamily, FamilyEvidenceSpec> = {
       req("full_silhouette", "recommended"),
       req("side_profile", "recommended"),
       req("texture_detail", "recommended"),
+      req("styling_context", "optional"),
+      req("body_scale", "optional"),
       req("attachment_point", "optional"),
       req("profile_depth", "optional"),
     ],
@@ -185,9 +187,10 @@ export const FAMILY_EVIDENCE: Record<ProductFamily, FamilyEvidenceSpec> = {
       req("surface_reflection", "recommended"),
       req("closure_mechanism", "optional"),
       req("profile_depth", "optional"),
+      req("styling_context", "optional"),
     ],
-    categoryRoleMix: { product_focus: 1, detail: 1 },
-    productZones: ["hand", "wrist"],
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 2 },
+    productZones: ["hand", "wrist", "product_only"],
   },
 
   full_look: {
@@ -336,6 +339,95 @@ export const ITEM_EVIDENCE_OVERRIDES: ItemEvidenceOverride[] = [
     family: "eyewear",
     label: "Optical Glasses",
     // No override needed beyond family
+  },
+
+  // ── Headwear Items ──
+  {
+    items: ["cap", "baseball cap", "trucker cap"],
+    family: "headwear",
+    label: "Cap",
+    evidenceOverrides: [
+      req("logo_placement", "recommended"),
+    ],
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 1 },
+  },
+  {
+    items: ["beanie", "knit beanie", "wool beanie"],
+    family: "headwear",
+    label: "Beanie",
+    evidenceOverrides: [
+      req("texture_detail", "required"),
+    ],
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 1 },
+  },
+  {
+    items: ["beret", "flat cap"],
+    family: "headwear",
+    label: "Beret",
+    evidenceOverrides: [
+      req("texture_detail", "required"),
+      req("styling_context", "recommended"),
+    ],
+    categoryRoleMix: { hero: 1, product_focus: 1, editorial: 1 },
+  },
+  {
+    items: ["bucket hat", "sun hat", "wide brim hat", "fedora"],
+    family: "headwear",
+    label: "Brimmed Hat",
+    evidenceOverrides: [
+      req("side_profile", "required"),
+      req("profile_depth", "recommended"),
+    ],
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 1 },
+  },
+
+  // ── Small Accessories Items ──
+  {
+    items: ["wallet", "bifold wallet", "long wallet", "zip wallet"],
+    family: "small_accessories",
+    label: "Wallet",
+    evidenceOverrides: [
+      req("closure_mechanism", "recommended"),
+      req("interior_capacity", "optional"),
+    ],
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 2 },
+  },
+  {
+    items: ["cardholder", "card holder", "card case", "card wallet"],
+    family: "small_accessories",
+    label: "Cardholder",
+    evidenceOverrides: [
+      req("profile_depth", "recommended"),
+    ],
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 2 },
+  },
+  {
+    items: ["keychain", "key holder", "key ring", "key fob"],
+    family: "small_accessories",
+    label: "Keychain",
+    evidenceOverrides: [
+      req("attachment_point", "recommended"),
+      req("hardware_detail", "recommended"),
+    ],
+    categoryRoleMix: { hero: 1, detail: 1 },
+  },
+  {
+    items: ["coin purse", "pouch", "small pouch"],
+    family: "small_accessories",
+    label: "Coin Purse / Pouch",
+    evidenceOverrides: [
+      req("closure_mechanism", "recommended"),
+    ],
+    categoryRoleMix: { hero: 1, product_focus: 1, detail: 1 },
+  },
+  {
+    items: ["wool scarf", "cashmere scarf", "knit scarf", "winter scarf"],
+    family: "scarves",
+    label: "Wool/Cashmere Scarf",
+    evidenceOverrides: [
+      req("texture_detail", "required"),
+      req("movement_behavior", "recommended"),
+    ],
   },
 ];
 

@@ -40,6 +40,16 @@ function hasNoApparelWording(result: LookbookPlanResult): string[] {
   return errors;
 }
 
+// Evidence types that appear on nearly every shot for certain families and
+// should not count toward the redundancy check between generation-order shots.
+const AMBIENT_EVIDENCE: Set<EvidenceType> = new Set([
+  "body_scale",
+  "face_scale",
+  "fit_on_body",
+  "full_silhouette",
+  "scale_reference",
+]);
+
 // Check that first two generation-order shots don't have critical redundancy
 function checkGenOrderNonRedundancy(result: LookbookPlanResult): string[] {
   const errors: string[] = [];
@@ -53,9 +63,10 @@ function checkGenOrderNonRedundancy(result: LookbookPlanResult): string[] {
   if (!shotA || !shotB) return errors;
 
   const shared = shotA.evidenceProvided.filter((e) => shotB.evidenceProvided.includes(e));
-  if (shared.length >= 3) {
+  const distinctiveShared = shared.filter((e) => !AMBIENT_EVIDENCE.has(e));
+  if (distinctiveShared.length >= 3) {
     errors.push(
-      `First two generation-order shots (${shotA.archetype.title}, ${shotB.archetype.title}) share ${shared.length} evidence types: ${shared.join(", ")}`
+      `First two generation-order shots (${shotA.archetype.title}, ${shotB.archetype.title}) share ${distinctiveShared.length} distinctive evidence types: ${distinctiveShared.join(", ")}`
     );
   }
 
@@ -283,6 +294,106 @@ const TEST_CASES: TestCase[] = [
       for (const shot of result.shots) {
         const id = shot.archetype.id.toLowerCase();
         if (id.includes("footwear_") || id.includes("bag_") || id.includes("ear_") || id.includes("jewelry_")) {
+          errors.push(`Shot ${shot.position} uses wrong-family archetype: ${shot.archetype.id}`);
+        }
+      }
+      errors.push(...hasNoApparelWording(result));
+      return errors;
+    },
+  },
+  // 10. belts > leather belt > editorial (6)
+  {
+    name: "belts > leather belt > editorial",
+    input: {
+      productFamily: "belts",
+      specificItem: "leather belt",
+      genderPresentation: "menswear",
+      targetStyle: "editorial",
+      campaignGoal: "detail_focus",
+      logoVisibilityPriority: "medium",
+      creativityLevel: "balanced",
+      shotCount: 6,
+    },
+    assertions: (result) => {
+      const errors: string[] = [];
+      if (!hasEvidence(result, "waist_anchoring")) errors.push("Missing waist_anchoring evidence");
+      if (!hasEvidence(result, "hardware_detail")) errors.push("Missing hardware_detail evidence");
+      if (!hasEvidence(result, "closure_mechanism")) errors.push("Missing closure_mechanism evidence");
+      if (countCategory(result, "detail") < 1) errors.push("Need at least 1 detail shot");
+      const productFocusOrWaist = result.shots.filter(
+        (s) => s.archetype.shotCategory === "product_focus" ||
+               s.archetype.id === "belt_waist_hero" ||
+               s.archetype.id === "belt_waist_styling_crop"
+      ).length;
+      if (productFocusOrWaist < 1) errors.push("Need at least 1 product_focus or waist-led shot");
+      // No duplicate hero-like waist seller shots
+      const heroCount = countCategory(result, "hero");
+      if (heroCount > 1) errors.push(`Too many hero shots (${heroCount}), expected 1`);
+      errors.push(...hasNoApparelWording(result));
+      return errors;
+    },
+  },
+
+  // 11. headwear > cap > commercial (6)
+  {
+    name: "headwear > cap > commercial",
+    input: {
+      productFamily: "headwear",
+      specificItem: "cap",
+      genderPresentation: "menswear",
+      targetStyle: "commercial",
+      campaignGoal: "product_clarity",
+      logoVisibilityPriority: "medium",
+      creativityLevel: "balanced",
+      shotCount: 6,
+    },
+    assertions: (result) => {
+      const errors: string[] = [];
+      if (!hasEvidence(result, "face_framing")) errors.push("Missing face_framing evidence");
+      if (!hasEvidence(result, "face_scale")) errors.push("Missing face_scale evidence");
+      if (result.shots.length < 5) errors.push(`Need 5+ shots, got ${result.shots.length}`);
+      if (!hasEvidence(result, "texture_detail")) errors.push("Missing texture_detail evidence (recommended)");
+      if (!hasEvidence(result, "side_profile")) errors.push("Missing side_profile evidence (recommended)");
+      // Should have at least 1 detail shot for texture
+      if (countCategory(result, "detail") < 1) errors.push("Need at least 1 detail shot");
+      // Should not select bag/watch/footwear archetypes
+      for (const shot of result.shots) {
+        const id = shot.archetype.id.toLowerCase();
+        if (id.includes("bag_") || id.includes("watch_") || id.includes("footwear_")) {
+          errors.push(`Shot ${shot.position} uses wrong-family archetype: ${shot.archetype.id}`);
+        }
+      }
+      errors.push(...hasNoApparelWording(result));
+      return errors;
+    },
+  },
+
+  // 12. small_accessories > wallet > commercial (6)
+  {
+    name: "small_accessories > wallet > commercial",
+    input: {
+      productFamily: "small_accessories",
+      specificItem: "wallet",
+      genderPresentation: "menswear",
+      targetStyle: "commercial",
+      campaignGoal: "detail_focus",
+      logoVisibilityPriority: "low",
+      creativityLevel: "balanced",
+      shotCount: 6,
+    },
+    assertions: (result) => {
+      const errors: string[] = [];
+      if (!hasEvidence(result, "scale_reference")) errors.push("Missing scale_reference evidence");
+      if (!hasEvidence(result, "texture_detail")) errors.push("Missing texture_detail evidence");
+      if (result.shots.length < 4) errors.push(`Need 4+ shots, got ${result.shots.length}`);
+      if (countCategory(result, "detail") + countCategory(result, "product_focus") < 2) {
+        errors.push("Need 2+ detail/product_focus shots");
+      }
+      if (countCategory(result, "hero") < 1) errors.push("Need at least 1 hero shot");
+      // Should not select bag/watch/footwear archetypes
+      for (const shot of result.shots) {
+        const id = shot.archetype.id.toLowerCase();
+        if (id.includes("bag_") || id.includes("watch_") || id.includes("footwear_")) {
           errors.push(`Shot ${shot.position} uses wrong-family archetype: ${shot.archetype.id}`);
         }
       }

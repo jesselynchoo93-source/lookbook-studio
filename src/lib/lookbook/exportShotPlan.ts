@@ -33,6 +33,7 @@ const DISPLAY_NAME_OVERRIDES: Record<string, Partial<Record<ProductFamily, strin
     watches: "Wrist Presence Hero",
     jewelry: "Placement and Scale Hero",
     eyewear: "Face-Framing Hero",
+    belts: "Full-Body Belt Context",
   },
   accessory_hand_interaction: {
     watches: "Wrist and Hand Interaction",
