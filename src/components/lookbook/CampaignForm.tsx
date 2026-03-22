@@ -209,13 +209,18 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
         activePreset={activePreset}
       />
 
-      {/* Divider */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 h-px bg-gray-700" />
-        <span className="text-xs text-gray-500 uppercase tracking-wider">
-          Campaign Details
-        </span>
-        <div className="flex-1 h-px bg-gray-700" />
+      {/* Divider with relationship explainer */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-gray-700" />
+          <span className="text-xs text-gray-500 uppercase tracking-wider">
+            Campaign Details
+          </span>
+          <div className="flex-1 h-px bg-gray-700" />
+        </div>
+        <p className="text-xs text-gray-500 text-center">
+          Your creative direction stays active unless you choose to apply the AI recommendation.
+        </p>
       </div>
 
       {/* Product Selection */}
