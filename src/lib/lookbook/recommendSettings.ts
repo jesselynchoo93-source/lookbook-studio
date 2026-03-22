@@ -39,6 +39,8 @@ interface RecommendationInput {
 export function getRecommendedSettings(input: RecommendationInput): RecommendedSettings {
   const { productFamily, specificItem, targetStyle } = input;
   const item = specificItem?.toLowerCase() || "";
+  // Use the specific item name in titles when available, otherwise fall back to family name
+  const itemLabel = specificItem || productFamily;
 
   // Item-specific overrides first, then family + style matrix
 
@@ -117,7 +119,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
         campaignGoal: "styling_story",
         logoVisibilityPriority: "medium",
         creativityLevel: "balanced",
-        title: "Lifestyle eyewear set",
+        title: `${itemLabel} attitude and face-framing set`,
         reason: "Luxury eyewear sells through face framing, mood, and frame attitude. Medium logo priority keeps branding readable without forcing stiff shots. Balanced creativity allows a clean hero, a product-focus angle, and editorial support.",
       };
     }
@@ -125,7 +127,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
       campaignGoal: "product_clarity",
       logoVisibilityPriority: "medium",
       creativityLevel: "safe",
-      title: "Clear commercial eyewear set",
+      title: `Clean commercial ${itemLabel} set`,
       reason: "Commercial eyewear needs frame shape, lens tint, and temple arm detail clearly visible. Medium branding ensures the logo on the temple arm is readable. Safe creativity keeps shots reliable.",
     };
   }
@@ -137,7 +139,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
         campaignGoal: "premium_branding",
         logoVisibilityPriority: "medium",
         creativityLevel: "balanced",
-        title: "Premium bag set",
+        title: `Premium ${itemLabel} set`,
         reason: "Luxury bags sell through carry method, hardware quality, and brand recognition. Medium branding balances logo visibility with natural carry poses. Balanced creativity allows carry profiles and editorial context.",
       };
     }
@@ -146,7 +148,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
         campaignGoal: "detail_focus",
         logoVisibilityPriority: "medium",
         creativityLevel: "balanced",
-        title: "Clutch detail set",
+        title: `${itemLabel} detail set`,
         reason: "Clutches are small and need close-up hardware and closure detail. Balanced creativity allows hand interaction and editorial styling shots.",
       };
     }
@@ -154,7 +156,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
       campaignGoal: "product_clarity",
       logoVisibilityPriority: "medium",
       creativityLevel: "safe",
-      title: "Commercial bag set",
+      title: `Commercial ${itemLabel} set`,
       reason: "Commercial bags need carry method, body scale, and hardware readability first. Safe creativity gives cleaner product-selling shots. Medium branding keeps logos naturally visible.",
     };
   }
@@ -166,7 +168,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
         campaignGoal: "styling_story",
         logoVisibilityPriority: "medium",
         creativityLevel: "balanced",
-        title: "Street sneaker set",
+        title: `Street ${itemLabel} set`,
         reason: "Sneakers in a street context sell through on-foot energy, sole profile, and styling attitude. Balanced creativity allows a motion shot alongside clean product shots.",
       };
     }
@@ -175,7 +177,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
         campaignGoal: "product_clarity",
         logoVisibilityPriority: "low",
         creativityLevel: "balanced",
-        title: "Elevated footwear set",
+        title: `Elevated ${itemLabel} set`,
         reason: "Heels and sandals need clear on-foot presence and sole profile. Low branding because these products rarely feature prominent logos. Balanced creativity allows some editorial variety.",
       };
     }
@@ -183,7 +185,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
       campaignGoal: "product_clarity",
       logoVisibilityPriority: "medium",
       creativityLevel: "safe",
-      title: "Commercial footwear set",
+      title: `Commercial ${itemLabel} set`,
       reason: "Footwear needs on-foot presence, sole profile, and material detail clearly visible. Safe creativity reduces rendering risk on shoe-to-ground contact.",
     };
   }
@@ -196,7 +198,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
           campaignGoal: "premium_branding",
           logoVisibilityPriority: "high",
           creativityLevel: "balanced",
-          title: "Premium tailoring set",
+          title: `Premium ${itemLabel} tailoring set`,
           reason: "Tailoring and branded apparel benefit from clear silhouette plus controlled premium presentation. High branding ensures labels and construction details are visible. Balanced creativity keeps it polished without becoming rigid.",
         };
       }
@@ -223,7 +225,7 @@ export function getRecommendedSettings(input: RecommendationInput): RecommendedS
           campaignGoal: "premium_branding",
           logoVisibilityPriority: "high",
           creativityLevel: "safe",
-          title: "Brand-forward streetwear set",
+          title: `Brand-forward ${itemLabel} set`,
           reason: "Hoodies and sweatshirts in streetwear are often logo-driven. High branding ensures front graphics stay readable. Safe creativity gives reliable front-facing shots.",
         };
       }

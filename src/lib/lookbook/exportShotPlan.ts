@@ -12,8 +12,44 @@ import {
   LOGO_LABELS,
   CREATIVITY_LABELS,
 } from "./types";
+import type { ProductFamily } from "./types";
 import { NEGATIVE_DEFAULTS } from "./realismRules";
 import { runBriefQualityPass } from "./buildShotDelta";
+
+// ── Category-native display names for generic archetypes ──
+// When a generic archetype is used for a specific family, show a better name in the export.
+const DISPLAY_NAME_OVERRIDES: Record<string, Partial<Record<ProductFamily, string>>> = {
+  detail_crop_logo_focus: {
+    eyewear: "Frame and Temple Mark Detail",
+    watches: "Dial and Case Mark Detail",
+    footwear: "Tongue and Heel Tab Detail",
+    bags: "Logo and Hardware Detail",
+    jewelry: "Hallmark and Setting Detail",
+    headwear: "Badge and Label Detail",
+    belts: "Buckle Stamp Detail",
+  },
+  hero_full_body_seller: {
+    bags: "Carry and Proportion Hero",
+    watches: "Wrist Presence Hero",
+    jewelry: "Placement and Scale Hero",
+    eyewear: "Face-Framing Hero",
+  },
+  accessory_hand_interaction: {
+    watches: "Wrist and Hand Interaction",
+    jewelry: "Hand and Piece Interaction",
+    eyewear: "Frames in Hand",
+  },
+  portrait_hero_clean: {
+    eyewear: "Clean Frame Portrait",
+    jewelry: "Jewelry Portrait",
+    headwear: "Headwear Portrait",
+  },
+};
+
+function getDisplayName(archetypeId: string, archetypeTitle: string, family: ProductFamily): string {
+  const override = DISPLAY_NAME_OVERRIDES[archetypeId]?.[family];
+  return override || archetypeTitle;
+}
 
 export function formatExportText(
   dna: MasterShootDNA,
@@ -68,7 +104,8 @@ export function formatExportText(
   for (const genIdx of firstThree) {
     const shot = shots.find((s) => s.position === genIdx + 1);
     if (shot?.whyGenerateNow) {
-      lines.push(`  #${shot.position} ${shot.archetype.title}: ${shot.whyGenerateNow}`);
+      const name = getDisplayName(shot.archetype.id, shot.archetype.title, input.productFamily);
+      lines.push(`  #${shot.position} ${name}: ${shot.whyGenerateNow}`);
     }
   }
   if (firstThree.some((i) => shots.find((s) => s.position === i + 1)?.whyGenerateNow)) {
@@ -80,7 +117,8 @@ export function formatExportText(
 
   // ── Individual Shots ──
   for (const shot of shots) {
-    lines.push(`SHOT ${shot.position}: ${shot.archetype.title.toUpperCase()}`);
+    const displayName = getDisplayName(shot.archetype.id, shot.archetype.title, input.productFamily);
+    lines.push(`SHOT ${shot.position}: ${displayName.toUpperCase()}`);
     lines.push(`Category: ${shot.archetype.shotCategory} | Priority: #${shot.generationPriority} | ${shot.archetype.difficulty} difficulty`);
     if (shot.badges.length > 0) {
       lines.push(`Badges: ${shot.badges.join(", ")}`);

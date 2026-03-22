@@ -95,10 +95,13 @@ function SelectField<T extends string>({
       >
         {options.map((opt) => (
           <option key={opt} value={opt}>
-            {labels[opt]}{descriptions ? ` — ${descriptions[opt]}` : ""}
+            {labels[opt]}
           </option>
         ))}
       </select>
+      {descriptions && descriptions[value] && (
+        <p className="mt-1 text-xs text-gray-400">{descriptions[value]}</p>
+      )}
       <p className="mt-1 text-xs text-gray-500">{helperText}</p>
     </div>
   );
