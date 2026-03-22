@@ -989,7 +989,7 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
     priorityMap.set(selIdx, priority + 1);
   });
 
-  // Step 7: Build recommended shots
+  // Step 7: Build recommended shots (pass selected for whyGenerateNow context)
   const shots = selected.map((s, idx) =>
     buildRecommendedShot(
       s,
@@ -998,6 +998,7 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
       dna,
       input,
       blueprint,
+      selected,
     ),
   );
 

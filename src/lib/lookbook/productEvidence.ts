@@ -565,7 +565,7 @@ export function getDetailNoun(family: ProductFamily): string {
   return FAMILY_DETAIL_NOUN[family];
 }
 
-/** Compose a "what it sells" sentence from evidence types. */
+/** Compose a "what it sells" sentence from evidence types using category-native tone. */
 export function composeEvidenceSells(
   evidenceTypes: EvidenceType[],
   item: string,
@@ -575,16 +575,29 @@ export function composeEvidenceSells(
     .slice(0, 3)
     .map((e) => EVIDENCE_SELL_PHRASES[e]);
 
-  const categoryVerb: Record<ShotCategory, string> = {
-    hero: "Primary visibility of",
-    detail: "Close-up validation of",
-    product_focus: "Focused view of",
-    editorial: "Lifestyle context for",
-    silhouette: "Shape and outline of",
-    motion: "Dynamic behaviour of",
-  };
+  const joined = phrases.join("; ");
 
-  return `${categoryVerb[category]} ${item}. Buyer sees: ${phrases.join("; ")}.`;
+  // Category-native tone instead of generic "Buyer sees:" template
+  if (category === "hero") {
+    return `The ${item} in full context: ${joined}.`;
+  }
+  if (category === "detail") {
+    return `Craftsmanship proof for the ${item}: ${joined}.`;
+  }
+  if (category === "product_focus") {
+    return `${item[0].toUpperCase() + item.slice(1)} up close: ${joined}.`;
+  }
+  if (category === "editorial") {
+    return `The ${item} in a world the buyer wants: ${joined}.`;
+  }
+  if (category === "silhouette") {
+    return `Shape language of the ${item}: ${joined}.`;
+  }
+  if (category === "motion") {
+    return `The ${item} in motion: ${joined}.`;
+  }
+
+  return `The ${item}: ${joined}.`;
 }
 
 /** Families eligible for product_only display zone shots. */

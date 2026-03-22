@@ -459,6 +459,10 @@ export interface RecommendedShot {
   deltaBrief: string;
   negativeCues: string;
   evidenceProvided: EvidenceType[];
+  /** V2: shot-specific realism guardrail (replaces global boilerplate) */
+  realismGuardrail: string;
+  /** V2: why this shot should be generated at this priority (first 3 only) */
+  whyGenerateNow?: string;
 }
 
 export interface CoverageSummary {

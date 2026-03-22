@@ -12,6 +12,8 @@ import {
   LOGO_LABELS,
   CREATIVITY_LABELS,
 } from "./types";
+import { NEGATIVE_DEFAULTS } from "./realismRules";
+import { runBriefQualityPass } from "./buildShotDelta";
 
 export function formatExportText(
   dna: MasterShootDNA,
@@ -22,12 +24,12 @@ export function formatExportText(
 ): string {
   const lines: string[] = [];
 
-  lines.push("LOOKBOOK STUDIO PLAN");
-  lines.push("====================");
+  lines.push("LOOKBOOK STUDIO PLAN v2");
+  lines.push("=======================");
   lines.push("");
 
-  // Master Shoot DNA
-  lines.push("Master Shoot DNA");
+  // ── Master Shoot DNA ──
+  lines.push("MASTER SHOOT DNA");
   lines.push("-----------------");
   lines.push(`Campaign direction: ${dna.campaignDirection}`);
   lines.push(
@@ -49,40 +51,96 @@ export function formatExportText(
   lines.push(`Branding rules: ${dna.brandingVisibilityRules}`);
   lines.push("");
 
-  // Generation order
-  const firstThree = generationOrder.slice(0, 3).map((i) => `#${i + 1}`);
-  lines.push(`Recommended first shots: ${firstThree.join(", ")}`);
+  // V2: Global negative cues live here, not per-shot
+  lines.push("GLOBAL NEGATIVE CUES (apply to every shot):");
+  lines.push(`  ${NEGATIVE_DEFAULTS}`);
+  lines.push("");
+
+  // Generation order with "why generate now" for first 3
+  const firstThree = generationOrder.slice(0, 3);
+  lines.push("GENERATION ORDER");
+  lines.push("-----------------");
+  lines.push(`Recommended first shots: ${firstThree.map((i) => `#${i + 1}`).join(", ")}`);
   lines.push(`${dna.generationPriorityNotes}`);
   lines.push("");
+
+  // Show why-generate-now for first 3
+  for (const genIdx of firstThree) {
+    const shot = shots.find((s) => s.position === genIdx + 1);
+    if (shot?.whyGenerateNow) {
+      lines.push(`  #${shot.position} ${shot.archetype.title}: ${shot.whyGenerateNow}`);
+    }
+  }
+  if (firstThree.some((i) => shots.find((s) => s.position === i + 1)?.whyGenerateNow)) {
+    lines.push("");
+  }
+
   lines.push("---");
   lines.push("");
 
-  // Individual shots
+  // ── Individual Shots ──
   for (const shot of shots) {
-    lines.push(`${shot.position}. ${shot.archetype.title}`);
-    lines.push(`   Role: ${shot.archetype.role}`);
-    lines.push(`   Category: ${shot.archetype.shotCategory}`);
-    lines.push(`   What it sells: ${shot.whatItSells}`);
-    if (shot.evidenceProvided.length > 0) {
-      lines.push(`   Evidence: ${shot.evidenceProvided.join(", ")}`);
+    lines.push(`SHOT ${shot.position}: ${shot.archetype.title.toUpperCase()}`);
+    lines.push(`Category: ${shot.archetype.shotCategory} | Priority: #${shot.generationPriority} | ${shot.archetype.difficulty} difficulty`);
+    if (shot.badges.length > 0) {
+      lines.push(`Badges: ${shot.badges.join(", ")}`);
     }
-    lines.push(`   Framing: ${shot.framingDelta}`);
-    lines.push(`   Pose: ${shot.poseDelta}`);
-    lines.push(`   Branding: ${shot.brandingSafety}`);
-    lines.push(`   Reliability: ${shot.archetype.higgsfieldReliability} | Difficulty: ${shot.archetype.difficulty}`);
-    lines.push(`   Priority: #${shot.generationPriority}`);
     lines.push("");
-    lines.push(`   DELTA BRIEF:`);
-    lines.push(`   ${shot.deltaBrief}`);
+
+    // What it sells (separated from brief)
+    lines.push(`WHAT IT SELLS:`);
+    lines.push(`  ${shot.whatItSells}`);
     lines.push("");
-    lines.push(`   NEGATIVE CUES:`);
-    lines.push(`   ${shot.negativeCues}`);
+
+    // Evidence
+    if (shot.evidenceProvided.length > 0) {
+      lines.push(`EVIDENCE: ${shot.evidenceProvided.join(", ")}`);
+      lines.push("");
+    }
+
+    // The brief itself (the image to create)
+    lines.push(`BRIEF:`);
+    lines.push(`  ${shot.deltaBrief}`);
+    lines.push("");
+
+    // Technical
+    lines.push(`FRAMING: ${shot.framingDelta}`);
+    lines.push(`POSE: ${shot.poseDelta}`);
+    lines.push(`BRANDING: ${shot.brandingSafety}`);
+    lines.push("");
+
+    // V2: Shot-specific realism guardrail (replaces global boilerplate per shot)
+    if (shot.realismGuardrail) {
+      lines.push(`REALISM GUARDRAIL:`);
+      lines.push(`  ${shot.realismGuardrail}`);
+      lines.push("");
+    }
+
+    // V2: Shot-specific negative cues only (global cues are in DNA section)
+    if (shot.negativeCues && shot.negativeCues !== "(see global negative cues)") {
+      lines.push(`SHOT-SPECIFIC NEGATIVE CUES:`);
+      lines.push(`  ${shot.negativeCues}`);
+      lines.push("");
+    }
+
+    lines.push("---");
+    lines.push("");
+  }
+
+  // ── Brief Quality Pass ──
+  const qualityIssues = runBriefQualityPass(shots);
+  if (qualityIssues.length > 0) {
+    lines.push("BRIEF QUALITY PASS");
+    lines.push("==================");
+    for (const issue of qualityIssues) {
+      lines.push(`  Shot ${issue.shotPosition}: ${issue.issue}`);
+    }
     lines.push("");
     lines.push("---");
     lines.push("");
   }
 
-  // Evidence coverage diagnostics
+  // ── Evidence Coverage Diagnostics ──
   if (diagnostics) {
     lines.push("EVIDENCE COVERAGE DIAGNOSTICS");
     lines.push("=============================");
@@ -166,7 +224,7 @@ export function formatExportText(
     lines.push("");
   }
 
-  lines.push("Generated by Lookbook Studio v1");
+  lines.push("Generated by Lookbook Studio v2");
 
   return lines.join("\n");
 }

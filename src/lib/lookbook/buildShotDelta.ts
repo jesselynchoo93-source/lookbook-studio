@@ -1,5 +1,7 @@
 import type {
   ShotArchetype,
+  ShotCategory,
+  ProductFamily,
   LookbookInput,
   MasterShootDNA,
   RecommendedShot,
@@ -8,17 +10,149 @@ import type {
   EvidenceType,
 } from "./types";
 import { PRODUCT_FAMILY_LABELS } from "./types";
-import { NEGATIVE_DEFAULTS } from "./realismRules";
 import {
   composeEvidenceSells,
   FAMILY_FALLBACK_SELLS,
 } from "./productEvidence";
 
-// ── Delta Brief Builder ──
+// ── V2 Family-Native Vocabulary ──
+
+const FAMILY_VOCABULARY: Record<ProductFamily, Record<string, string>> = {
+  eyewear: {
+    product: "frames",
+    material: "acetate and metal finish",
+    hero_verb: "sits on the face",
+    detail_focus: "temple arm, hinge engineering, and lens coating",
+    editorial_mood: "attitude and face-framing confidence",
+  },
+  bags: {
+    product: "bag",
+    material: "leather grain and hardware",
+    hero_verb: "hangs against the body",
+    detail_focus: "buckle finish, stitching, and edge paint",
+    editorial_mood: "ease and everyday carry",
+  },
+  watches: {
+    product: "watch",
+    material: "case finishing and dial texture",
+    hero_verb: "sits on the wrist",
+    detail_focus: "dial indices, crown, and bezel detailing",
+    editorial_mood: "wrist presence and personal style",
+  },
+  jewelry: {
+    product: "piece",
+    material: "metal finish and stone setting",
+    hero_verb: "catches light against the skin",
+    detail_focus: "setting, clasp, and surface sparkle",
+    editorial_mood: "adornment and personal expression",
+  },
+  footwear: {
+    product: "shoes",
+    material: "upper construction and sole profile",
+    hero_verb: "grounds the look from the feet up",
+    detail_focus: "sole tread, stitching, and lacing system",
+    editorial_mood: "ground energy and street confidence",
+  },
+  apparel: {
+    product: "garment",
+    material: "fabric hand and construction",
+    hero_verb: "drapes on the body",
+    detail_focus: "seam finishing, button quality, and fabric weave",
+    editorial_mood: "personal style and occasion",
+  },
+  headwear: {
+    product: "headpiece",
+    material: "material texture and structure",
+    hero_verb: "frames the face from above",
+    detail_focus: "brim edge, inner band, and material grain",
+    editorial_mood: "face framing and identity",
+  },
+  belts: {
+    product: "belt",
+    material: "leather grain and buckle finish",
+    hero_verb: "anchors the waist",
+    detail_focus: "buckle mechanism, edge finishing, and hole punching",
+    editorial_mood: "waist definition and polish",
+  },
+  scarves: {
+    product: "scarf",
+    material: "weave, drape weight, and print clarity",
+    hero_verb: "falls across the body",
+    detail_focus: "hemming, fabric weight, and print registration",
+    editorial_mood: "layering and colour story",
+  },
+  small_accessories: {
+    product: "accessory",
+    material: "material finish and surface quality",
+    hero_verb: "sits in or on the hand",
+    detail_focus: "hinge, clasp, and surface finishing",
+    editorial_mood: "personal detail and intentionality",
+  },
+  full_look: {
+    product: "ensemble",
+    material: "fabric interplay and layering",
+    hero_verb: "comes together on the body",
+    detail_focus: "fabric interaction, proportion, and finish quality",
+    editorial_mood: "total look and styled intention",
+  },
+};
+
+// ── V2 Shot-Specific Realism Guardrails ──
+
+function buildRealismGuardrail(archetype: ShotArchetype, input: LookbookInput): string {
+  const id = archetype.id;
+  const family = input.productFamily;
+
+  // Shot-specific guardrails: what to watch for in THIS shot only
+  if (id === "hero_full_body_seller") {
+    if (family === "bags") return "Watch: strap attachment points, bag-to-hip proportion, hardware not merging with clothing.";
+    if (family === "footwear") return "Watch: shoe-to-ground contact, lacing symmetry, sole not floating.";
+    if (family === "apparel") return "Watch: shoulder seam alignment, hem consistency, button spacing.";
+    return "Watch: product-to-body proportion, natural weight distribution.";
+  }
+
+  if (id === "watch_wrist_hero") return "Watch: case-to-wrist proportion, strap sitting flush against skin, crown at 3 o'clock.";
+  if (id === "watch_dial_closeup") return "Watch: index alignment, hand positions realistic, crystal reflection natural, small dial text may be illegible.";
+  if (id === "watch_strap_detail") return "Watch: bracelet link alignment, clasp hinge accuracy, strap-to-lug junction clean.";
+  if (id === "accessory_hand_interaction" && family === "watches") return "Watch: finger count, wrist anatomy, watch face legibility at this angle.";
+  if (id === "accessory_hand_interaction") return "Watch: finger count, natural finger curvature, small object not floating above skin.";
+
+  if (id === "eyewear_portrait_halfbody") return "Watch: frame symmetry across the bridge, lens tint consistency, temple arm alignment.";
+  if (id === "eyewear_temple_detail") return "Watch: hinge pin rendering, logo legibility on temple arm, lens-to-frame junction.";
+  if (id === "portrait_hero_clean" && family === "eyewear") return "Watch: frame sitting naturally on the nose bridge, both lenses same tint, no frame warping.";
+
+  if (id === "bag_carry_profile") return "Watch: strap attachment where it meets the bag, bag not clipping through clothing, consistent leather texture.";
+  if (id === "bag_hardware_detail") return "Watch: buckle/clasp rendering, metal colour consistency, stitching regularity near hardware.";
+  if (id === "bag_construction_detail") return "Watch: interior lining texture, pocket edge finishing, zipper teeth alignment.";
+
+  if (id === "footwear_ground_focus") return "Watch: shoe-to-ground shadow contact, sole tread pattern clarity, lacing eyelet rendering.";
+  if (id === "footwear_material_detail") return "Watch: stitching regularity, sole-to-upper seam, leather grain consistency.";
+  if (id === "controlled_half_stride") {
+    if (family === "footwear") return "Watch: both shoes rendered correctly, natural stride length, sole flex believable.";
+    return "Watch: mid-stride weight distribution, fabric movement consistent with direction.";
+  }
+
+  if (id === "ear_detail_crop") return "Watch: earring attachment to earlobe, metal colour match if pair, no earring floating.";
+  if (id === "three_quarter_ear_reveal") return "Watch: earring drop against jawline, both sides consistent if pair visible.";
+  if (id === "pair_symmetry_validation") return "Watch: left-right earring size match, identical drop length, no asymmetric distortion.";
+  if (id === "jewelry_neckline_focus") return "Watch: chain drape following gravity, pendant resting on skin, clasp hidden at back.";
+
+  if (id === "detail_crop_logo_focus") return "Watch: text legibility, no mirrored or scrambled characters, logo proportions accurate.";
+
+  // Category-level fallbacks
+  if (archetype.shotCategory === "detail") return "Watch: material texture rendering at close range, clean edges, no AI smoothing artefacts.";
+  if (archetype.shotCategory === "motion") return "Watch: natural motion blur direction, no frozen mid-air limbs, clothing movement consistent.";
+  if (archetype.shotCategory === "editorial") return "Watch: environment-to-subject lighting match, no compositing seams, grounded shadows.";
+  if (archetype.shotCategory === "silhouette") return "Watch: clean edge separation from background, no phantom limbs, unbroken silhouette line.";
+
+  return "Watch: product rendering accuracy, natural skin texture, grounded anatomy.";
+}
+
+// ── V2 Delta Brief Builder ──
 
 function buildDeltaBrief(
   archetype: ShotArchetype,
-  dna: MasterShootDNA,
+  _dna: MasterShootDNA,
   input: LookbookInput,
   blueprint: ResolvedBlueprint
 ): string {
@@ -37,11 +171,11 @@ function buildDeltaBrief(
   brief = brief.replace(/\{lens\}/g, archetype.defaultLens);
   brief = brief.replace(/\{aperture\}/g, archetype.defaultAperture);
 
-  // Add branding line based on blueprint emphasis
+  // Add branding line based on blueprint emphasis (kept concise)
   if (blueprint.brandingEmphasis === "product_first") {
-    brief += ` Product visibility replaces logo branding. Ensure the ${item} is fully visible and catching light.`;
+    brief += ` ${item[0].toUpperCase() + item.slice(1)} visibility is the priority.`;
   } else if (blueprint.brandingEmphasis === "logo_first" && archetype.logoVisibilitySuitability === "high") {
-    brief += " Preserve all visible branding and printed text with full legibility.";
+    brief += " Keep all visible branding legible.";
   }
 
   // Add item-specific delta brief suffix from blueprint
@@ -49,44 +183,43 @@ function buildDeltaBrief(
     brief += ` ${blueprint.deltaBriefSuffix}`;
   }
 
-  // Realism guardrail
-  brief += " Natural skin texture, no AI stare, grounded anatomy.";
+  // V2: NO generic realism boilerplate appended. Realism is in the guardrail field.
 
   return brief;
 }
 
-// ── Negative Cues ──
+// ── V2 Negative Cues (shot-specific only, global moved to export header) ──
 
 function buildNegativeCues(archetype: ShotArchetype, input: LookbookInput, blueprint: ResolvedBlueprint): string {
-  const extras: string[] = [];
+  const cues: string[] = [];
 
+  // Shot-specific risks only
   if (archetype.anatomyRisk === "high" || archetype.anatomyRisk === "medium") {
-    extras.push("warped hands", "incorrect finger count", "unnatural joint angles");
+    cues.push("warped hands", "incorrect finger count", "unnatural joint angles");
   }
   if (archetype.logoRisk === "high" || archetype.logoRisk === "medium") {
-    extras.push("obscured logos", "distorted branding", "broken text");
+    cues.push("scrambled logo text", "mirrored brand marks");
   }
   if (archetype.occlusionRisk === "high" || archetype.occlusionRisk === "medium") {
-    extras.push("hidden product details", "occluded product features");
+    cues.push("product hidden by pose", "key feature occluded");
   }
   if (archetype.shotCategory === "motion") {
-    extras.push("frozen mid-air pose", "unnatural stride length");
+    cues.push("frozen mid-air pose", "unnatural stride length", "motion blur in wrong direction");
   }
 
-  // Blueprint-driven negative cues
-  extras.push(...blueprint.additionalNegativeCues);
+  // Blueprint-driven negative cues (family/item-specific)
+  cues.push(...blueprint.additionalNegativeCues);
 
-  return extras.length > 0
-    ? `${NEGATIVE_DEFAULTS}, ${extras.join(", ")}`
-    : NEGATIVE_DEFAULTS;
+  // Return only shot-specific cues, or "none" if clean
+  return cues.length > 0 ? cues.join(", ") : "(see global negative cues)";
 }
 
-// ── Badges ──
+// ── Badges (unchanged) ──
 
 function buildBadges(
   archetype: ShotArchetype,
   input: LookbookInput,
-  blueprint: ResolvedBlueprint
+  _blueprint: ResolvedBlueprint
 ): string[] {
   const badges: string[] = [];
 
@@ -118,58 +251,126 @@ function buildBadges(
   return badges;
 }
 
-// ── Shot Purpose ──
-
-function deriveShotPurpose(archetype: ShotArchetype, _input: LookbookInput): string {
-  const purposes: Record<string, string> = {
-    hero: "Anchor shot establishing the product clearly for the buyer.",
-    silhouette: "Shows product shape, proportions, and overall profile.",
-    detail: "Highlights construction, texture, and material quality.",
-    motion: "Adds life and energy, showing how the product moves.",
-    editorial: "Creates mood and narrative interest for the brand.",
-    product_focus: "Directs attention to the specific product being featured.",
-  };
-  return purposes[archetype.shotCategory] || archetype.role;
-}
-
-// ── What It Sells ──
+// ── V2 What It Sells (family-native vocabulary, concise) ──
 
 function deriveWhatItSells(archetype: ShotArchetype, input: LookbookInput, blueprint: ResolvedBlueprint): string {
   const item = input.specificItem || PRODUCT_FAMILY_LABELS[input.productFamily].toLowerCase();
+  const vocab = FAMILY_VOCABULARY[input.productFamily];
+  const cat = archetype.shotCategory;
 
-  // Tier 1: Blueprint category-specific "what it sells" language (hand-written, highest priority)
-  const blueprintSells = blueprint.whatItSellsByCategory[archetype.shotCategory];
-  if (blueprintSells) return blueprintSells;
-
-  // Tier 2: Compose from intersection of archetype capabilities and evidence plan
+  // Evidence-based composition (archetype-specific, so it differentiates shots in the same category)
   const planEvidence = blueprint.evidencePlan.orderedEvidence.map((e) => e.evidence);
-  const matchedEvidence = archetype.evidenceCapabilities.filter((e) => planEvidence.includes(e));
-  if (matchedEvidence.length >= 2) {
-    return composeEvidenceSells(matchedEvidence, item, archetype.shotCategory);
+  const matched = archetype.evidenceCapabilities.filter((e) => planEvidence.includes(e));
+
+  // For categories that commonly have 2+ shots (detail, product_focus, editorial),
+  // evidence composition takes priority over blueprint category text to avoid duplicates.
+
+  if (cat === "hero") {
+    // Hero is usually one per set, so blueprint text is safe
+    const blueprintSells = blueprint.whatItSellsByCategory[cat];
+    if (blueprintSells) return blueprintSells;
+    return `How the ${item} ${vocab.hero_verb}. First impression: shape, proportion, and presence.`;
   }
 
-  // Tier 3: Blueprint sells focus hints (unchanged)
-  if (blueprint.sellsFocus.length > 0) {
-    const sellsHints = blueprint.sellsFocus.slice(0, 3).join("; ");
-    if (archetype.shotCategory === "hero") {
-      return `Primary visibility of the ${item}. Key selling points: ${sellsHints}.`;
+  if (cat === "product_focus") {
+    if (matched.length >= 2) {
+      return composeEvidenceSells(matched, item, cat);
     }
-    if (archetype.shotCategory === "detail") {
-      return `Craftsmanship and detail of the ${item}. Focus: ${sellsHints}.`;
-    }
+    const blueprintSells = blueprint.whatItSellsByCategory[cat];
+    if (blueprintSells) return blueprintSells;
+    return `${item[0].toUpperCase() + item.slice(1)} in focused context. The buyer evaluates ${vocab.material}.`;
   }
 
-  // Tier 4: Family-aware generic fallback (replaces old apparel-centric wording)
+  if (cat === "detail") {
+    // Evidence-first: differentiates hardware detail from construction detail, etc.
+    if (matched.length >= 2) {
+      return composeEvidenceSells(matched, item, cat);
+    }
+    const blueprintSells = blueprint.whatItSellsByCategory[cat];
+    if (blueprintSells) return blueprintSells;
+    return `Craftsmanship proof: ${vocab.detail_focus}.`;
+  }
+
+  if (cat === "editorial") {
+    // Archetype-specific editorial sells (each editorial archetype has a distinct mood)
+    if (archetype.id === "mood_environmental_hero") {
+      return `The ${item} in an environment that tells the buyer where this product lives.`;
+    }
+    if (archetype.id === "torso_turn_editorial") {
+      return `Movement energy and styled confidence with the ${item} visible.`;
+    }
+    if (archetype.id === "seated_forward_lean") {
+      return `Relaxed context: the ${item} in a seated moment that signals ease and authority.`;
+    }
+    if (archetype.id === "relaxed_lean") {
+      return `Off-duty attitude with the ${item}. Casual confidence, not posed.`;
+    }
+    const blueprintSells = blueprint.whatItSellsByCategory[cat];
+    if (blueprintSells) return blueprintSells;
+    return `Desirability. The ${item} in a world the buyer wants to be part of.`;
+  }
+
+  if (cat === "silhouette") {
+    const blueprintSells = blueprint.whatItSellsByCategory[cat];
+    if (blueprintSells) return blueprintSells;
+    return `Shape language: the ${item}'s outline and how it changes the body's profile.`;
+  }
+
+  if (cat === "motion") {
+    const blueprintSells = blueprint.whatItSellsByCategory[cat];
+    if (blueprintSells) return blueprintSells;
+    return `Energy and behaviour. How the ${item} responds to movement.`;
+  }
+
+  // Family fallback
   const familyFallback = FAMILY_FALLBACK_SELLS[input.productFamily];
   if (familyFallback) {
-    const fallbackText = familyFallback[archetype.shotCategory];
+    const fallbackText = familyFallback[cat];
     if (fallbackText) return fallbackText;
   }
 
-  return `The ${item} in its intended use context. Buyers see the product as it would be worn or carried.`;
+  return `The ${item} in context.`;
 }
 
-// ── Framing/Pose Deltas ──
+// ── V2 Why Generate Now (first 3 shots only) ──
+
+function deriveWhyGenerateNow(
+  archetype: ShotArchetype,
+  priority: number,
+  input: LookbookInput,
+  allShots: ScoredArchetype[]
+): string | undefined {
+  if (priority > 3) return undefined;
+
+  const item = input.specificItem || PRODUCT_FAMILY_LABELS[input.productFamily].toLowerCase();
+  const cat = archetype.shotCategory;
+
+  if (priority === 1) {
+    if (cat === "hero") {
+      return `Validates that the AI can render the ${item} accurately before committing to the full set.`;
+    }
+    if (cat === "product_focus") {
+      return `Establishes core product rendering. If the ${item} looks wrong here, stop and adjust before shooting the rest.`;
+    }
+    return `Anchors the set. Every other shot depends on this rendering being right.`;
+  }
+
+  if (priority === 2) {
+    return `Second angle confirms the ${item} renders consistently from a different perspective. Catches single-angle flukes.`;
+  }
+
+  if (priority === 3) {
+    const firstTwoCats = allShots.slice(0, 2).map((s) => s.archetype.shotCategory);
+    if (!firstTwoCats.includes("detail")) {
+      return `First detail shot. Tests close-range rendering quality before the remaining set.`;
+    }
+    return `Completes the core trio. The set is now commercially usable even if generation stops here.`;
+  }
+
+  return undefined;
+}
+
+// ── Framing/Pose Deltas (unchanged) ──
 
 function deriveFramingDelta(archetype: ShotArchetype, _dna: MasterShootDNA): string {
   return `${archetype.defaultFraming} at ${archetype.defaultLens} ${archetype.defaultAperture}, ` +
@@ -182,7 +383,7 @@ function derivePoseDelta(archetype: ShotArchetype): string {
     `Head: ${archetype.headDirection}.`;
 }
 
-// ── Risk Summary ──
+// ── Risk Summary (unchanged) ──
 
 function deriveRiskSummary(archetype: ShotArchetype): string {
   const risks: string[] = [];
@@ -193,7 +394,69 @@ function deriveRiskSummary(archetype: ShotArchetype): string {
   return risks.join(", ") + `. Difficulty: ${archetype.difficulty}.`;
 }
 
-// ── Build Recommended Shot ──
+// ── V2 Brief Quality Pass ──
+
+export interface BriefQualityIssue {
+  shotPosition: number;
+  issue: string;
+}
+
+export function runBriefQualityPass(shots: RecommendedShot[]): BriefQualityIssue[] {
+  const issues: BriefQualityIssue[] = [];
+
+  for (const shot of shots) {
+    const words = shot.deltaBrief.split(/\s+/).length;
+    const cat = shot.archetype.shotCategory;
+
+    // Length check
+    if (cat === "detail") {
+      if (words > 80) issues.push({ shotPosition: shot.position, issue: `Detail brief too long: ${words} words (target: 40-70)` });
+    } else if (cat === "editorial" || cat === "motion") {
+      if (words > 140) issues.push({ shotPosition: shot.position, issue: `Brief too long: ${words} words (max 130)` });
+    } else {
+      if (words > 120) issues.push({ shotPosition: shot.position, issue: `Brief too long: ${words} words (target: 70-110)` });
+    }
+
+    // Generic realism boilerplate check
+    if (shot.deltaBrief.includes("Natural skin texture, no AI stare, grounded anatomy")) {
+      issues.push({ shotPosition: shot.position, issue: "Contains V1 generic realism boilerplate (should be removed)" });
+    }
+  }
+
+  // Cross-shot repetition check: find repeated opening phrases
+  const openings = shots.map((s) => {
+    const firstSentence = s.deltaBrief.split(/\.\s/)[0] || "";
+    return { position: s.position, opening: firstSentence.slice(0, 40).toLowerCase() };
+  });
+
+  for (let i = 0; i < openings.length; i++) {
+    for (let j = i + 1; j < openings.length; j++) {
+      if (openings[i].opening === openings[j].opening && openings[i].opening.length > 15) {
+        issues.push({
+          shotPosition: openings[j].position,
+          issue: `Opening phrase duplicates shot ${openings[i].position}: "${openings[i].opening}..."`,
+        });
+      }
+    }
+  }
+
+  // Cross-shot "what it sells" uniqueness check
+  const sellsTexts = shots.map((s) => ({ position: s.position, text: s.whatItSells.toLowerCase() }));
+  for (let i = 0; i < sellsTexts.length; i++) {
+    for (let j = i + 1; j < sellsTexts.length; j++) {
+      if (sellsTexts[i].text === sellsTexts[j].text) {
+        issues.push({
+          shotPosition: sellsTexts[j].position,
+          issue: `"What it sells" identical to shot ${sellsTexts[i].position}`,
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+// ── Build Recommended Shot (V2) ──
 
 export function buildRecommendedShot(
   scored: ScoredArchetype,
@@ -201,7 +464,8 @@ export function buildRecommendedShot(
   priority: number,
   dna: MasterShootDNA,
   input: LookbookInput,
-  blueprint: ResolvedBlueprint
+  blueprint: ResolvedBlueprint,
+  allShots?: ScoredArchetype[]
 ): RecommendedShot {
   const archetype = scored.archetype;
 
@@ -214,17 +478,17 @@ export function buildRecommendedShot(
   return {
     position,
     archetype,
-    shotPurpose: deriveShotPurpose(archetype, input),
+    shotPurpose: deriveShotPurpose(archetype),
     whatItSells: deriveWhatItSells(archetype, input, blueprint),
     framingDelta: deriveFramingDelta(archetype, dna),
     poseDelta: derivePoseDelta(archetype),
     productEmphasis: archetype.role,
     brandingSafety:
       archetype.logoVisibilitySuitability === "high"
-        ? "Logo-safe: branding fully visible in this framing."
+        ? "Logo-safe: branding fully visible."
         : archetype.logoVisibilitySuitability === "medium"
-        ? "Moderate: branding partially visible depending on angle."
-        : "Low visibility: branding may be obscured by pose or crop.",
+        ? "Moderate: branding partially visible."
+        : "Low visibility: branding may be obscured.",
     realismNote: archetype.realismNotes,
     riskSummary: deriveRiskSummary(archetype),
     generationPriority: priority,
@@ -232,5 +496,21 @@ export function buildRecommendedShot(
     deltaBrief: buildDeltaBrief(archetype, dna, input, blueprint),
     negativeCues: buildNegativeCues(archetype, input, blueprint),
     evidenceProvided,
+    realismGuardrail: buildRealismGuardrail(archetype, input),
+    whyGenerateNow: deriveWhyGenerateNow(archetype, priority, input, allShots || []),
   };
+}
+
+// ── V2 Shot Purpose (tone varies by role) ──
+
+function deriveShotPurpose(archetype: ShotArchetype): string {
+  const purposes: Record<string, string> = {
+    hero: "The anchor. Establishes the product clearly for the buyer.",
+    silhouette: "Shape and proportion. How the product changes the body's outline.",
+    detail: "Proof of craft. Texture, construction, and finish quality.",
+    motion: "Energy. How the product behaves when the body moves.",
+    editorial: "Desire. The world the product lives in.",
+    product_focus: "Product-first. Focused commercial visibility.",
+  };
+  return purposes[archetype.shotCategory] || archetype.role;
 }
