@@ -391,6 +391,23 @@ function selectShots(
         const marginalGain = computeMarginalEvidenceGain(c, coveredEvidence, evidencePlan);
         const { penalty: redundancyPenalty } = computeRedundancyPenalty(c, selected);
 
+        // Required evidence deficit: strongly prefer candidates that fill required evidence gaps.
+        // This is the key mechanism that ensures family-native archetypes beat generic ones
+        // when required evidence is still uncovered.
+        const uncoveredRequired = evidencePlan.orderedEvidence
+          .filter((e) => e.priority === "required" && !coveredEvidence.has(e.evidence))
+          .map((e) => e.evidence);
+        let requiredDeficitBonus = 0;
+        if (uncoveredRequired.length > 0) {
+          const coversCount = c.archetype.evidenceCapabilities
+            .filter((ev) => uncoveredRequired.includes(ev)).length;
+          if (coversCount > 0) {
+            requiredDeficitBonus = coversCount * 25;
+          } else {
+            requiredDeficitBonus = -20;
+          }
+        }
+
         // Framing diversity check: penalise if we already have this bucket
         let framingDiversityBonus = 0;
         const bucket = getFramingBucket(c.archetype.defaultFraming);
@@ -420,7 +437,7 @@ function selectShots(
         }
 
         const combinedScore =
-          marginalGain + c.score + framingDiversityBonus + redundancyPenalty + criticalPenalty;
+          marginalGain + c.score + requiredDeficitBonus + framingDiversityBonus + redundancyPenalty + criticalPenalty;
 
         return { candidate: c, combinedScore };
       })
@@ -527,11 +544,27 @@ function selectShots(
 
       const { penalty: redundancyPenalty } = computeRedundancyPenalty(candidate, selected);
 
+      // Required evidence deficit: strongly prefer candidates that fill required evidence gaps
+      const uncoveredRequired = evidencePlan.orderedEvidence
+        .filter((e) => e.priority === "required" && !coveredEvidence.has(e.evidence))
+        .map((e) => e.evidence);
+      let requiredDeficitBonus = 0;
+      if (uncoveredRequired.length > 0) {
+        const coversCount = candidate.archetype.evidenceCapabilities
+          .filter((ev) => uncoveredRequired.includes(ev)).length;
+        if (coversCount > 0) {
+          requiredDeficitBonus = coversCount * 25;
+        } else {
+          requiredDeficitBonus = -20;
+        }
+      }
+
       const combinedScore =
         marginalGain * 0.5 +
         candidate.score * 0.25 +
         roleMixBonus * 0.15 +
-        redundancyPenalty * 0.1;
+        redundancyPenalty * 0.1 +
+        requiredDeficitBonus;
 
       if (combinedScore > bestScore) {
         bestScore = combinedScore;
@@ -580,11 +613,24 @@ function selectShots(
         const catActual = categoryCount[cat] || 0;
         let roleMixBonus = catActual < catTarget ? 20 : catActual >= catTarget && catTarget > 0 ? -15 : 0;
 
+        // Required evidence deficit bonus (same logic as Phase 2)
+        const uncoveredReq = evidencePlan.orderedEvidence
+          .filter((e) => e.priority === "required" && !coveredEvidence.has(e.evidence))
+          .map((e) => e.evidence);
+        let reqDeficitBonus = 0;
+        if (uncoveredReq.length > 0) {
+          const covers = candidate.archetype.evidenceCapabilities
+            .filter((ev) => uncoveredReq.includes(ev)).length;
+          if (covers > 0) reqDeficitBonus = covers * 25;
+          else reqDeficitBonus = -20;
+        }
+
         const combinedScore =
           marginalGain * 0.5 +
           candidate.score * 0.25 +
           roleMixBonus * 0.15 +
-          (redundancyPenalty + critRedPenalty) * 0.1;
+          (redundancyPenalty + critRedPenalty) * 0.1 +
+          reqDeficitBonus;
 
         if (combinedScore > bestScore) {
           bestScore = combinedScore;

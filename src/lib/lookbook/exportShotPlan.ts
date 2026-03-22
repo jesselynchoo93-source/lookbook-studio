@@ -166,13 +166,27 @@ export function formatExportText(
     lines.push("");
   }
 
-  // ── Brief Quality Pass ──
+  // ── Brief Quality Pass (corrective) ──
   const qualityIssues = runBriefQualityPass(shots);
+  const corrections = qualityIssues.filter((i) => i.issue.startsWith("[CORRECTED]"));
+  const remaining = qualityIssues.filter((i) => !i.issue.startsWith("[CORRECTED]"));
   if (qualityIssues.length > 0) {
     lines.push("BRIEF QUALITY PASS");
     lines.push("==================");
-    for (const issue of qualityIssues) {
-      lines.push(`  Shot ${issue.shotPosition}: ${issue.issue}`);
+    if (corrections.length > 0) {
+      lines.push(`  Auto-corrected (${corrections.length}):`);
+      for (const c of corrections) {
+        lines.push(`    Shot ${c.shotPosition}: ${c.issue}`);
+      }
+    }
+    if (remaining.length > 0) {
+      lines.push(`  Remaining issues (${remaining.length}):`);
+      for (const r of remaining) {
+        lines.push(`    Shot ${r.shotPosition}: ${r.issue}`);
+      }
+    }
+    if (remaining.length === 0 && corrections.length > 0) {
+      lines.push(`  All detected issues were auto-corrected.`);
     }
     lines.push("");
     lines.push("---");

@@ -222,11 +222,17 @@ export function scoreArchetype(
   // Semantic affinity: prefer family-specialist archetypes over generic universal ones.
   // A specialist archetype (1-3 families) designed for this family will outscore a
   // universal archetype (7+ families) that happens to be eligible.
+  // Native archetypes (≤2 families) get the strongest boost because they were
+  // purpose-built for this product type and should always beat generic alternatives
+  // when they cover the same evidence.
   const familyCount = archetype.suitableFamilies.length;
   if (archetype.suitableFamilies.includes(input.productFamily)) {
-    if (familyCount <= 3) {
-      contextRaw += 20;
-      contextReasons.push("family specialist affinity (+20)");
+    if (familyCount <= 2) {
+      contextRaw += 40;
+      contextReasons.push("native archetype affinity (+40)");
+    } else if (familyCount <= 3) {
+      contextRaw += 30;
+      contextReasons.push("family specialist affinity (+30)");
     } else if (familyCount <= 6) {
       contextRaw += 10;
       contextReasons.push("semi-specialist affinity (+10)");

@@ -470,20 +470,31 @@ export function runBriefQualityPass(shots: RecommendedShot[]): BriefQualityIssue
     }
   }
 
-  // Cross-shot repetition check: find repeated opening phrases
+  // Cross-shot repetition check: CORRECTIVE for repeated opening phrases
+  // Rewrite duplicate opening sentences by prepending archetype title context
   const openings = shots.map((s) => {
     const firstSentence = s.deltaBrief.split(/\.\s/)[0] || "";
-    return { position: s.position, opening: firstSentence.slice(0, 40).toLowerCase() };
+    return { position: s.position, opening: firstSentence.slice(0, 40).toLowerCase(), shotRef: s };
   });
 
-  for (let i = 0; i < openings.length; i++) {
-    for (let j = i + 1; j < openings.length; j++) {
-      if (openings[i].opening === openings[j].opening && openings[i].opening.length > 15) {
-        issues.push({
-          shotPosition: openings[j].position,
-          issue: `Opening phrase duplicates shot ${openings[i].position}: "${openings[i].opening}..."`,
-        });
+  const seenOpenings = new Map<string, number>(); // opening -> first position
+  for (const { position, opening, shotRef } of openings) {
+    if (opening.length <= 15) continue;
+    const firstPos = seenOpenings.get(opening);
+    if (firstPos !== undefined) {
+      // Rewrite the duplicate's opening by prepending the archetype title
+      const title = shotRef.archetype.title;
+      const firstDot = shotRef.deltaBrief.indexOf(".");
+      if (firstDot > 0 && firstDot < 120) {
+        const rest = shotRef.deltaBrief.slice(firstDot + 1).trim();
+        shotRef.deltaBrief = `${title} shot. ${rest}`;
       }
+      issues.push({
+        shotPosition: position,
+        issue: `[CORRECTED] Opening phrase duplicated shot ${firstPos}; rewritten with archetype title`,
+      });
+    } else {
+      seenOpenings.set(opening, position);
     }
   }
 
@@ -500,26 +511,44 @@ export function runBriefQualityPass(shots: RecommendedShot[]): BriefQualityIssue
     }
   }
 
-  // Cross-shot trailing sentence repetition check
-  // Extract the last sentence from each brief and flag if repeated across 3+ shots
+  // Cross-shot trailing sentence repetition: CORRECTIVE
+  // Extract the last sentence from each brief. If repeated across 3+ shots,
+  // strip it from all but the first occurrence and log the correction.
   const trailingSentences = shots.map((s) => {
     const sentences = s.deltaBrief.split(/\.\s+/).filter(Boolean);
     const last = sentences[sentences.length - 1]?.toLowerCase().trim() || "";
-    return { position: s.position, sentence: last };
+    return { position: s.position, sentence: last, shotRef: s };
   });
-  const trailingCounts = new Map<string, number[]>();
-  for (const { position, sentence } of trailingSentences) {
+  const trailingCounts = new Map<string, { positions: number[]; shotRefs: RecommendedShot[]; rawSentence: string }>();
+  for (const { position, sentence, shotRef } of trailingSentences) {
     if (sentence.length > 15) {
-      const positions = trailingCounts.get(sentence) || [];
-      positions.push(position);
-      trailingCounts.set(sentence, positions);
+      const entry = trailingCounts.get(sentence) || { positions: [], shotRefs: [], rawSentence: "" };
+      entry.positions.push(position);
+      entry.shotRefs.push(shotRef);
+      // Keep the original-case version from the first occurrence
+      if (!entry.rawSentence) {
+        const sentences = shotRef.deltaBrief.split(/\.\s+/).filter(Boolean);
+        entry.rawSentence = sentences[sentences.length - 1]?.trim() || "";
+      }
+      trailingCounts.set(sentence, entry);
     }
   }
-  for (const [sentence, positions] of trailingCounts) {
+  for (const [, { positions, shotRefs, rawSentence }] of trailingCounts) {
     if (positions.length >= 3) {
+      // Keep the trailing sentence on the first shot, strip from the rest
+      for (let i = 1; i < shotRefs.length; i++) {
+        const shot = shotRefs[i];
+        // Remove the trailing sentence (case-insensitive match at end of brief)
+        const escaped = rawSentence.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const pattern = new RegExp(`\\.?\\s*${escaped}\\.?\\s*$`, "i");
+        const cleaned = shot.deltaBrief.replace(pattern, "").trim();
+        if (cleaned !== shot.deltaBrief && cleaned.length > 20) {
+          shot.deltaBrief = cleaned.endsWith(".") ? cleaned : cleaned + ".";
+        }
+      }
       issues.push({
-        shotPosition: positions[positions.length - 1],
-        issue: `Trailing phrase "${sentence.slice(0, 50)}..." repeated in ${positions.length} shots (${positions.join(", ")})`,
+        shotPosition: positions[0],
+        issue: `[CORRECTED] Trailing phrase "${rawSentence.slice(0, 50)}..." was repeated in ${positions.length} shots; stripped from shots ${positions.slice(1).join(", ")}`,
       });
     }
   }
