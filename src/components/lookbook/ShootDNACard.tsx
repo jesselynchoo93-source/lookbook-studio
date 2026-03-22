@@ -16,33 +16,36 @@ interface ShootDNACardProps {
 
 function DNARow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 py-1.5 border-b border-gray-700/50 last:border-0">
-      <span className="text-xs text-gray-500 shrink-0">{label}</span>
-      <span className="text-xs text-gray-300 text-right">{value}</span>
+    <div className="flex justify-between gap-4 py-1.5 border-b border-[--border-subtle] last:border-0">
+      <span className="text-xs text-[--text-tertiary] shrink-0">{label}</span>
+      <span className="text-xs text-[--text-primary] text-right">{value}</span>
     </div>
   );
 }
 
 export default function ShootDNACard({ dna }: ShootDNACardProps) {
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
-      <h3 className="text-base font-semibold text-white mb-1">
+    <div
+      className="bg-[--surface-card] rounded-xl p-5"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
+      <h3 className="text-base font-semibold text-[--text-primary] mb-1">
         Master Shoot DNA
       </h3>
-      <p className="text-xs text-gray-400 mb-4">
+      <p className="text-xs text-[--text-secondary] mb-4">
         Every shot in this set inherits these shared settings. This keeps your
         lookbook feeling like one photoshoot, not six separate images.
       </p>
 
-      <div className="bg-gray-900/50 rounded-lg px-3 py-2 mb-4">
-        <p className="text-sm text-gray-300 leading-relaxed">
+      <div className="bg-[--surface-inset] rounded-lg px-3 py-2 mb-4">
+        <p className="text-sm text-[--text-primary] leading-relaxed">
           {dna.campaignDirection}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
         <div>
-          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+          <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
             Identity
           </span>
           <DNARow
@@ -60,7 +63,7 @@ export default function ShootDNACard({ dna }: ShootDNACardProps) {
           <DNARow label="Creativity" value={CREATIVITY_LABELS[dna.creativityLevel]} />
         </div>
         <div>
-          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+          <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
             Visual Family
           </span>
           <DNARow label="Environment" value={dna.environmentFamily} />
@@ -73,17 +76,17 @@ export default function ShootDNACard({ dna }: ShootDNACardProps) {
       </div>
 
       <div className="mt-4">
-        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+        <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
           Realism Profile
         </span>
-        <p className="text-xs text-gray-400 mt-1">{dna.realismProfile}</p>
+        <p className="text-xs text-[--text-secondary] mt-1">{dna.realismProfile}</p>
       </div>
 
       <div className="mt-3">
-        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+        <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
           Branding Rules
         </span>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-[--text-secondary] mt-1">
           {dna.brandingVisibilityRules}
         </p>
       </div>

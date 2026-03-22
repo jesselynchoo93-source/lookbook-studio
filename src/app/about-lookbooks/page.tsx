@@ -2,19 +2,19 @@ import Link from "next/link";
 
 export default function AboutLookbooksPage() {
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/80 backdrop-blur-sm">
+      <header className="border-b border-[--border-subtle] bg-[--surface-card]/80 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link
             href="/"
-            className="text-lg font-semibold hover:text-gray-300 transition-colors"
+            className="text-lg font-semibold text-[--text-primary] hover:opacity-70 transition-opacity"
           >
             Lookbook Studio
           </Link>
           <Link
             href="/studio"
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-[--text-secondary] hover:text-[--text-primary] transition-colors"
           >
             Start Planning
           </Link>
@@ -22,9 +22,9 @@ export default function AboutLookbooksPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold mb-6">What is a Lookbook?</h1>
+        <h1 className="text-3xl font-bold text-[--text-primary] mb-6">What is a Lookbook?</h1>
 
-        <div className="space-y-8 text-gray-300 text-sm leading-relaxed">
+        <div className="space-y-8 text-[--text-secondary] text-sm leading-relaxed">
           <section>
             <p>
               A lookbook is a collection of photographs that showcase a brand's
@@ -36,7 +36,7 @@ export default function AboutLookbooksPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">
+            <h2 className="text-xl font-semibold text-[--text-primary] mb-3">
               Why Consistency Matters
             </h2>
             <p>
@@ -56,7 +56,7 @@ export default function AboutLookbooksPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">
+            <h2 className="text-xl font-semibold text-[--text-primary] mb-3">
               The Six Shot Types
             </h2>
             <p className="mb-4">
@@ -65,9 +65,9 @@ export default function AboutLookbooksPage() {
             </p>
 
             <div className="space-y-4">
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-                <h3 className="text-white font-medium mb-1">Hero Shot</h3>
-                <p className="text-gray-400">
+              <div className="bg-[--surface-card] rounded-lg p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+                <h3 className="text-[--text-primary] font-medium mb-1">Hero Shot</h3>
+                <p className="text-[--text-secondary]">
                   The primary product visibility shot. Full-body, front-facing,
                   with the complete garment clearly visible. This is the image
                   that goes on your product page. The buyer sees fit,
@@ -75,11 +75,11 @@ export default function AboutLookbooksPage() {
                 </p>
               </div>
 
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-                <h3 className="text-white font-medium mb-1">
+              <div className="bg-[--surface-card] rounded-lg p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+                <h3 className="text-[--text-primary] font-medium mb-1">
                   Silhouette / Fit Shot
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-[--text-secondary]">
                   Shows the garment's shape from a side or three-quarter angle.
                   Reveals proportions, hem length, and how the fabric drapes on
                   the body. Buyers use this to understand how the piece will look
@@ -87,11 +87,11 @@ export default function AboutLookbooksPage() {
                 </p>
               </div>
 
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-                <h3 className="text-white font-medium mb-1">
+              <div className="bg-[--surface-card] rounded-lg p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+                <h3 className="text-[--text-primary] font-medium mb-1">
                   Branding / Detail Shot
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-[--text-secondary]">
                   A tight crop on the logo, label, stitching, or construction
                   detail. Shows craftsmanship and brand identity. Particularly
                   important for luxury and premium products where the logo is
@@ -99,11 +99,11 @@ export default function AboutLookbooksPage() {
                 </p>
               </div>
 
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-                <h3 className="text-white font-medium mb-1">
+              <div className="bg-[--surface-card] rounded-lg p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+                <h3 className="text-[--text-primary] font-medium mb-1">
                   Editorial Angle Shot
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-[--text-secondary]">
                   A more creative composition that adds mood and narrative
                   interest. Might include a torso turn, an environmental
                   interaction, or a seated pose. This shot elevates the lookbook
@@ -111,11 +111,11 @@ export default function AboutLookbooksPage() {
                 </p>
               </div>
 
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-                <h3 className="text-white font-medium mb-1">
+              <div className="bg-[--surface-card] rounded-lg p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+                <h3 className="text-[--text-primary] font-medium mb-1">
                   Controlled Motion Shot
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-[--text-secondary]">
                   Shows the garment in subtle movement, like a half stride or a
                   pivot. Buyers see how fabric moves and drapes during natural
                   motion, which static shots cannot convey. Keep the movement
@@ -123,11 +123,11 @@ export default function AboutLookbooksPage() {
                 </p>
               </div>
 
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-                <h3 className="text-white font-medium mb-1">
+              <div className="bg-[--surface-card] rounded-lg p-4" style={{ boxShadow: "var(--shadow-card)" }}>
+                <h3 className="text-[--text-primary] font-medium mb-1">
                   Mood / Supporting Shot
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-[--text-secondary]">
                   A wider or more atmospheric shot that places the product in a
                   lifestyle context. Often used for social media, brand
                   campaigns, or the opening spread of a digital lookbook. Shows
@@ -138,7 +138,7 @@ export default function AboutLookbooksPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">
+            <h2 className="text-xl font-semibold text-[--text-primary] mb-3">
               Generation Order
             </h2>
             <p>
@@ -158,7 +158,7 @@ export default function AboutLookbooksPage() {
           <div className="pt-4">
             <Link
               href="/studio"
-              className="inline-block bg-white text-gray-900 font-medium px-6 py-2.5 rounded-lg hover:bg-gray-100 transition-colors text-sm"
+              className="inline-block bg-[--text-primary] text-[--text-inverted] font-medium px-6 py-2.5 rounded-lg hover:opacity-90 transition-opacity text-sm"
             >
               Start Planning Your Lookbook
             </Link>

@@ -16,15 +16,18 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShow(!show); }}
-        className="text-gray-500 hover:text-gray-400 transition-colors ml-1 text-xs"
+        className="text-[--text-tertiary] hover:text-[--text-secondary] transition-colors ml-1 text-xs"
         aria-label="More info"
       >
         ?
       </button>
       {show && (
-        <span className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-700 text-gray-200 text-xs rounded-lg shadow-lg max-w-[240px] text-center whitespace-normal">
+        <span
+          className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[--text-primary] text-[--text-inverted] text-xs rounded-lg max-w-[240px] text-center whitespace-normal"
+          style={{ boxShadow: "var(--shadow-card-active)" }}
+        >
           {text}
-          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-700" />
+          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[--text-primary]" />
         </span>
       )}
     </span>

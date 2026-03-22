@@ -479,6 +479,8 @@ export interface RecommendedShot {
   realismGuardrail: string;
   /** V2: why this shot should be generated at this priority (first 3 only) */
   whyGenerateNow?: string;
+  /** V2.1: one-line explanation of why this shot was selected for the set */
+  whySelected?: string;
 }
 
 export interface CoverageSummary {
@@ -499,4 +501,235 @@ export interface LookbookPlanResult {
   generationOrder: number[];
   exportText: string;
   diagnostics: PlanDiagnostics;
+}
+
+// ── V3: Generation Workflow Types ──
+
+/** Where this shot sits in the practical generation order */
+export type GenerationPhase =
+  | "anchor"              // hero + product_focus: generate first, validate product rendering
+  | "detail_validation"   // detail: confirm material/hardware renders correctly at close range
+  | "editorial";          // editorial + silhouette + motion: atmospheric, generate last
+
+/** Why a shot was rejected and needs retry */
+export type RetryReason =
+  | "pose"
+  | "product_structure"
+  | "face"
+  | "hands"
+  | "lighting"
+  | "branding_text"
+  | "composition"
+  | "consistency"
+  | "other";
+
+/** Why an accepted shot may not fit the rest of the set */
+export type ContinuityConcern =
+  | "face_drift"
+  | "lighting_drift"
+  | "product_scale_drift"
+  | "background_drift"
+  | "finish_drift"
+  | "mood_drift"
+  | "other";
+
+/** Continuity review state for a single shot */
+export type ContinuityVerdict = "unreviewed" | "ok" | "concern";
+
+/** Skin polish handoff state */
+export type SkinPolishStatus = "not_applicable" | "ready" | "done";
+
+/** Tracker state persisted to localStorage */
+export interface TrackerState {
+  planKey: string;
+  createdAt: string;
+  shots: Record<number, ShotStatus>;
+}
+
+/** Per-shot status in the tracker */
+export interface ShotStatus {
+  status: GenerationStatus;
+  retryCount: number;
+  retryReasons: RetryReason[];
+  continuity: ContinuityVerdict;
+  continuityConcerns: ContinuityConcern[];
+  skinPolish: SkinPolishStatus;
+  /** V4.3: Final set review mark. null = unmarked. */
+  finalMark: FinalMark;
+  lastUpdated: string;
+}
+
+/** V4.3: Per-shot final review decision. */
+export type FinalMark = "keep" | "replace_later" | "best_in_set" | null;
+
+/** V4.3: Set-level readiness tier (advisory, never blocking). */
+export type SetReadinessTier = "not_ready" | "ready_with_issues" | "ready_to_finalise";
+
+/** V4.3: Result of set readiness computation. */
+export interface SetReadinessResult {
+  tier: SetReadinessTier;
+  reasons: string[];
+}
+
+/** Per-shot status in the manual generation workflow */
+export type GenerationStatus =
+  | "pending"
+  | "generating"
+  | "needs_retry"
+  | "accepted"
+  | "enhancing"
+  | "done";
+
+/** Visual world constraints carried from MasterShootDNA. Immutable per set. */
+export interface ContinuityLock {
+  environment: string;
+  lighting: string;
+  lensFamily: string;
+  framingFamily: string;
+  finish: string;
+  realism: string;
+  brandingRules: string;
+}
+
+// ── V4: Reference Asset Types ──
+
+export type ReferenceType = "model" | "product" | "styling";
+
+/** A single uploaded reference image. Session-only, no persistence in V4.0. */
+export interface ReferenceAsset {
+  id: string;
+  type: ReferenceType;
+  /** Original file name from the upload */
+  fileName: string;
+  /** MIME type, e.g. "image/jpeg", "image/png" */
+  mimeType: string;
+  /** File size in bytes */
+  sizeBytes: number;
+  /** Object URL from URL.createObjectURL(). Valid for the current session only. */
+  previewUrl: string;
+  /** Whether this is the primary reference in its group (model or product) */
+  isPrimary: boolean;
+  /** Whether this reference is a source-of-truth asset (product) vs inspiration (styling) */
+  isSourceOfTruth: boolean;
+  addedAt: string;
+}
+
+// ── V4.1: Persistence Types ──
+
+export const PROJECT_SCHEMA_VERSION = 2;
+
+/** Derived project status, always recomputed on save (cached convenience). */
+export type ProjectStatus =
+  | "draft"         // has input but no plan yet
+  | "planned"       // has a plan, no generation activity
+  | "in_progress"   // at least one shot has moved past pending
+  | "complete";     // all shots are done
+
+/** ReferenceAsset as stored in IndexedDB (no previewUrl, that's session-only). */
+export interface PersistedReferenceAsset {
+  id: string;
+  type: ReferenceType;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  isPrimary: boolean;
+  isSourceOfTruth: boolean;
+  addedAt: string;
+}
+
+/** Image blob stored separately from the project record. */
+export interface ReferenceBlobRecord {
+  id: string;         // matches PersistedReferenceAsset.id
+  projectId: string;
+  blob: Blob;
+}
+
+// ── V4.2: Generated Image Types ──
+
+/** Metadata for a generated image attached to a shot position (persisted). */
+export interface PersistedGeneratedImage {
+  shotPosition: number;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  addedAt: string;
+}
+
+/** Session-only version with preview URL restored from blob. */
+export interface GeneratedImageAsset extends PersistedGeneratedImage {
+  previewUrl: string;
+}
+
+/** Blob record for generated images, stored in its own table. */
+export interface GeneratedBlobRecord {
+  /** Deterministic key: `${projectId}_shot_${shotPosition}` */
+  id: string;
+  projectId: string;
+  blob: Blob;
+}
+
+/** Top-level project record stored in IndexedDB. */
+export interface ProjectRecord {
+  id: string;
+  schemaVersion: number;
+  name: string;
+  /** True if the user has manually edited the project name. */
+  nameEdited: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** Cached convenience, always recomputed on save. */
+  status: ProjectStatus;
+
+  // Core data
+  input: LookbookInput;
+  references: {
+    model: PersistedReferenceAsset[];
+    product: PersistedReferenceAsset[];
+    styling: PersistedReferenceAsset[];
+  };
+
+  // Plan (null until generated)
+  plan: LookbookPlanResult | null;
+
+  // Tracker (null until plan exists)
+  tracker: TrackerState | null;
+
+  // V4.2: Generated images (one per shot position)
+  generatedImages: Record<number, PersistedGeneratedImage>;
+}
+
+/** Generation-ready prompt package for a single shot. */
+export interface GenerationPromptPackage {
+  // Identity
+  shotPosition: number;
+  archetypeId: string;
+  archetypeTitle: string;
+
+  // Generation workflow
+  generationPriority: number;
+  generationPhase: GenerationPhase;
+  reliabilityLabel: "High reliability" | "Moderate reliability" | "Higher risk";
+
+  // Separated prompt layers
+  shootDNA: string;
+  shotBrief: string;
+  generatorPrompt: string;
+  negativePrompt: string;
+  guardrailChecklist: string[];
+
+  // Continuity locks (from DNA, immutable per set)
+  continuity: ContinuityLock;
+
+  // Context from planner
+  evidenceProvided: EvidenceType[];
+  whySelected: string;
+  whyGenerateNow?: string;
+
+  // Tracker state (mutable at runtime)
+  status: GenerationStatus;
+  retryReason?: RetryReason;
+  retryCount: number;
+
+  // Enhancor handoff
+  enhancorNotes: string[];
 }

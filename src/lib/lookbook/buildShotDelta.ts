@@ -143,7 +143,41 @@ function buildRealismGuardrail(archetype: ShotArchetype, input: LookbookInput): 
   if (id === "belt_leather_texture") return "Check grain consistency, stitching regularity, edge paint smoothness, hole punching uniformity.";
   if (id === "belt_waist_styling_crop") return "Check belt sitting naturally at the waist (not floating), fabric interaction at the belt line, belt width consistent.";
 
+  // Headwear-specific guardrails
+  if (id === "headwear_portrait_hero") return "Check hat sitting naturally on the head (not floating), brim shape consistent, crown not collapsing. Hair-to-hat transition must look real.";
+  if (id === "headwear_side_profile") return "Check brim depth and curvature from the side, crown shape consistent, ear-to-hat gap natural. No hat clipping through hair.";
+  if (id === "headwear_texture_detail") return "Check weave or knit pattern consistency, band stitching regularity, any logo or badge rendering accuracy.";
+
+  // Scarf-specific guardrails
+  if (id === "scarf_drape_portrait") return "Check drape following gravity naturally, fabric edges not floating, knot or wrap staying in place. Print registration should be consistent across folds.";
+  if (id === "scarf_texture_closeup") return "Check weave pattern regularity, fringe rendering (if present), edge hemming detail. Fabric weight should be visually consistent.";
+
+  // Small accessories guardrails
+  if (id === "accessory_in_hand_hero") return "Check finger count and curvature, product not floating above palm, natural grip pressure visible.";
+  if (id === "accessory_flatlay_detail") return "Check surface shadow contact, product not hovering above the surface, consistent lighting angle. Avoid AI over-smoothing on metal or leather.";
+  if (id === "accessory_texture_macro") return "Check material grain at macro range, no AI smoothing artefacts, edge sharpness consistent.";
+  if (id === "accessory_lifestyle_styled") return "Check product-to-environment lighting match, natural placement on surface or body, no compositing seams.";
+
   if (id === "detail_crop_logo_focus") return "Check text legibility, no mirrored or scrambled characters, logo proportions accurate.";
+
+  // Family-level fallbacks (more specific than category-level)
+  if (family === "headwear") {
+    if (archetype.shotCategory === "editorial") return "Check hat-to-environment lighting match, hat not floating, brim shadow natural.";
+    return "Check hat sitting naturally, crown shape consistent, no hair clipping through hat.";
+  }
+  if (family === "scarves") {
+    if (archetype.shotCategory === "editorial") return "Check drape following gravity, fabric-to-environment lighting match, print registration consistent.";
+    return "Check drape weight and gravity, fabric edges natural, pattern consistency across folds.";
+  }
+  if (family === "small_accessories") {
+    return "Check product scale against hand or surface, material rendering accuracy, no floating objects.";
+  }
+  if (family === "belts") {
+    return "Check buckle rendering accuracy, leather grain consistency, belt not floating above waist.";
+  }
+  if (family === "watches") {
+    return "Check dial legibility, case-to-wrist proportion, strap sitting flush, crown position accurate.";
+  }
 
   // Category-level fallbacks
   if (archetype.shotCategory === "detail") return "Check material texture rendering at close range, clean edges, no AI smoothing artefacts.";
@@ -282,11 +316,13 @@ function buildBadges(
   if (archetype.shotCategory === "motion") {
     badges.push("Motion");
   }
-  if (archetype.higgsfieldReliability === "high") {
-    badges.push("High reliability");
-  }
+  // Exactly one reliability label per shot
   if (archetype.difficulty === "hard" || archetype.higgsfieldReliability === "low") {
     badges.push("Higher risk");
+  } else if (archetype.higgsfieldReliability === "high") {
+    badges.push("High reliability");
+  } else {
+    badges.push("Moderate reliability");
   }
 
   return badges;
@@ -337,10 +373,25 @@ function deriveWhatItSells(archetype: ShotArchetype, input: LookbookInput, bluep
     // Family vocabulary adds specificity so eyewear editorial reads differently from bags editorial
     if (archetype.id === "mood_environmental_hero") {
       const mood = vocab.editorial_mood;
-      return `The ${item} in an environment that tells the buyer where this product lives. ${mood[0].toUpperCase() + mood.slice(1)} in context.`;
+      const moodCap = mood[0].toUpperCase() + mood.slice(1);
+      const envSells: Partial<Record<string, string>> = {
+        watches: `The ${item} in its world: ${moodCap}. Environment tells the buyer who wears this.`,
+        belts: `The ${item} grounding a full look in context. ${moodCap} and outfit completeness.`,
+        headwear: `The ${item} in its natural setting. ${moodCap} and street-level authenticity.`,
+        scarves: `The ${item} styled within an environment. ${moodCap} and visual storytelling.`,
+        small_accessories: `The ${item} in context: ${moodCap}. The environment signals taste and intentionality.`,
+      };
+      return envSells[input.productFamily] || `The ${item} in an environment that tells the buyer where this product lives. ${moodCap} in context.`;
     }
     if (archetype.id === "torso_turn_editorial") {
-      return `Movement energy and styled confidence with the ${item}. The turn reveals ${vocab.material} from a new angle.`;
+      const turnVerbs: Partial<Record<string, string>> = {
+        watches: `Wrist presence in motion. The turn catches ${vocab.material} from a new angle.`,
+        belts: `Waist definition through movement. The turn reveals ${vocab.material} from a new angle.`,
+        headwear: `The ${item} anchoring a styled turn. The rotation shows ${vocab.material} from a new perspective.`,
+        scarves: `Fabric in motion: the ${item} responds to the turn, revealing ${vocab.material}.`,
+        small_accessories: `Styled confidence with the ${item}. The turn reveals ${vocab.material} from a new angle.`,
+      };
+      return turnVerbs[input.productFamily] || `Movement energy and styled confidence with the ${item}. The turn reveals ${vocab.material} from a new angle.`;
     }
     if (archetype.id === "seated_forward_lean") {
       return `Relaxed context: the ${item} in a seated moment that signals ease. Focus shifts to ${vocab.detail_focus}.`;
@@ -390,28 +441,29 @@ function deriveWhyGenerateNow(
   if (priority > 3) return undefined;
 
   const item = input.specificItem || PRODUCT_FAMILY_LABELS[input.productFamily].toLowerCase();
+  const vocab = FAMILY_VOCABULARY[input.productFamily];
   const cat = archetype.shotCategory;
 
   if (priority === 1) {
     if (cat === "hero") {
-      return `Validates that the AI can render the ${item} accurately before committing to the full set.`;
+      return `Validates the ${item} renders accurately. If ${vocab.product} shape or proportion is off, stop here.`;
     }
     if (cat === "product_focus") {
-      return `Establishes core product rendering. If the ${item} looks wrong here, stop and adjust before shooting the rest.`;
+      return `Tests core ${vocab.product} rendering. If ${vocab.detail_focus} looks wrong, adjust before the full set.`;
     }
-    return `Anchors the set. Every other shot depends on this rendering being right.`;
+    return `Anchors the set. Confirms the ${item} renders correctly at this framing.`;
   }
 
   if (priority === 2) {
-    return `Second angle confirms the ${item} renders consistently from a different perspective. Catches single-angle flukes.`;
+    return `Second angle confirms the ${item} renders consistently. Catches single-perspective flukes early.`;
   }
 
   if (priority === 3) {
     const firstTwoCats = allShots.slice(0, 2).map((s) => s.archetype.shotCategory);
     if (!firstTwoCats.includes("detail")) {
-      return `First detail shot. Tests close-range rendering quality before the remaining set.`;
+      return `First close-up. Tests ${vocab.material} rendering at close range before committing to the rest.`;
     }
-    return `Completes the core trio. The set is now commercially usable even if generation stops here.`;
+    return `Completes the core trio. The set is commercially usable even if generation stops here.`;
   }
 
   return undefined;

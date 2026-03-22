@@ -2004,7 +2004,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     movementSuitability: "low",
     editorialStrength: "low",
     higgsfieldReliability: "medium",
-    difficulty: "moderate",
+    difficulty: "hard", // dial text and index rendering at macro range is high-failure for AI generators
     logoRisk: "low",
     anatomyRisk: "low",
     occlusionRisk: "low",

@@ -5,21 +5,85 @@
   --font-mono: var(--font-geist-mono);
 }
 
-html {
-  color-scheme: dark;
+/*
+ * Lookbook Studio: Premium monochrome design tokens.
+ *
+ * Principle: the UI is monochrome. Photography provides colour.
+ * Surfaces are white/off-white. Text is charcoal. Borders are minimal.
+ * Status indicators use muted tints, never saturated.
+ */
+:root {
+  color-scheme: light;
+
+  /* ── Surfaces ── */
+  --surface-page: #f8f8f8;       /* off-white page background */
+  --surface-card: #ffffff;        /* card / panel surface */
+  --surface-inset: #f3f4f6;      /* inset areas: prompt preview, code, inputs */
+  --surface-elevated: #ffffff;    /* elevated elements (modals, popovers) */
+
+  /* ── Text ── */
+  --text-primary: #1a1a1a;       /* near-black, headlines and primary text */
+  --text-secondary: #6b7280;     /* mid-gray, descriptions and secondary text */
+  --text-tertiary: #9ca3af;      /* light gray, hints, labels, breadcrumbs */
+  --text-inverted: #ffffff;      /* text on dark buttons */
+
+  /* ── Borders ── */
+  --border-default: #e5e7eb;     /* standard borders (use sparingly) */
+  --border-subtle: #f3f4f6;      /* near-invisible dividers */
+
+  /* ── Shadows (elevation instead of borders) ── */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-card-active: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+
+  /* ── Accent (restrained: one warm tone for active states) ── */
+  --accent: #92400e;             /* amber-800: warm, muted, reads well on white */
+  --accent-soft: #fef3c7;        /* amber-100: very soft highlight background */
+
+  /* ── Status tints (muted, never saturated) ── */
+  --status-success-bg: #f0fdf4;  /* green-50 */
+  --status-success-text: #166534; /* green-800 */
+  --status-warning-bg: #fffbeb;  /* amber-50 */
+  --status-warning-text: #92400e; /* amber-800 */
+  --status-error-bg: #fef2f2;   /* red-50 */
+  --status-error-text: #991b1b;  /* red-800 */
+  --status-info-bg: #f0f9ff;    /* sky-50 */
+  --status-info-text: #0c4a6e;  /* sky-800 */
+
+  /* ── Phase accents (muted tints for section dots) ── */
+  --phase-anchor: #d97706;       /* amber-600, muted */
+  --phase-detail: #0891b2;       /* cyan-600, muted */
+  --phase-editorial: #7c3aed;    /* violet-600, muted */
 }
 
+/* ── Base element styling ── */
+
 select {
-  color-scheme: dark;
   -webkit-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 0.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   padding-right: 2rem;
 }
 
-select option {
-  background-color: #1f2937;
-  color: #ffffff;
+select:focus {
+  outline: 2px solid var(--border-default);
+  outline-offset: 1px;
+}
+
+/* ── Scroll and focus ── */
+
+:focus-visible {
+  outline: 2px solid var(--text-tertiary);
+  outline-offset: 2px;
+}
+
+/* ── Shot card highlight animation (F1: next-action scroll) ── */
+@keyframes f1-highlight {
+  0% { box-shadow: 0 0 0 2px rgba(146, 64, 14, 0.4); }
+  100% { box-shadow: var(--shadow-card); }
 }

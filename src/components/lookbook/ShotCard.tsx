@@ -10,21 +10,21 @@ interface ShotCardProps {
 
 function Badge({ label }: { label: string }) {
   const colorMap: Record<string, string> = {
-    Safe: "bg-green-600/20 text-green-400 border-green-600/30",
-    Balanced: "bg-blue-600/20 text-blue-400 border-blue-600/30",
-    Directional: "bg-purple-600/20 text-purple-400 border-purple-600/30",
-    "Logo-safe": "bg-emerald-600/20 text-emerald-400 border-emerald-600/30",
-    "High detail": "bg-cyan-600/20 text-cyan-400 border-cyan-600/30",
-    Motion: "bg-amber-600/20 text-amber-400 border-amber-600/30",
-    "High reliability": "bg-green-600/20 text-green-400 border-green-600/30",
-    "Higher risk": "bg-red-600/20 text-red-400 border-red-600/30",
+    Safe: "bg-[--status-success-bg] text-[--status-success-text]",
+    Balanced: "bg-[--status-info-bg] text-[--status-info-text]",
+    Directional: "bg-purple-50 text-purple-700",
+    "Logo-safe": "bg-emerald-50 text-emerald-700",
+    "High detail": "bg-cyan-50 text-cyan-700",
+    Motion: "bg-[--status-warning-bg] text-[--status-warning-text]",
+    "High reliability": "bg-[--status-success-bg] text-[--status-success-text]",
+    "Higher risk": "bg-[--status-error-bg] text-[--status-error-text]",
   };
   const colors =
-    colorMap[label] || "bg-gray-600/20 text-gray-400 border-gray-600/30";
+    colorMap[label] || "bg-[--surface-inset] text-[--text-secondary]";
 
   return (
     <span
-      className={`inline-block text-xs px-2 py-0.5 rounded-full border ${colors}`}
+      className={`inline-block text-xs px-2 py-0.5 rounded-full ${colors}`}
     >
       {label}
     </span>
@@ -33,9 +33,9 @@ function Badge({ label }: { label: string }) {
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between text-xs py-1 border-b border-gray-700/50 last:border-0">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-gray-300 text-right max-w-[65%]">{value}</span>
+    <div className="flex justify-between text-xs py-1 border-b border-[--border-subtle] last:border-0">
+      <span className="text-[--text-tertiary]">{label}</span>
+      <span className="text-[--text-primary] text-right max-w-[65%]">{value}</span>
     </div>
   );
 }
@@ -52,26 +52,29 @@ export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+    <div
+      className="bg-[--surface-card] rounded-xl overflow-hidden"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
       {/* Header */}
       <div className="p-4 pb-3">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-gray-500 bg-gray-700/50 px-2 py-0.5 rounded">
+            <span className="text-xs font-mono text-[--text-tertiary] bg-[--surface-inset] px-2 py-0.5 rounded">
               #{shot.position}
             </span>
             {isTopPriority && (
-              <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">
+              <span className="text-xs text-[--phase-anchor] bg-[--accent-soft] px-2 py-0.5 rounded">
                 Generate first
               </span>
             )}
           </div>
-          <span className="text-xs text-gray-500 capitalize">
+          <span className="text-xs text-[--text-tertiary] capitalize">
             {a.shotCategory.replace("_", " ")}
           </span>
         </div>
-        <h3 className="text-white font-semibold text-base mb-1">{a.title}</h3>
-        <p className="text-gray-400 text-sm">{shot.shotPurpose}</p>
+        <h3 className="text-[--text-primary] font-semibold text-base mb-1">{a.title}</h3>
+        <p className="text-[--text-secondary] text-sm">{shot.shotPurpose}</p>
       </div>
 
       {/* Badges */}
@@ -83,10 +86,10 @@ export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
 
       {/* What It Sells */}
       <div className="px-4 pb-3">
-        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+        <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
           What it sells
         </span>
-        <p className="text-sm text-gray-300 mt-1">{shot.whatItSells}</p>
+        <p className="text-sm text-[--text-primary] mt-1">{shot.whatItSells}</p>
       </div>
 
       {/* Key Specs */}
@@ -102,19 +105,19 @@ export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
       </div>
 
       {/* Delta Brief */}
-      <div className="mx-4 mb-3 bg-gray-900/60 border border-gray-700/50 rounded-lg p-3">
+      <div className="mx-4 mb-3 bg-[--surface-inset] rounded-lg p-3">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+          <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
             Delta Brief
           </span>
           <button
             onClick={handleCopyBrief}
-            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            className="text-xs text-[--accent] hover:opacity-80 transition-opacity"
           >
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
-        <p className="text-sm text-gray-300 leading-relaxed">
+        <p className="text-sm text-[--text-primary] leading-relaxed">
           {shot.deltaBrief}
         </p>
       </div>
@@ -123,7 +126,7 @@ export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
       <div className="mx-4 mb-3">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-xs text-gray-500 hover:text-gray-400 transition-colors flex items-center gap-1"
+          className="text-xs text-[--text-tertiary] hover:text-[--text-secondary] transition-colors flex items-center gap-1"
         >
           <span>{expanded ? "Hide" : "Show"} details</span>
           <span className="text-[10px]">{expanded ? "\u25B2" : "\u25BC"}</span>
@@ -133,40 +136,40 @@ export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
           <div className="mt-3 space-y-3">
             {/* Pose Details */}
             <div className="space-y-0.5">
-              <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
                 Pose Direction
               </span>
-              <p className="text-xs text-gray-400">{shot.poseDelta}</p>
+              <p className="text-xs text-[--text-secondary]">{shot.poseDelta}</p>
             </div>
 
             {/* Branding */}
             <div className="space-y-0.5">
-              <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
                 Branding Safety
               </span>
-              <p className="text-xs text-gray-400">{shot.brandingSafety}</p>
+              <p className="text-xs text-[--text-secondary]">{shot.brandingSafety}</p>
             </div>
 
             {/* Realism */}
             <div className="space-y-0.5">
-              <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
                 Realism Notes
               </span>
-              <p className="text-xs text-gray-400">{shot.realismNote}</p>
+              <p className="text-xs text-[--text-secondary]">{shot.realismNote}</p>
             </div>
 
             {/* Usage */}
             <div className="space-y-0.5">
-              <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
                 Usage
               </span>
-              <div className="text-xs text-gray-400 space-y-1">
+              <div className="text-xs text-[--text-secondary] space-y-1">
                 <p>
-                  <span className="text-green-400">Best when:</span>{" "}
+                  <span className="text-[--status-success-text]">Best when:</span>{" "}
                   {a.bestUsedWhen}
                 </p>
                 <p>
-                  <span className="text-red-400">Avoid when:</span>{" "}
+                  <span className="text-[--status-error-text]">Avoid when:</span>{" "}
                   {a.avoidWhen}
                 </p>
               </div>
@@ -174,10 +177,10 @@ export default function ShotCard({ shot, isTopPriority }: ShotCardProps) {
 
             {/* Negative Cues */}
             <div className="space-y-0.5">
-              <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
                 Negative Cues
               </span>
-              <p className="text-xs text-gray-500 break-words">
+              <p className="text-xs text-[--text-tertiary] break-words">
                 {shot.negativeCues}
               </p>
             </div>

@@ -434,38 +434,38 @@ export const ITEM_EVIDENCE_OVERRIDES: ItemEvidenceOverride[] = [
 // ── Evidence Sell Phrases ──
 
 export const EVIDENCE_SELL_PHRASES: Record<EvidenceType, string> = {
-  full_silhouette: "complete product shape and proportions",
-  side_profile: "product shape from a different angle, showing its profile line",
-  back_shape: "rear construction and back profile",
-  fit_on_body: "how the product fits and sits when worn",
-  carry_method: "how the piece is carried and its strap behaviour",
-  wrist_visibility: "product on the wrist with natural fit",
-  ear_visibility: "earring placement, scale, and sparkle against the ear",
-  neckline_visibility: "necklace or pendant at the neckline with chain drape",
-  finger_visibility: "ring on the finger with hand context",
-  face_framing: "how the product frames and complements the face",
-  on_foot_presence: "shoe on foot in natural stance",
-  waist_anchoring: "belt at the waist with buckle visible",
-  fabric_drape: "how the fabric falls and moves on the body",
-  texture_detail: "material grain, weave, and surface quality",
-  hardware_detail: "hardware quality, buckles, and metal craftsmanship",
-  sole_profile: "sole design, construction, and ground presence",
-  interior_capacity: "interior volume, lining, and pocket structure",
-  construction_quality: "stitching, edge finishing, and joint quality",
-  closure_mechanism: "how the product opens and closes (clasp, buckle, zipper)",
-  surface_reflection: "how light plays on the surface (metal, glass, leather sheen)",
-  logo_placement: "brand mark visibility and legibility",
-  label_detail: "interior label and tag details",
-  movement_behavior: "how the product moves and behaves in motion",
-  styling_context: "product in a lifestyle or editorial setting",
-  scale_reference: "product size relative to the body",
-  face_scale: "product size and proportion relative to the face",
-  body_scale: "product size and proportion relative to the body",
-  profile_depth: "3D depth and thickness from the side",
-  dimensional_depth: "volume, structure, and 3D form",
-  attachment_point: "where and how the product connects to the body",
-  pair_symmetry: "matched pair balance and visual harmony",
-  symmetry_validation: "AI rendering accuracy for both sides of a pair",
+  full_silhouette: "shape, proportion, and presence",
+  side_profile: "profile line and dimensional form",
+  back_shape: "rear construction and finishing",
+  fit_on_body: "fit, drape, and how it sits when worn",
+  carry_method: "carry style, strap drop, and body interaction",
+  wrist_visibility: "wrist presence and natural fit",
+  ear_visibility: "placement, sparkle, and scale against the ear",
+  neckline_visibility: "chain drape and neckline placement",
+  finger_visibility: "ring scale and hand context",
+  face_framing: "face framing and how it complements the wearer",
+  on_foot_presence: "on-foot silhouette and ground contact",
+  waist_anchoring: "waist anchoring and buckle position",
+  fabric_drape: "fabric weight, drape, and movement",
+  texture_detail: "material grain, weave, and surface finish",
+  hardware_detail: "metal finish, buckle quality, and hardware precision",
+  sole_profile: "sole architecture and ground presence",
+  interior_capacity: "interior volume and pocket structure",
+  construction_quality: "stitching precision, edge finishing, and joint integrity",
+  closure_mechanism: "closure action and mechanism detail",
+  surface_reflection: "light play across the surface",
+  logo_placement: "brand mark placement and legibility",
+  label_detail: "label and tag finishing",
+  movement_behavior: "product behaviour in motion",
+  styling_context: "lifestyle context and styled intention",
+  scale_reference: "product scale against the body",
+  face_scale: "proportion relative to the face",
+  body_scale: "proportion relative to the body",
+  profile_depth: "depth and thickness from the side",
+  dimensional_depth: "volume, structure, and three-dimensional form",
+  attachment_point: "connection point and body interaction",
+  pair_symmetry: "matched-pair balance and visual harmony",
+  symmetry_validation: "rendering accuracy across both sides",
 };
 
 // ── Family-Aware Fallback Sells Language ──
@@ -669,27 +669,28 @@ export function composeEvidenceSells(
 
   const joined = phrases.join("; ");
 
-  // Category-native tone instead of generic "Buyer sees:" template
+  // Category-native tone: premium, concise, buyer-facing
+  const cap = item[0].toUpperCase() + item.slice(1);
   if (category === "hero") {
-    return `The ${item} in full context: ${joined}.`;
+    return `${cap} at first glance. Buyer sees: ${joined}.`;
   }
   if (category === "detail") {
-    return `Craftsmanship proof for the ${item}: ${joined}.`;
+    return `Close-up proof: ${joined}.`;
   }
   if (category === "product_focus") {
-    return `${item[0].toUpperCase() + item.slice(1)} up close: ${joined}.`;
+    return `${cap} in focus. Buyer evaluates: ${joined}.`;
   }
   if (category === "editorial") {
-    return `The ${item} in a world the buyer wants: ${joined}.`;
+    return `Desirability and context: ${joined}.`;
   }
   if (category === "silhouette") {
-    return `Shape language of the ${item}: ${joined}.`;
+    return `Shape and outline: ${joined}.`;
   }
   if (category === "motion") {
-    return `The ${item} in motion: ${joined}.`;
+    return `In motion: ${joined}.`;
   }
 
-  return `The ${item}: ${joined}.`;
+  return `${cap}: ${joined}.`;
 }
 
 /** Families eligible for product_only display zone shots. */

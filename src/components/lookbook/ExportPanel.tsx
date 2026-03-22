@@ -17,9 +17,12 @@ export default function ExportPanel({ exportText }: ExportPanelProps) {
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
-      <h3 className="text-sm font-medium text-white mb-1">Export</h3>
-      <p className="text-xs text-gray-500 mb-4">
+    <div
+      className="bg-[--surface-card] rounded-xl p-5"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
+      <h3 className="text-sm font-medium text-[--text-primary] mb-1">Export</h3>
+      <p className="text-xs text-[--text-tertiary] mb-4">
         Copy the full lookbook plan, including Master Shoot DNA and all 6 delta
         briefs, ready for your Higgsfield workflow.
       </p>
@@ -27,20 +30,20 @@ export default function ExportPanel({ exportText }: ExportPanelProps) {
       <div className="flex gap-3">
         <button
           onClick={handleCopy}
-          className="bg-white text-gray-900 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="bg-[--text-primary] text-[--text-inverted] text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
         >
           {copied ? "Copied to clipboard" : "Export Full Plan"}
         </button>
         <button
           onClick={() => setShowPreview(!showPreview)}
-          className="text-gray-400 hover:text-gray-300 text-sm px-4 py-2 rounded-lg border border-gray-700 transition-colors"
+          className="text-[--text-secondary] hover:text-[--text-primary] text-sm px-4 py-2 rounded-lg border border-[--border-default] transition-colors"
         >
           {showPreview ? "Hide Preview" : "Preview Export"}
         </button>
       </div>
 
       {showPreview && (
-        <pre className="mt-4 bg-gray-900 border border-gray-700 rounded-lg p-4 text-xs text-gray-400 overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
+        <pre className="mt-4 bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-4 text-xs text-[--text-secondary] overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
           {exportText}
         </pre>
       )}

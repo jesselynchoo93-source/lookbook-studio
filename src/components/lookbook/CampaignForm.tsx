@@ -20,6 +20,8 @@ import CampaignGoalSelector from "./CampaignGoalSelector";
 
 interface CampaignFormProps {
   onSubmit: (input: LookbookInput) => void;
+  /** Pre-fill form with saved input when reopening a draft project. */
+  initialInput?: LookbookInput;
 }
 
 const DEFAULT_INPUT: LookbookInput = {
@@ -34,22 +36,31 @@ const DEFAULT_INPUT: LookbookInput = {
   notes: "",
 };
 
-export default function CampaignForm({ onSubmit }: CampaignFormProps) {
-  const [input, setInput] = useState<LookbookInput>(DEFAULT_INPUT);
+export default function CampaignForm({ onSubmit, initialInput }: CampaignFormProps) {
+  const [input, setInput] = useState<LookbookInput>(initialInput ?? DEFAULT_INPUT);
 
   // ── Settings driver: tracks what is currently controlling goal/logo/creativity ──
-  // "preset"           = user selected a creative direction
-  // "ai_recommended"   = AI auto-applied based on product/style
-  // "custom"           = user manually edited without a preset base
-  // "modified_preset"  = user started from a preset then changed something
-  const [settingsDriver, setSettingsDriver] = useState<SettingsDriver>("ai_recommended");
+  const [settingsDriver, setSettingsDriver] = useState<SettingsDriver>(() => {
+    if (!initialInput) return "ai_recommended";
+    const rec = getRecommendedSettings({
+      productFamily: initialInput.productFamily,
+      specificItem: initialInput.specificItem,
+      genderPresentation: initialInput.genderPresentation,
+      targetStyle: initialInput.targetStyle,
+    });
+    if (
+      initialInput.campaignGoal === rec.campaignGoal &&
+      initialInput.logoVisibilityPriority === rec.logoVisibilityPriority &&
+      initialInput.creativityLevel === rec.creativityLevel
+    ) {
+      return "ai_recommended";
+    }
+    return "custom";
+  });
   const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
 
-  // When a preset is active and product changes, the recommendation becomes a
-  // pending suggestion rather than auto-applying. This stores it.
   const [pendingRecommendation, setPendingRecommendation] = useState<RecommendedSettings | null>(null);
 
-  // Track the context keys that drive recommendations (for detecting changes)
   const prevContextRef = useRef({
     productFamily: input.productFamily,
     specificItem: input.specificItem,
@@ -75,7 +86,6 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
       });
 
       if (settingsDriver === "ai_recommended") {
-        // No preset active, no manual edits: auto-apply freely
         setInput(prev => ({
           ...prev,
           campaignGoal: rec.campaignGoal,
@@ -84,7 +94,6 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
         }));
         setPendingRecommendation(null);
       } else {
-        // Preset, custom, or modified_preset active: show as suggestion, don't override
         setPendingRecommendation(rec);
       }
     }
@@ -108,11 +117,9 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
     setSelectedPresetId(match?.id);
   }, []);
 
-  // ── Clear preset (deselect) ──
   const handleClearPreset = useCallback(() => {
     setSelectedPresetId(undefined);
     setSettingsDriver("ai_recommended");
-    // Auto-apply current recommendation
     const rec = getRecommendedSettings({
       productFamily: input.productFamily,
       specificItem: input.specificItem,
@@ -128,7 +135,6 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
     setPendingRecommendation(null);
   }, [input.productFamily, input.specificItem, input.genderPresentation, input.targetStyle]);
 
-  // ── Apply recommendation (user clicks "Apply recommendation") ──
   const handleApplyRecommendation = useCallback((rec: RecommendedSettings) => {
     setInput(prev => ({
       ...prev,
@@ -141,12 +147,10 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
     setPendingRecommendation(null);
   }, []);
 
-  // ── Keep preset (dismiss the pending recommendation) ──
   const handleKeepPreset = useCallback(() => {
     setPendingRecommendation(null);
   }, []);
 
-  // ── Manual edits to goal/logo/creativity ──
   const handleGoalChange = useCallback((v: CampaignGoal) => {
     setInput(prev => ({ ...prev, campaignGoal: v }));
     setSettingsDriver(prev =>
@@ -171,8 +175,6 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
     setPendingRecommendation(null);
   }, []);
 
-  // ── Context changes (product, item, style, gender) ──
-  // These do NOT change the driver directly; the useEffect above handles the logic.
   const handleFamilyChange = useCallback((f: ProductFamily) => {
     setInput(prev => ({ ...prev, productFamily: f, specificItem: "" }));
   }, []);
@@ -194,7 +196,6 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
     onSubmit(input);
   };
 
-  // Find the active preset object for explanation display
   const activePreset = selectedPresetId
     ? STARTER_PRESETS.find(p => p.id === selectedPresetId)
     : undefined;
@@ -212,13 +213,13 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
       {/* Divider with relationship explainer */}
       <div className="space-y-2">
         <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-gray-700" />
-          <span className="text-xs text-gray-500 uppercase tracking-wider">
+          <div className="flex-1 h-px bg-[--border-default]" />
+          <span className="text-xs text-[--text-tertiary] uppercase tracking-wider">
             Campaign Details
           </span>
-          <div className="flex-1 h-px bg-gray-700" />
+          <div className="flex-1 h-px bg-[--border-default]" />
         </div>
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-[--text-tertiary] text-center">
           Your creative direction stays active unless you choose to apply the AI recommendation.
         </p>
       </div>
@@ -257,7 +258,7 @@ export default function CampaignForm({ onSubmit }: CampaignFormProps) {
       {/* Submit */}
       <button
         type="submit"
-        className="w-full bg-white text-gray-900 font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors"
+        className="w-full bg-[--text-primary] text-[--text-inverted] font-medium py-3 rounded-lg hover:opacity-90 transition-opacity"
       >
         Build Lookbook Plan
       </button>

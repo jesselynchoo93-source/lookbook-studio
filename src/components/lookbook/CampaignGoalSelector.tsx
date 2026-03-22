@@ -46,22 +46,26 @@ const CREATIVITY_DESCRIPTIONS: Record<CreativityLevel, string> = {
 
 // ── Driver badge labels and styles ──
 
-const DRIVER_BADGE: Record<SettingsDriver, { label: string; className: string }> = {
+const DRIVER_BADGE: Record<SettingsDriver, { label: string; hint: string; className: string }> = {
   preset: {
-    label: "Preset Active",
-    className: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+    label: "Creative Direction",
+    hint: "Settings locked to your chosen preset",
+    className: "bg-[--status-info-bg] text-[--status-info-text]",
   },
   ai_recommended: {
     label: "AI Recommended",
-    className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+    hint: "Auto-tuned for your product and style",
+    className: "bg-[--status-success-bg] text-[--status-success-text]",
   },
   custom: {
     label: "Custom",
-    className: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+    hint: "You set these manually",
+    className: "bg-[--status-warning-bg] text-[--status-warning-text]",
   },
   modified_preset: {
-    label: "Modified from Preset",
-    className: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+    label: "Modified Preset",
+    hint: "Started from a preset, then adjusted",
+    className: "bg-purple-50 text-purple-700",
   },
 };
 
@@ -110,13 +114,13 @@ function SelectField<T extends string>({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-200 mb-1">
+      <label className="block text-sm font-medium text-[--text-primary] mb-1">
         {label}
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gray-500"
+        className="w-full bg-[--surface-card] border border-[--border-default] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary]"
       >
         {options.map((opt) => (
           <option key={opt} value={opt}>
@@ -125,9 +129,9 @@ function SelectField<T extends string>({
         ))}
       </select>
       {descriptions && descriptions[value] && (
-        <p className="mt-1 text-xs text-gray-400">{descriptions[value]}</p>
+        <p className="mt-1 text-xs text-[--text-secondary]">{descriptions[value]}</p>
       )}
-      <p className="mt-1 text-xs text-gray-500">{helperText}</p>
+      <p className="mt-1 text-xs text-[--text-tertiary]">{helperText}</p>
     </div>
   );
 }
@@ -148,31 +152,26 @@ function ActiveRecommendationCard({
   recommendation: RecommendedSettings;
 }) {
   return (
-    <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
-            Recommended Settings for This Product
-          </p>
-          <p className="text-sm font-medium text-white">
-            {recommendation.title}
-          </p>
-        </div>
-        <span className="shrink-0 text-xs text-emerald-400 font-medium px-3 py-1.5">
+    <div
+      className="bg-[--surface-card] border border-[--border-default] rounded-xl p-4"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <p className="text-sm font-medium text-[--text-primary]">
+          {recommendation.title}
+        </p>
+        <span className="shrink-0 text-xs text-[--status-success-text] font-medium px-2 py-1">
           Active
         </span>
       </div>
 
-      <div className="flex gap-4 text-xs text-gray-300 mb-2">
-        <span>Goal: <span className="text-white">{GOAL_LABELS[recommendation.campaignGoal]}</span></span>
-        <span>Branding: <span className="text-white">{LOGO_LABELS[recommendation.logoVisibilityPriority]}</span></span>
-        <span>Creativity: <span className="text-white">{CREATIVITY_LABELS[recommendation.creativityLevel]}</span></span>
+      <div className="flex gap-4 text-xs text-[--text-secondary] mb-2">
+        <span>Goal: <span className="text-[--text-primary]">{GOAL_LABELS[recommendation.campaignGoal]}</span></span>
+        <span>Branding: <span className="text-[--text-primary]">{LOGO_LABELS[recommendation.logoVisibilityPriority]}</span></span>
+        <span>Creativity: <span className="text-[--text-primary]">{CREATIVITY_LABELS[recommendation.creativityLevel]}</span></span>
       </div>
 
-      <p className="text-xs text-gray-500 leading-relaxed">
-        Based on your selected product, style, and model presentation.
-      </p>
-      <p className="text-xs text-gray-400 leading-relaxed mt-1">
+      <p className="text-xs text-[--text-secondary] leading-relaxed">
         {recommendation.reason}
       </p>
     </div>
@@ -191,45 +190,40 @@ function PendingRecommendationCard({
   onKeep: () => void;
 }) {
   return (
-    <div className="bg-emerald-950/30 border border-emerald-700/40 rounded-xl p-4">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <p className="text-xs text-emerald-400 uppercase tracking-wider mb-1">
-            Recommended Settings for This Product
-          </p>
-          <p className="text-sm font-medium text-white">
-            {recommendation.title}
-          </p>
-        </div>
+    <div className="bg-[--status-success-bg] border border-[--status-success-text]/20 rounded-xl p-4">
+      <div className="mb-2">
+        <p className="text-xs text-[--status-success-text] uppercase tracking-wider mb-1">
+          Suggestion for this product
+        </p>
+        <p className="text-sm font-medium text-[--text-primary]">
+          {recommendation.title}
+        </p>
       </div>
 
-      <div className="flex gap-4 text-xs text-gray-300 mb-2">
-        <span>Goal: <span className="text-white">{GOAL_LABELS[recommendation.campaignGoal]}</span></span>
-        <span>Branding: <span className="text-white">{LOGO_LABELS[recommendation.logoVisibilityPriority]}</span></span>
-        <span>Creativity: <span className="text-white">{CREATIVITY_LABELS[recommendation.creativityLevel]}</span></span>
+      <div className="flex gap-4 text-xs text-[--text-secondary] mb-2">
+        <span>Goal: <span className="text-[--text-primary]">{GOAL_LABELS[recommendation.campaignGoal]}</span></span>
+        <span>Branding: <span className="text-[--text-primary]">{LOGO_LABELS[recommendation.logoVisibilityPriority]}</span></span>
+        <span>Creativity: <span className="text-[--text-primary]">{CREATIVITY_LABELS[recommendation.creativityLevel]}</span></span>
       </div>
 
-      <p className="text-xs text-gray-500 leading-relaxed mb-1">
-        Based on your selected product, style, and model presentation.
-      </p>
-      <p className="text-xs text-gray-400 leading-relaxed mb-3">
-        <span className="text-emerald-400/80">Why: </span>{recommendation.reason}
+      <p className="text-xs text-[--text-secondary] leading-relaxed mb-3">
+        {recommendation.reason}
       </p>
 
       <div className="flex gap-2">
         <button
           type="button"
           onClick={onApply}
-          className="text-xs bg-white text-gray-900 font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
+          className="text-xs bg-[--text-primary] text-[--text-inverted] font-medium px-3 py-1.5 rounded-md hover:opacity-90 transition-opacity"
         >
-          Apply recommendation
+          Apply
         </button>
         <button
           type="button"
           onClick={onKeep}
-          className="text-xs bg-gray-700 text-gray-300 font-medium px-3 py-1.5 rounded-md hover:bg-gray-600 transition-colors"
+          className="text-xs border border-[--border-default] text-[--text-secondary] font-medium px-3 py-1.5 rounded-md hover:text-[--text-primary] transition-colors"
         >
-          Keep current settings
+          Keep current
         </button>
       </div>
     </div>
@@ -246,17 +240,14 @@ function PassiveRecommendationHint({
   onApply: () => void;
 }) {
   return (
-    <div className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-xs text-gray-500">
-          AI suggestion: <span className="text-gray-400">{recommendation.title}</span>
-          {" "}&mdash;{" "}{GOAL_LABELS[recommendation.campaignGoal]}, {LOGO_LABELS[recommendation.logoVisibilityPriority].toLowerCase()} branding, {CREATIVITY_LABELS[recommendation.creativityLevel].toLowerCase()} creativity
-        </p>
-      </div>
+    <div className="bg-[--surface-inset] rounded-lg p-3 flex items-center justify-between gap-3">
+      <p className="text-xs text-[--text-tertiary] min-w-0">
+        AI would suggest: <span className="text-[--text-secondary]">{recommendation.title}</span>
+      </p>
       <button
         type="button"
         onClick={onApply}
-        className="shrink-0 text-xs text-gray-400 hover:text-white transition-colors underline underline-offset-2"
+        className="shrink-0 text-xs text-[--text-secondary] hover:text-[--text-primary] transition-colors underline underline-offset-2"
       >
         Apply
       </button>
@@ -271,7 +262,7 @@ function WarningList({ warnings }: { warnings: SettingsWarning[] }) {
   return (
     <div className="space-y-1.5">
       {warnings.map((w, i) => (
-        <p key={i} className="text-xs text-amber-400/80 leading-relaxed">
+        <p key={i} className="text-xs text-[--status-warning-text] leading-relaxed">
           {w.message}
         </p>
       ))}
@@ -318,7 +309,6 @@ export default function CampaignGoalSelector({
     logo === recommendation.logoVisibilityPriority &&
     creativity === recommendation.creativityLevel;
 
-  // Determine which recommendation card to show
   const showPendingCard = pendingRecommendation !== null;
   const showActiveCard = isRecommendationActive && !showPendingCard;
   const showPassiveHint = !showPendingCard && !showActiveCard &&
@@ -330,22 +320,15 @@ export default function CampaignGoalSelector({
     <div className="space-y-5">
       {/* Settings driver badge */}
       <div className="flex items-center gap-3">
-        <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full border ${badge.className}`}>
+        <span className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${badge.className}`}>
           {badge.label}
         </span>
-        {settingsDriver === "modified_preset" && selectedPresetId && (
-          <span className="text-xs text-gray-500">
-            Started from preset, then customised
-          </span>
-        )}
-        {settingsDriver === "custom" && (
-          <span className="text-xs text-gray-500">
-            Manually configured
-          </span>
-        )}
+        <span className="text-xs text-[--text-tertiary]">
+          {badge.hint}
+        </span>
       </div>
 
-      {/* Gender + Style (context selectors, outside the recommendation scope) */}
+      {/* Gender + Style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SelectField
           label="Gender Presentation"
@@ -422,16 +405,16 @@ export default function CampaignGoalSelector({
 
       {/* Notes */}
       <div>
-        <label className="block text-sm font-medium text-gray-200 mb-1">
+        <label className="block text-sm font-medium text-[--text-primary] mb-1">
           Notes (optional)
         </label>
         <textarea
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           placeholder="e.g. 'Focus on the back panel detail' or 'Model should feel relaxed, not stiff'"
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gray-500 min-h-[60px] resize-y"
+          className="w-full bg-[--surface-card] border border-[--border-default] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary] min-h-[60px] resize-y"
         />
-        <p className="mt-1 text-xs text-gray-500">Any specific direction or constraints for this lookbook.</p>
+        <p className="mt-1 text-xs text-[--text-tertiary]">Any specific direction or constraints for this lookbook.</p>
       </div>
     </div>
   );

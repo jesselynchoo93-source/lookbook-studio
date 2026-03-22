@@ -19,10 +19,10 @@ export default function StepHeader({ currentStep }: StepHeaderProps) {
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors ${
               currentStep === step.num
-                ? "bg-white text-gray-900 font-medium"
+                ? "bg-[--text-primary] text-[--text-inverted] font-medium"
                 : currentStep > step.num
-                ? "bg-gray-700 text-gray-300"
-                : "bg-gray-800 text-gray-500"
+                ? "bg-[--surface-inset] text-[--text-primary]"
+                : "bg-[--surface-page] text-[--text-tertiary]"
             }`}
           >
             <span className="text-xs font-mono">{step.num}</span>
@@ -31,7 +31,7 @@ export default function StepHeader({ currentStep }: StepHeaderProps) {
           {i < STEPS.length - 1 && (
             <div
               className={`w-8 h-px ${
-                currentStep > step.num ? "bg-gray-500" : "bg-gray-700"
+                currentStep > step.num ? "bg-[--text-tertiary]" : "bg-[--border-default]"
               }`}
             />
           )}

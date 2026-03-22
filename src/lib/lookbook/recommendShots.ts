@@ -1011,6 +1011,114 @@ export function computeDiagnostics(
   };
 }
 
+// ── Why Selected (per-shot selection reasoning) ──
+
+function deriveWhySelected(
+  shot: ScoredArchetype,
+  evidencePlan: ResolvedEvidencePlan,
+  coveredByOthers: Set<EvidenceType>,
+  input: LookbookInput,
+): string {
+  const arch = shot.archetype;
+  const item = input.specificItem || input.productFamily.replace(/_/g, " ");
+  const requiredSet = new Set(
+    evidencePlan.orderedEvidence.filter((e) => e.priority === "required").map((e) => e.evidence),
+  );
+  const recommendedSet = new Set(
+    evidencePlan.orderedEvidence.filter((e) => e.priority === "recommended").map((e) => e.evidence),
+  );
+
+  // What required evidence does this shot uniquely provide (no other shot covers it)?
+  const uniqueRequired = arch.evidenceCapabilities.filter(
+    (ev) => requiredSet.has(ev) && !coveredByOthers.has(ev),
+  );
+  // What required evidence does this shot cover (even if shared)?
+  const coveredRequired = arch.evidenceCapabilities.filter((ev) => requiredSet.has(ev));
+  // What recommended evidence?
+  const coveredRecommended = arch.evidenceCapabilities.filter((ev) => recommendedSet.has(ev));
+
+  // Evidence type to short human phrase
+  const shortPhrase: Record<string, string> = {
+    waist_anchoring: "waist fit",
+    hardware_detail: "hardware and buckle detail",
+    closure_mechanism: "closure and buckle mechanism",
+    texture_detail: "material texture",
+    face_framing: "face framing",
+    face_scale: "face-to-product proportion",
+    side_profile: "profile shape",
+    full_silhouette: "full shape and outline",
+    carry_method: "carry method",
+    body_scale: "body proportion",
+    surface_reflection: "surface and light play",
+    wrist_visibility: "wrist presence",
+    dimensional_depth: "3D depth and volume",
+    on_foot_presence: "on-foot presence",
+    sole_profile: "sole detail",
+    fabric_drape: "drape and movement",
+    construction_quality: "construction quality",
+    ear_visibility: "earring placement",
+    pair_symmetry: "pair balance",
+    neckline_visibility: "neckline placement",
+    styling_context: "styling context",
+    logo_placement: "brand visibility",
+    movement_behavior: "movement behaviour",
+    profile_depth: "profile depth",
+    attachment_point: "attachment and connection point",
+    interior_capacity: "interior capacity",
+    finger_visibility: "finger placement",
+    scale_reference: "product scale",
+    label_detail: "label detail",
+    symmetry_validation: "rendering symmetry",
+  };
+
+  const phrase = (ev: EvidenceType) => shortPhrase[ev] || ev.replace(/_/g, " ");
+
+  // Build the reason
+  if (uniqueRequired.length >= 2) {
+    return `Selected to prove ${uniqueRequired.slice(0, 3).map(phrase).join(" and ")}`;
+  }
+  if (uniqueRequired.length === 1) {
+    return `Selected to validate ${phrase(uniqueRequired[0])} for the ${item}`;
+  }
+  if (coveredRequired.length >= 2) {
+    return `Selected to show ${coveredRequired.slice(0, 2).map(phrase).join(" and ")}`;
+  }
+  if (coveredRequired.length === 1 && coveredRecommended.length >= 1) {
+    return `Selected for ${phrase(coveredRequired[0])} plus ${phrase(coveredRecommended[0])}`;
+  }
+  if (coveredRecommended.length >= 2) {
+    return `Selected to cover ${coveredRecommended.slice(0, 2).map(phrase).join(" and ")}`;
+  }
+
+  // Category-based fallback (family-aware for editorial)
+  const cat = arch.shotCategory;
+  if (cat === "editorial") {
+    // Use the family vocabulary to make editorial WHY lines specific
+    const familyMoods: Partial<Record<string, string>> = {
+      eyewear: "Selected to show face-framing attitude in context",
+      bags: "Selected for carry style in a real-world setting",
+      watches: "Selected to show wrist presence in a lifestyle moment",
+      jewelry: "Selected for styled adornment and personal expression",
+      footwear: "Selected for street-level energy and confidence",
+      headwear: "Selected to show the hat in its natural context",
+      belts: "Selected for styled waist context and outfit polish",
+      scarves: "Selected for colour story and layered styling",
+      small_accessories: "Selected for personal style in a lifestyle moment",
+      apparel: "Selected for occasion context and personal style",
+      full_look: "Selected for total look in an aspirational setting",
+    };
+    return familyMoods[input.productFamily] || "Selected for lifestyle context and editorial mood";
+  }
+  const catReasons: Record<string, string> = {
+    hero: `Selected as the anchor shot for the ${item}`,
+    detail: `Selected for close-range craftsmanship proof`,
+    product_focus: `Selected for focused product visibility`,
+    silhouette: `Selected to show shape and outline`,
+    motion: `Selected to show movement and energy`,
+  };
+  return catReasons[cat] || `Selected for ${cat} coverage`;
+}
+
 // ── Main Entry Point ──
 
 export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
@@ -1052,6 +1160,22 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
 
   // Step 7b: Deduplicate identical "what it sells" text across shots
   deduplicateSellsText(shots, input, blueprint);
+
+  // Step 7c: Derive "why selected" reasoning per shot
+  for (const shot of shots) {
+    // Build a set of evidence covered by all OTHER shots (not this one)
+    const coveredByOthers = new Set<EvidenceType>();
+    for (const other of selected) {
+      if (other.archetype.id === shot.archetype.id) continue;
+      for (const ev of other.archetype.evidenceCapabilities) {
+        coveredByOthers.add(ev);
+      }
+    }
+    const scoredMatch = selected.find((s) => s.archetype.id === shot.archetype.id);
+    if (scoredMatch) {
+      shot.whySelected = deriveWhySelected(scoredMatch, blueprint.evidencePlan, coveredByOthers, input);
+    }
+  }
 
   // Step 8: Coverage (including evidence coverage)
   const baseCoverage = computeCoverage(

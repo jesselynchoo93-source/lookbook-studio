@@ -25,7 +25,7 @@ export default function ProductSelector({
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-sm text-gray-300 mb-1.5">
+        <label className="block text-sm text-[--text-primary] mb-1.5">
           Product Family
           <InfoTooltip text="The broad category of your product. This helps the system choose appropriate shot types." />
         </label>
@@ -35,7 +35,7 @@ export default function ProductSelector({
             onFamilyChange(e.target.value as ProductFamily);
             onItemChange("");
           }}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gray-500"
+          className="w-full bg-[--surface-card] border border-[--border-default] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary]"
         >
           {families.map((f) => (
             <option key={f} value={f}>
@@ -46,14 +46,14 @@ export default function ProductSelector({
       </div>
 
       <div>
-        <label className="block text-sm text-gray-300 mb-1.5">
+        <label className="block text-sm text-[--text-primary] mb-1.5">
           Specific Item
           <InfoTooltip text="Optional. Choosing a specific item helps tailor shot recommendations to your exact product." />
         </label>
         <select
           value={specificItem || ""}
           onChange={(e) => onItemChange(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gray-500"
+          className="w-full bg-[--surface-card] border border-[--border-default] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary]"
         >
           <option value="">Any / not specified</option>
           {items.map((item) => (

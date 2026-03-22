@@ -3,6 +3,9 @@ import type {
   RecommendedShot,
   LookbookInput,
   PlanDiagnostics,
+  TrackerState,
+  SetReadinessResult,
+  FinalMark,
 } from "./types";
 import {
   PRODUCT_FAMILY_LABELS,
@@ -15,6 +18,7 @@ import {
 import type { ProductFamily } from "./types";
 import { NEGATIVE_DEFAULTS } from "./realismRules";
 import { runBriefQualityPass } from "./buildShotDelta";
+import { getSelectedShots, getLeadShot } from "./setReadiness";
 
 // ── Category-native display names for generic archetypes ──
 // When a generic archetype is used for a specific family, show a better name in the export.
@@ -126,6 +130,11 @@ export function formatExportText(
     }
     lines.push("");
 
+    // Why this shot was selected (1-liner)
+    if (shot.whySelected) {
+      lines.push(`WHY: ${shot.whySelected}`);
+    }
+
     // What it sells (separated from brief)
     lines.push(`WHAT IT SELLS:`);
     lines.push(`  ${shot.whatItSells}`);
@@ -193,91 +202,138 @@ export function formatExportText(
     lines.push("");
   }
 
-  // ── Evidence Coverage Diagnostics ──
+  // ── Compact Coverage Summary ──
   if (diagnostics) {
-    lines.push("EVIDENCE COVERAGE DIAGNOSTICS");
-    lines.push("=============================");
-    lines.push("");
-
-    lines.push(`Required evidence covered (${diagnostics.requiredEvidenceCovered.length}):`);
-    if (diagnostics.requiredEvidenceCovered.length > 0) {
-      lines.push(`  ${diagnostics.requiredEvidenceCovered.join(", ")}`);
-    } else {
-      lines.push("  (none)");
-    }
-    lines.push("");
-
-    lines.push(`Recommended evidence covered (${diagnostics.recommendedEvidenceCovered.length}):`);
-    if (diagnostics.recommendedEvidenceCovered.length > 0) {
-      lines.push(`  ${diagnostics.recommendedEvidenceCovered.join(", ")}`);
-    } else {
-      lines.push("  (none)");
-    }
-    lines.push("");
-
+    // COVERAGE line
+    const reqTotal = diagnostics.requiredEvidenceCovered.length + diagnostics.uncoveredRequired.length;
+    const recTotal = diagnostics.recommendedEvidenceCovered.length + diagnostics.uncoveredRecommended.length;
+    const optGaps = diagnostics.uncoveredOptional.length;
+    let coverageLine = `COVERAGE: ${diagnostics.requiredEvidenceCovered.length}/${reqTotal} required, ${diagnostics.recommendedEvidenceCovered.length}/${recTotal} recommended`;
     if (diagnostics.uncoveredRequired.length > 0) {
-      lines.push(`UNCOVERED REQUIRED evidence (${diagnostics.uncoveredRequired.length}):`);
-      lines.push(`  ${diagnostics.uncoveredRequired.join(", ")}`);
-      lines.push("");
+      const n = diagnostics.uncoveredRequired.length;
+      coverageLine += `, ${n} required gap${n > 1 ? "s" : ""} (${diagnostics.uncoveredRequired.join(", ")})`;
     }
     if (diagnostics.uncoveredRecommended.length > 0) {
-      lines.push(`UNCOVERED RECOMMENDED evidence (${diagnostics.uncoveredRecommended.length}):`);
-      lines.push(`  ${diagnostics.uncoveredRecommended.join(", ")}`);
-      lines.push("");
+      const n = diagnostics.uncoveredRecommended.length;
+      coverageLine += `, ${n} recommended gap${n > 1 ? "s" : ""} (${diagnostics.uncoveredRecommended.join(", ")})`;
     }
-    if (diagnostics.uncoveredOptional.length > 0) {
-      lines.push(`Uncovered optional evidence (${diagnostics.uncoveredOptional.length}):`);
-      lines.push(`  ${diagnostics.uncoveredOptional.join(", ")}`);
-      lines.push("");
+    if (optGaps > 0 && diagnostics.uncoveredRequired.length === 0 && diagnostics.uncoveredRecommended.length === 0) {
+      coverageLine += `, ${optGaps} optional gap${optGaps > 1 ? "s" : ""}`;
     }
-    if (diagnostics.uncoveredRequired.length === 0 && diagnostics.uncoveredRecommended.length === 0) {
-      lines.push("All required and recommended evidence is covered.");
-      lines.push("");
-    }
+    lines.push(coverageLine);
 
-    // Redundancy warnings
-    const criticalWarnings = diagnostics.redundancyWarnings.filter((w) => w.severity === "critical");
-    const warningWarnings = diagnostics.redundancyWarnings.filter((w) => w.severity === "warning");
-
-    if (criticalWarnings.length > 0) {
-      lines.push("CRITICAL redundancy:");
-      for (const w of criticalWarnings) {
-        lines.push(`  ${w.message}`);
-      }
-      lines.push("");
-    }
-
-    if (warningWarnings.length > 0) {
-      lines.push("Redundancy warnings:");
-      for (const w of warningWarnings) {
-        lines.push(`  ${w.message}`);
-      }
-      lines.push("");
-    }
-
-    if (criticalWarnings.length === 0 && warningWarnings.length === 0) {
-      lines.push("No significant redundancy detected.");
-      lines.push("");
-    }
-
-    // Role mix
-    lines.push("Role mix:");
+    // ROLE MIX line
     const allCategories = new Set([
       ...Object.keys(diagnostics.roleMixTarget),
       ...Object.keys(diagnostics.roleMixActual),
     ]);
+    const roleParts: string[] = [];
     for (const cat of allCategories) {
-      const target = (diagnostics.roleMixTarget as Record<string, number>)[cat] ?? 0;
       const actual = (diagnostics.roleMixActual as Record<string, number>)[cat] ?? 0;
-      const status = actual >= target ? "OK" : "BELOW TARGET";
-      lines.push(`  ${cat}: ${actual}/${target} ${status}`);
+      if (actual > 0) roleParts.push(`${cat} ${actual}`);
     }
-    lines.push("");
-    lines.push("---");
+    lines.push(`ROLE MIX: ${roleParts.join(", ")}`);
+
+    // OVERLAP line
+    const criticalWarnings = diagnostics.redundancyWarnings.filter((w) => w.severity === "critical");
+    const warningWarnings = diagnostics.redundancyWarnings.filter((w) => w.severity === "warning");
+    if (criticalWarnings.length > 0) {
+      lines.push(`OVERLAP: critical duplication detected (${criticalWarnings.length} issue${criticalWarnings.length > 1 ? "s" : ""})`);
+    } else if (warningWarnings.length > 0) {
+      lines.push(`OVERLAP: moderate, ${warningWarnings.length} warning${warningWarnings.length > 1 ? "s" : ""}`);
+    } else {
+      lines.push("OVERLAP: clean, no critical redundancy");
+    }
+
     lines.push("");
   }
 
   lines.push("Generated by Lookbook Studio v2");
+
+  return lines.join("\n");
+}
+
+// ── V4.3: Final summary export (presentation-ready, selected shots only) ──
+
+const FINAL_MARK_LABELS: Record<NonNullable<FinalMark>, string> = {
+  keep: "Keep",
+  replace_later: "Replace Later",
+  best_in_set: "Lead Shot",
+};
+
+const READINESS_LABELS: Record<string, string> = {
+  not_ready: "Not Ready",
+  ready_with_issues: "Ready (with issues)",
+  ready_to_finalise: "Ready to Finalise",
+};
+
+/**
+ * V4.3: Presentation-ready export of the selected final set.
+ * Includes only keep + best_in_set shots. No internal workflow noise.
+ */
+export function formatFinalExport(
+  input: LookbookInput,
+  shots: RecommendedShot[],
+  tracker: TrackerState,
+  readiness: SetReadinessResult,
+  projectName?: string,
+): string {
+  const lines: string[] = [];
+  const selectedPositions = new Set(getSelectedShots(tracker));
+  const leadPosition = getLeadShot(tracker);
+
+  const selectedShots = shots.filter((s) => selectedPositions.has(s.position));
+
+  // ── Header ──
+  lines.push("LOOKBOOK FINAL SUMMARY");
+  lines.push("======================");
+  lines.push("");
+  if (projectName) {
+    lines.push(`Project: ${projectName}`);
+  }
+  const productLabel = input.specificItem?.trim()
+    ? `${input.specificItem} (${PRODUCT_FAMILY_LABELS[input.productFamily]})`
+    : PRODUCT_FAMILY_LABELS[input.productFamily];
+  lines.push(`Product: ${productLabel}`);
+  lines.push(`Style: ${STYLE_LABELS[input.targetStyle]}`);
+  lines.push(`Goal: ${GOAL_LABELS[input.campaignGoal]}`);
+  lines.push(`Selected shots: ${selectedShots.length} of ${shots.length}`);
+  lines.push(`Status: ${READINESS_LABELS[readiness.tier] || readiness.tier}`);
+  if (leadPosition !== null) {
+    const leadShot = shots.find((s) => s.position === leadPosition);
+    if (leadShot) {
+      const leadName = getDisplayName(leadShot.archetype.id, leadShot.archetype.title, input.productFamily);
+      lines.push(`Lead shot: #${leadPosition} ${leadName}`);
+    }
+  }
+  lines.push("");
+
+  if (readiness.reasons.length > 0) {
+    lines.push("Notes:");
+    for (const reason of readiness.reasons) {
+      lines.push(`  - ${reason}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("---");
+  lines.push("");
+
+  // ── Selected shots ──
+  for (const shot of selectedShots) {
+    const displayName = getDisplayName(shot.archetype.id, shot.archetype.title, input.productFamily);
+    const status = tracker.shots[shot.position];
+    const mark = status?.finalMark;
+    const markLabel = mark ? FINAL_MARK_LABELS[mark] : "Unmarked";
+
+    lines.push(`SHOT ${shot.position}: ${displayName.toUpperCase()}`);
+    lines.push(`${markLabel} | ${shot.archetype.shotCategory}`);
+    lines.push("");
+    lines.push(`  ${shot.whatItSells}`);
+    lines.push("");
+  }
+
+  lines.push("Generated by Lookbook Studio");
 
   return lines.join("\n");
 }

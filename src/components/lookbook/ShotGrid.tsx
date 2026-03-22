@@ -14,10 +14,10 @@ export default function ShotGrid({
 }: ShotGridProps) {
   return (
     <div>
-      <h3 className="text-base font-semibold text-white mb-1">
+      <h3 className="text-base font-semibold text-[--text-primary] mb-1">
         Your 6-Shot Lookbook Plan
       </h3>
-      <p className="text-xs text-gray-500 mb-4">
+      <p className="text-xs text-[--text-tertiary] mb-4">
         Each shot is a variation on your Master Shoot DNA. They share the same
         environment, lighting, and realism profile. Only the framing, pose, and
         emphasis change.
