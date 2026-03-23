@@ -320,6 +320,7 @@ export interface MasterShootDNA {
   motionAllowance: string;
   finishFamily: string;
   generationPriorityNotes: string;
+  brandGuidelines?: string;
 }
 
 // ── Shot Archetype ──

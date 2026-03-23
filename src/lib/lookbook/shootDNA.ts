@@ -14,10 +14,16 @@ import { getFamilyBlueprint } from "./shotBlueprints";
 // Falls back to style/goal/family heuristics only when hints are generic.
 
 function resolveEnvironment(input: LookbookInput): string {
+  // Priority 1: Continuity World from styling analysis
+  if (input.continuityWorld?.backdrop) {
+    return input.continuityWorld.backdrop;
+  }
+
+  // Priority 2: Family blueprint hints
   const bp = getFamilyBlueprint(input.productFamily);
   if (bp.dnaHints.environment) return bp.dnaHints.environment;
 
-  // Fallback heuristics
+  // Priority 3: Style/goal heuristics
   if (input.campaignGoal === "mood" || input.campaignGoal === "styling_story") {
     return "Environmental location: urban architecture, natural landscape, or curated interior that supports the brand narrative.";
   }
@@ -34,10 +40,19 @@ function resolveEnvironment(input: LookbookInput): string {
 }
 
 function resolveLighting(input: LookbookInput): string {
+  // Priority 1: Continuity World from styling analysis
+  if (input.continuityWorld?.lighting) {
+    const tonal = input.continuityWorld.tonalTemperature
+      ? ` Tonal temperature: ${input.continuityWorld.tonalTemperature}.`
+      : "";
+    return input.continuityWorld.lighting + tonal;
+  }
+
+  // Priority 2: Family blueprint hints
   const bp = getFamilyBlueprint(input.productFamily);
   if (bp.dnaHints.lighting) return bp.dnaHints.lighting;
 
-  // Fallback heuristics
+  // Priority 3: Style/goal heuristics
   if (input.targetStyle === "editorial" || input.targetStyle === "avant_garde") {
     return "Directional studio light with controlled contrast. Key light from camera-right, subtle fill. Allow dramatic shadow play when it supports the editorial mood.";
   }
@@ -164,5 +179,6 @@ export function buildMasterShootDNA(input: LookbookInput): MasterShootDNA {
     motionAllowance: resolveMotion(input.campaignGoal, input.creativityLevel),
     finishFamily: resolveFinish(input.targetStyle),
     generationPriorityNotes: resolveGenerationNotes(input),
+    brandGuidelines: input.notes || undefined,
   };
 }

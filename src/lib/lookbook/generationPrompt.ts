@@ -112,15 +112,20 @@ function buildContinuityLockText(dna: MasterShootDNA): string {
   const style = STYLE_LABELS[dna.targetStyle].toLowerCase();
   const realism = getRealismProfile(dna.targetStyle);
 
-  return (
+  let text =
     `${style} fashion photograph, ${gender.toLowerCase()} model. ` +
     `Environment: ${dna.environmentFamily}. ` +
     `Lighting: ${dna.lightingFamily}. ` +
     `Lens family: ${dna.lensFamily}. ` +
     `Finish: ${dna.finishFamily}. ` +
     `${realism} ` +
-    `Branding rules: ${dna.brandingVisibilityRules}.`
-  );
+    `Branding rules: ${dna.brandingVisibilityRules}.`;
+
+  if (dna.brandGuidelines) {
+    text += ` Brand guidelines: ${dna.brandGuidelines}`;
+  }
+
+  return text;
 }
 
 // ── Shared Set Locks ──
