@@ -194,6 +194,11 @@ export interface PlanDiagnostics {
   roleMixTarget: Partial<Record<ShotCategory, number>>;
   shotCountRequested: number;
   shotCountActual: number;
+  /** F5a: visual variety diagnostic (informational, not blocking) */
+  varietyScore?: {
+    score: number;       // 0-100, higher = more varied
+    flags: string[];     // human-readable warnings
+  };
 }
 
 // ── Label Maps ──
@@ -402,6 +407,8 @@ export interface FamilyShotBlueprint {
     framing: string;
     generationNotes: string;
   };
+  /** F5a: set composition rhythm for presentation order and diagnostics */
+  setRhythm?: SetRhythm;
 }
 
 /** Layer 3: Item-level override. Overrides specific fields from the family blueprint. */
@@ -449,14 +456,41 @@ export interface ResolvedBlueprint {
   deltaBriefSuffix: string;
   // ── Evidence-based planning ──
   evidencePlan: ResolvedEvidencePlan;
+  // ── F5a: Composition rhythm ──
+  setRhythm?: SetRhythm;
 }
 
 // ── Output Types ──
+
+// ── F5a: Visual Diversity Buckets (diagnostic, not selection) ──
+
+export type AngleBucket = "frontal" | "three_quarter" | "profile" | "rear";
+export type DistanceBucket = "intimate" | "medium" | "environmental";
+export type PoseBucket = "standing" | "seated" | "leaning" | "walking" | "product_only";
+
+export type ShotRole = "hero" | "proof" | "contrast" | "release" | "editorial_finish" | "product_only";
+
+export type ProductOnlyPreference = "strong" | "medium" | "low" | "none";
+
+export interface SetRhythm {
+  /** Recommended role sequence for the 6 shots (presentation order, not generation) */
+  idealSequence: ShotRole[];
+  /** Which roles MUST appear in the set */
+  requiredRoles: ShotRole[];
+  /** Product-only preference level for this family */
+  productOnlyPreference: ProductOnlyPreference;
+}
 
 export interface ScoredArchetype {
   archetype: ShotArchetype;
   score: number;
   matchReasons: string[];
+  /** F5a: angle bucket derived from defaultAngle */
+  angleBucket: AngleBucket;
+  /** F5a: distance bucket derived from defaultCameraDistance */
+  distanceBucket: DistanceBucket;
+  /** F5a: pose bucket derived from poseFamily + primaryDisplayZones */
+  poseBucket: PoseBucket;
 }
 
 export interface RecommendedShot {
@@ -499,6 +533,8 @@ export interface LookbookPlanResult {
   shots: RecommendedShot[];
   coverage: CoverageSummary;
   generationOrder: number[];
+  /** F5a: gallery/collage display order (contrast-maximised, separate from generation) */
+  presentationOrder: number[];
   exportText: string;
   diagnostics: PlanDiagnostics;
 }
@@ -732,4 +768,17 @@ export interface GenerationPromptPackage {
 
   // Enhancor handoff
   enhancorNotes: string[];
+
+  // F4: Structured prompt layers (for UI display and debugging)
+  promptLayers?: {
+    campaignContinuityLock: string;  // Layer 1: from DNA
+    productTruthLock: string;        // Layer 2: family invariants
+    scaleLock: string;               // Layer 3: proportion rules
+    shotDelta: string;               // Layer 4: per-shot framing/angle/pose
+  };
+  negativeLayers?: {
+    globalDefaults: string;          // Tier 1: universal negatives
+    familyDrift: string;             // Tier 2: family drift negatives
+    shotSpecific: string;            // Tier 3: per-shot negative cues
+  };
 }

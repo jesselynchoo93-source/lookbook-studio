@@ -128,6 +128,7 @@ export default function FinaliseMode({
         tracker={tracker}
         generatedImages={generatedImages}
         generationOrder={plan.generationOrder}
+        presentationOrder={plan.presentationOrder}
         onFinalMarkChange={onFinalMarkChange}
       />
 

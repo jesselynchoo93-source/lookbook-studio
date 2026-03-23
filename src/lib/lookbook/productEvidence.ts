@@ -74,6 +74,7 @@ export const FAMILY_EVIDENCE: Record<ProductFamily, FamilyEvidenceSpec> = {
       req("closure_mechanism", "optional"),
       req("interior_capacity", "optional"),
       req("surface_reflection", "optional"),
+      req("movement_behavior", "optional"),
     ],
     categoryRoleMix: { hero: 1, product_focus: 1, detail: 2 },
     productZones: ["shoulder", "shoulder_line", "hip", "hand", "side_body"],
@@ -257,6 +258,7 @@ export const ITEM_EVIDENCE_OVERRIDES: ItemEvidenceOverride[] = [
     label: "Shoulder Bag",
     evidenceOverrides: [
       req("side_profile", "required"),
+      req("interior_capacity", "recommended"),
     ],
     productZones: ["shoulder", "shoulder_line", "hip", "hand", "side_body"],
   },
@@ -701,5 +703,5 @@ export const PRODUCT_ONLY_ELIGIBLE_FAMILIES: ProductFamily[] = [
 
 /** Categories allowed for product_only shots. */
 export const PRODUCT_ONLY_ELIGIBLE_CATEGORIES: ShotCategory[] = [
-  "detail", "product_focus",
+  "detail", "product_focus", "hero",
 ];

@@ -6,8 +6,41 @@ import type {
   ResolvedBlueprint,
   EvidenceType,
   ResolvedEvidencePlan,
+  AngleBucket,
+  DistanceBucket,
+  PoseBucket,
 } from "./types";
 import { getEvidenceWeight } from "./productEvidence";
+
+// ── F5a: Visual Diversity Bucket Derivation ──
+
+export function deriveAngleBucket(defaultAngle: string): AngleBucket {
+  const a = defaultAngle.toLowerCase();
+  if (a.includes("straight on") || a.includes("perpendicular") || a.includes("front")) return "frontal";
+  if (a.includes("rear") || a.includes("back") || a.includes("180")) return "rear";
+  if (a.includes("90") || a.includes("profile") || a.includes("side")) return "profile";
+  // "10-25", "30-40", "three-quarter", "slight", any other angle
+  return "three_quarter";
+}
+
+export function deriveDistanceBucket(defaultCameraDistance: string): DistanceBucket {
+  // Parse the first numeric value from strings like "~0.8m", "1.5m", "4-6m"
+  const match = defaultCameraDistance.match(/(\d+(?:\.\d+)?)/);
+  if (!match) return "medium";
+  const distance = parseFloat(match[1]);
+  if (distance < 1.2) return "intimate";
+  if (distance > 3) return "environmental";
+  return "medium";
+}
+
+export function derivePoseBucket(poseFamily: string, primaryDisplayZones: string[]): PoseBucket {
+  if (primaryDisplayZones.includes("product_only")) return "product_only";
+  const p = poseFamily.toLowerCase();
+  if (p.includes("seated") || p.includes("sitting") || p.includes("edge")) return "seated";
+  if (p.includes("lean")) return "leaning";
+  if (p.includes("walking") || p.includes("stride") || p.includes("pivot")) return "walking";
+  return "standing";
+}
 
 function ratingToNumber(r: SuitabilityRating): number {
   if (r === "high") return 100;
@@ -294,7 +327,14 @@ export function scoreArchetype(
     ...evidenceResult.reasons,
   ];
 
-  return { archetype, score: finalScore, matchReasons: allReasons };
+  return {
+    archetype,
+    score: finalScore,
+    matchReasons: allReasons,
+    angleBucket: deriveAngleBucket(archetype.defaultAngle),
+    distanceBucket: deriveDistanceBucket(archetype.defaultCameraDistance),
+    poseBucket: derivePoseBucket(archetype.poseFamily, archetype.primaryDisplayZones),
+  };
 }
 
 export function computeCoverage(

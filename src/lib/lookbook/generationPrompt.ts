@@ -1,10 +1,13 @@
 /**
- * V3.0: Generation-ready prompt packages.
+ * F4: 6-Layer Prompt Architecture.
  *
- * Turns each planned shot into a structured package that can be:
- * - copy/pasted into Higgsfield
- * - consumed by a future tracker UI
- * - consumed by a future API generation path
+ * Turns each planned shot into a structured package with layered prompts:
+ *   Layer 1: Campaign Continuity Lock (per-set, from DNA)
+ *   Layer 2: Product Truth Lock (per-set, per-family)
+ *   Layer 3: Scale/Proportion Lock (per-set, per-family)
+ *   Layer 4: Shot Delta (per-shot, slimmed to framing/angle/pose/product)
+ *   Layer 5: Negative Prompt (3-tier: global + family drift + shot-specific)
+ *   Layer 6: Guardrail/Review Checks (existing guardrails + product truth)
  *
  * Does NOT modify planner logic. Read-only consumer of LookbookPlanResult.
  */
@@ -19,14 +22,20 @@ import type {
   EvidenceType,
   ProductFamily,
   ShotCategory,
+  LookbookInput,
 } from "./types";
 import {
   PRODUCT_FAMILY_LABELS,
   GENDER_LABELS,
   STYLE_LABELS,
-  GOAL_LABELS,
 } from "./types";
-import { NEGATIVE_DEFAULTS } from "./realismRules";
+import { NEGATIVE_DEFAULTS, getRealismProfile } from "./realismRules";
+import {
+  resolveProductTruth,
+  resolveScaleLock,
+  resolveDriftNegatives,
+  getProductTruthInvariants,
+} from "./productTruth";
 
 // ── Family-Aware Enhancor Vocabulary ──
 // Compact lookup for generating practical Enhancor notes per family.
@@ -76,7 +85,7 @@ export function assignGenerationPhase(shot: RecommendedShot): GenerationPhase {
   return "editorial"; // editorial, silhouette, motion
 }
 
-// ── Continuity Lock ──
+// ── Continuity Lock (data object, unchanged) ──
 
 function buildContinuityLock(dna: MasterShootDNA): ContinuityLock {
   return {
@@ -87,6 +96,44 @@ function buildContinuityLock(dna: MasterShootDNA): ContinuityLock {
     finish: dna.finishFamily,
     realism: dna.realismProfile,
     brandingRules: dna.brandingVisibilityRules,
+  };
+}
+
+// ── F4 Layer 1: Campaign Continuity Lock TEXT ──
+// Full prose paragraph written into the prompt. Not abbreviated first-clauses.
+
+function buildContinuityLockText(dna: MasterShootDNA): string {
+  const gender = GENDER_LABELS[dna.genderPresentation];
+  const style = STYLE_LABELS[dna.targetStyle].toLowerCase();
+  const realism = getRealismProfile(dna.targetStyle);
+
+  return (
+    `${style} fashion photograph, ${gender.toLowerCase()} model. ` +
+    `Environment: ${dna.environmentFamily}. ` +
+    `Lighting: ${dna.lightingFamily}. ` +
+    `Lens family: ${dna.lensFamily}. ` +
+    `Finish: ${dna.finishFamily}. ` +
+    `${realism} ` +
+    `Branding rules: ${dna.brandingVisibilityRules}.`
+  );
+}
+
+// ── Shared Set Locks ──
+// Built once per set, passed to each shot's compilation.
+
+export interface SetLocks {
+  continuityLockText: string;   // Layer 1
+  productTruthText: string;     // Layer 2
+  scaleLockText: string;        // Layer 3
+  driftNegatives: string;       // Layer 5 tier 2
+}
+
+export function buildSetLocks(dna: MasterShootDNA, input: LookbookInput): SetLocks {
+  return {
+    continuityLockText: buildContinuityLockText(dna),
+    productTruthText: resolveProductTruth(input),
+    scaleLockText: resolveScaleLock(input),
+    driftNegatives: resolveDriftNegatives(input),
   };
 }
 
@@ -101,15 +148,15 @@ function extractReliabilityLabel(badges: string[]): "High reliability" | "Modera
 // ── Shoot DNA Summary ──
 
 function buildShootDNASummary(dna: MasterShootDNA): string {
-  // campaignDirection already contains the full narrative; just add gender for context
   const gender = GENDER_LABELS[dna.genderPresentation];
   return `${gender}. ${dna.campaignDirection}`;
 }
 
-// ── Prompt Normalization ──
-// Cleans up compiled prompts to remove duplication inherited from brief composition.
+// ── Layer 4 Normalization ──
+// Runs ONLY on the shot delta layer, not the full assembled prompt.
+// This prevents the normalizer from stripping lock content.
 
-function normalizeCompiledPrompt(raw: string, item: string): string {
+function normalizeShotDelta(raw: string, item: string): string {
   let text = raw;
 
   // 1. Remove "Override framing to X." — redundant with the opening framing summary
@@ -130,11 +177,9 @@ function normalizeCompiledPrompt(raw: string, item: string): string {
     text = text.replace(pat, "");
   }
 
-  // 4. Remove sentences that duplicate an earlier sentence.
-  //    Two passes: exact-match dedup, then keyword-overlap dedup.
+  // 4. Sentence dedup within the delta only
   const sentences = text.split(/(?<=\.)\s+/);
 
-  // Extract content keywords from a sentence (nouns and key adjectives, 4+ chars)
   const STOP_WORDS = new Set([
     "this", "that", "with", "from", "into", "also", "been", "have", "will",
     "should", "must", "does", "than", "more", "very", "over", "under",
@@ -143,7 +188,6 @@ function normalizeCompiledPrompt(raw: string, item: string): string {
     return new Set(
       s.toLowerCase()
         .replace(/[.,;:!?()]/g, "")
-        // Normalize common verb endings so "faces"/"facing", "tucked"/"tuck" match
         .replace(/\b(\w+?)(?:ing|ed|es|s)\b/g, "$1")
         .split(/\s+/)
         .filter((w) => w.length >= 4 && !STOP_WORDS.has(w))
@@ -154,11 +198,7 @@ function normalizeCompiledPrompt(raw: string, item: string): string {
   for (const s of sentences) {
     const norm = s.toLowerCase().replace(/\s+/g, " ").trim();
     if (norm.length < 8) continue;
-
-    // Exact duplicate check (case-insensitive)
     if (kept.some((k) => k.raw.toLowerCase().replace(/\s+/g, " ").trim() === norm)) continue;
-
-    // Keyword overlap: if a short sentence's keywords are 80%+ covered by a prior sentence
     const kw = extractKeywords(s);
     if (kw.size >= 2 && kw.size <= 6) {
       const isCovered = kept.some((prev) => {
@@ -168,92 +208,102 @@ function normalizeCompiledPrompt(raw: string, item: string): string {
       });
       if (isCovered) continue;
     }
-
     kept.push({ raw: s, keywords: kw });
   }
   text = kept.map((k) => k.raw).join(" ");
 
-  // 5. Clean up stray double spaces or leading spaces
+  // 5. Clean up stray double spaces
   text = text.replace(/\s{2,}/g, " ").trim();
 
   return text;
 }
 
-// ── Generator Prompt ──
+// ── F4 Generator Prompt: 4-Layer Assembly ──
 
-export function formatGeneratorPrompt(shot: RecommendedShot, dna: MasterShootDNA): string {
-  const family = PRODUCT_FAMILY_LABELS[dna.productFamily];
-  const item = dna.specificItem || family.toLowerCase();
-  const gender = GENDER_LABELS[dna.genderPresentation];
-  const style = STYLE_LABELS[dna.targetStyle].toLowerCase();
+export function formatGeneratorPrompt(
+  shot: RecommendedShot,
+  dna: MasterShootDNA,
+  locks: SetLocks,
+): string {
+  const item = dna.specificItem || PRODUCT_FAMILY_LABELS[dna.productFamily].toLowerCase();
 
-  // Build a concise, pasteable prompt
-  const parts: string[] = [];
+  // Layer 1: Campaign Continuity Lock (full prose, not abbreviated)
+  const layer1 = locks.continuityLockText;
 
-  // Opening: style + subject
-  parts.push(`${style} fashion photograph`);
+  // Layer 2: Product Truth Lock
+  const layer2 = `Product truth: ${locks.productTruthText}`;
 
-  // Gender context
-  if (gender === "Menswear") parts.push("male model");
-  else if (gender === "Womenswear") parts.push("female model");
-  else parts.push("model");
+  // Layer 3: Scale/Proportion Lock
+  const layer3 = `Scale: ${locks.scaleLockText}`;
 
-  // Framing summary (first clause of framingDelta before the lens spec)
+  // Layer 4: Shot Delta (per-shot, normalized)
   const framingSummary = shot.framingDelta.split(" at ")[0];
-  if (framingSummary) parts.push(framingSummary.toLowerCase());
+  const deltaOpening = framingSummary
+    ? `This shot: ${framingSummary.toLowerCase()}, featuring ${item}.`
+    : `This shot: featuring ${item}.`;
+  const rawDelta = `${deltaOpening} ${shot.deltaBrief}`;
+  const layer4 = normalizeShotDelta(rawDelta, item);
 
-  // Product placement
-  parts.push(`featuring ${item}`);
-
-  // Join the opening
-  let prompt = parts.join(", ") + ". ";
-
-  // Add the brief as the detailed scene description
-  prompt += shot.deltaBrief;
-
-  // Add environment and lighting from DNA (concise, first clause only)
-  prompt += ` Environment: ${dna.environmentFamily.split(".")[0]}.`;
-  prompt += ` Lighting: ${dna.lightingFamily.split(".")[0]}.`;
-  prompt += ` Finish: ${dna.finishFamily.split(".")[0]}.`;
-
-  // Normalize: deduplicate framing restatements, product anchors, repeated sentences
-  return normalizeCompiledPrompt(prompt, item);
+  // Assemble: Layers 1-4 concatenated
+  return `${layer1} ${layer2} ${layer3} ${layer4}`;
 }
 
-// ── Negative Prompt ──
+// ── F4 Negative Prompt: 3-Tier ──
 
-export function buildNegativePrompt(shot: RecommendedShot, _dna: MasterShootDNA): string {
+export function buildNegativePrompt(
+  shot: RecommendedShot,
+  _dna: MasterShootDNA,
+  locks: SetLocks,
+): string {
+  // Tier 1: Global defaults
+  const tier1 = NEGATIVE_DEFAULTS;
+
+  // Tier 2: Family drift negatives
+  const tier2 = locks.driftNegatives;
+
+  // Tier 3: Shot-specific negative cues
   const shotSpecific = shot.negativeCues;
-  if (shotSpecific && shotSpecific !== "(see global negative cues)") {
-    return `${NEGATIVE_DEFAULTS}, ${shotSpecific}`;
-  }
-  return NEGATIVE_DEFAULTS;
+  const tier3 = (shotSpecific && shotSpecific !== "(see global negative cues)")
+    ? shotSpecific
+    : "";
+
+  // Combine non-empty tiers
+  const parts = [tier1, tier2];
+  if (tier3) parts.push(tier3);
+  return parts.join(", ");
 }
 
-// ── Guardrail Checklist ──
+// ── Guardrail Checklist (Layer 6) ──
 
-export function buildGuardrailChecklist(shot: RecommendedShot): string[] {
+export function buildGuardrailChecklist(shot: RecommendedShot, family: ProductFamily): string[] {
   const guardrail = shot.realismGuardrail;
-  if (!guardrail) return [];
+  const items: string[] = [];
 
-  // Split on periods and commas that separate distinct checks
-  // First try splitting on ". " for sentence-level items
-  const sentences = guardrail
-    .split(/\.\s+/)
-    .map((s) => s.replace(/\.$/, "").trim())
-    .filter((s) => s.length > 0);
+  if (guardrail) {
+    // Split on periods and commas that separate distinct checks
+    const sentences = guardrail
+      .split(/\.\s+/)
+      .map((s) => s.replace(/\.$/, "").trim())
+      .filter((s) => s.length > 0);
 
-  if (sentences.length >= 2) {
-    return sentences;
+    if (sentences.length >= 2) {
+      items.push(...sentences);
+    } else {
+      const parts = guardrail
+        .split(/,\s+/)
+        .map((s) => s.replace(/\.$/, "").trim())
+        .filter((s) => s.length > 0);
+      items.push(...parts);
+    }
   }
 
-  // If only one sentence, try splitting on ", " for comma-separated checks
-  const parts = guardrail
-    .split(/,\s+/)
-    .map((s) => s.replace(/\.$/, "").trim())
-    .filter((s) => s.length > 0);
+  // F4 Layer 6: Add product-truth consistency checks
+  const invariants = getProductTruthInvariants(family);
+  if (invariants.length > 0) {
+    items.push(`Cross-shot consistency: verify ${invariants.slice(0, 3).join(", ")}`);
+  }
 
-  return parts;
+  return items;
 }
 
 // ── Enhancor Notes ──
@@ -284,12 +334,11 @@ export function buildEnhancorNotes(shot: RecommendedShot, dna: MasterShootDNA): 
       notes.push(`Verify ${focus.boundary}`);
       notes.push(`Check ${focus.texture} is visible and natural`);
     } else {
-      // editorial, silhouette, motion
       notes.push(`Verify ${focus.boundary}`);
     }
   }
 
-  // Deduplicate (evidence hints may overlap with family hints)
+  // Deduplicate
   const seen = new Set<string>();
   return notes.filter((n) => {
     if (seen.has(n)) return false;
@@ -304,7 +353,24 @@ export function compilePromptPackage(
   shot: RecommendedShot,
   dna: MasterShootDNA,
   _plan: LookbookPlanResult,
+  locks: SetLocks,
 ): GenerationPromptPackage {
+  const item = dna.specificItem || PRODUCT_FAMILY_LABELS[dna.productFamily].toLowerCase();
+
+  // Build Layer 4 delta text for the promptLayers field
+  const framingSummary = shot.framingDelta.split(" at ")[0];
+  const deltaOpening = framingSummary
+    ? `This shot: ${framingSummary.toLowerCase()}, featuring ${item}.`
+    : `This shot: featuring ${item}.`;
+  const rawDelta = `${deltaOpening} ${shot.deltaBrief}`;
+  const normalizedDelta = normalizeShotDelta(rawDelta, item);
+
+  // Build shot-specific negatives for the negativeLayers field
+  const shotSpecific = shot.negativeCues;
+  const tier3Text = (shotSpecific && shotSpecific !== "(see global negative cues)")
+    ? shotSpecific
+    : "";
+
   return {
     shotPosition: shot.position,
     archetypeId: shot.archetype.id,
@@ -316,9 +382,9 @@ export function compilePromptPackage(
 
     shootDNA: buildShootDNASummary(dna),
     shotBrief: shot.deltaBrief,
-    generatorPrompt: formatGeneratorPrompt(shot, dna),
-    negativePrompt: buildNegativePrompt(shot, dna),
-    guardrailChecklist: buildGuardrailChecklist(shot),
+    generatorPrompt: formatGeneratorPrompt(shot, dna, locks),
+    negativePrompt: buildNegativePrompt(shot, dna, locks),
+    guardrailChecklist: buildGuardrailChecklist(shot, dna.productFamily),
 
     continuity: buildContinuityLock(dna),
 
@@ -330,19 +396,34 @@ export function compilePromptPackage(
     retryCount: 0,
 
     enhancorNotes: buildEnhancorNotes(shot, dna),
+
+    // F4: Structured layers for UI display
+    promptLayers: {
+      campaignContinuityLock: locks.continuityLockText,
+      productTruthLock: locks.productTruthText,
+      scaleLock: locks.scaleLockText,
+      shotDelta: normalizedDelta,
+    },
+    negativeLayers: {
+      globalDefaults: NEGATIVE_DEFAULTS,
+      familyDrift: locks.driftNegatives,
+      shotSpecific: tier3Text,
+    },
   };
 }
 
 // ── Compile All Packages ──
 
 export function compileAllPackages(plan: LookbookPlanResult): GenerationPromptPackage[] {
-  // generationOrder stores 1-based positions (see recommendShots.ts line 1208)
+  // Build shared locks once for the entire set
+  const locks = buildSetLocks(plan.dna, plan.input);
+
   const ordered = plan.generationOrder.map((pos) => {
     const shot = plan.shots.find((s) => s.position === pos);
     return shot;
   }).filter((s): s is RecommendedShot => s !== undefined);
 
-  return ordered.map((shot) => compilePromptPackage(shot, plan.dna, plan));
+  return ordered.map((shot) => compilePromptPackage(shot, plan.dna, plan, locks));
 }
 
 // ── Clipboard Export: Single Shot ──
@@ -386,7 +467,54 @@ export function formatForClipboard(pkg: GenerationPromptPackage): string {
   return lines.join("\n");
 }
 
+// ── Clipboard Export: Single Shot (delta only, for queue export) ──
+
+function formatShotDeltaForClipboard(pkg: GenerationPromptPackage): string {
+  const lines: string[] = [];
+
+  lines.push(`SHOT ${pkg.shotPosition}: ${pkg.archetypeTitle.toUpperCase()}`);
+  lines.push(`Phase: ${formatPhaseLabel(pkg.generationPhase)} | Priority: #${pkg.generationPriority} | ${pkg.reliabilityLabel}`);
+  lines.push("");
+
+  if (pkg.whySelected) {
+    lines.push(`WHY: ${pkg.whySelected}`);
+  }
+  if (pkg.whyGenerateNow) {
+    lines.push(`GENERATE NOW: ${pkg.whyGenerateNow}`);
+  }
+  if (pkg.whySelected || pkg.whyGenerateNow) {
+    lines.push("");
+  }
+
+  // Only the shot delta, not the full 4-layer prompt
+  lines.push("SHOT DELTA:");
+  lines.push(pkg.promptLayers?.shotDelta || pkg.shotBrief);
+  lines.push("");
+
+  // Shot-specific negatives only (tiers 1-2 are in the shared header)
+  const shotNeg = pkg.negativeLayers?.shotSpecific;
+  if (shotNeg) {
+    lines.push("SHOT-SPECIFIC NEGATIVES:");
+    lines.push(shotNeg);
+    lines.push("");
+  }
+
+  lines.push("GUARDRAIL CHECKLIST:");
+  for (const item of pkg.guardrailChecklist) {
+    lines.push(`  [ ] ${item}`);
+  }
+  lines.push("");
+
+  lines.push("ENHANCOR NOTES:");
+  for (const note of pkg.enhancorNotes) {
+    lines.push(`  - ${note}`);
+  }
+
+  return lines.join("\n");
+}
+
 // ── Clipboard Export: Full Queue ──
+// Shared locks printed once at top, then per-shot deltas only.
 
 export function formatQueueForClipboard(pkgs: GenerationPromptPackage[]): string {
   const lines: string[] = [];
@@ -397,7 +525,27 @@ export function formatQueueForClipboard(pkgs: GenerationPromptPackage[]): string
   lines.push(item);
   lines.push("");
 
-  // Group by phase
+  // Shared locks (printed once for the entire set)
+  const firstPkg = pkgs[0];
+  if (firstPkg?.promptLayers) {
+    lines.push("CAMPAIGN CONTINUITY LOCK (all shots):");
+    lines.push(firstPkg.promptLayers.campaignContinuityLock);
+    lines.push("");
+    lines.push("PRODUCT TRUTH LOCK (all shots):");
+    lines.push(firstPkg.promptLayers.productTruthLock);
+    lines.push("");
+    lines.push("SCALE LOCK (all shots):");
+    lines.push(firstPkg.promptLayers.scaleLock);
+    lines.push("");
+    lines.push("NEGATIVE BASELINE (all shots):");
+    lines.push(`Global: ${firstPkg.negativeLayers?.globalDefaults || NEGATIVE_DEFAULTS}`);
+    lines.push(`Family drift: ${firstPkg.negativeLayers?.familyDrift || ""}`);
+    lines.push("");
+    lines.push("=================");
+    lines.push("");
+  }
+
+  // Group by phase, show per-shot deltas only
   const anchors = pkgs.filter((p) => p.generationPhase === "anchor");
   const details = pkgs.filter((p) => p.generationPhase === "detail_validation");
   const editorial = pkgs.filter((p) => p.generationPhase === "editorial");
@@ -406,7 +554,7 @@ export function formatQueueForClipboard(pkgs: GenerationPromptPackage[]): string
     lines.push("--- ANCHOR SHOTS (generate first, validate product rendering) ---");
     lines.push("");
     for (const pkg of anchors) {
-      lines.push(formatForClipboard(pkg));
+      lines.push(formatShotDeltaForClipboard(pkg));
       lines.push("");
       lines.push("---");
       lines.push("");
@@ -417,7 +565,7 @@ export function formatQueueForClipboard(pkgs: GenerationPromptPackage[]): string
     lines.push("--- DETAIL VALIDATION (confirm materials render at close range) ---");
     lines.push("");
     for (const pkg of details) {
-      lines.push(formatForClipboard(pkg));
+      lines.push(formatShotDeltaForClipboard(pkg));
       lines.push("");
       lines.push("---");
       lines.push("");
@@ -428,14 +576,14 @@ export function formatQueueForClipboard(pkgs: GenerationPromptPackage[]): string
     lines.push("--- EDITORIAL (atmospheric, generate after anchors pass) ---");
     lines.push("");
     for (const pkg of editorial) {
-      lines.push(formatForClipboard(pkg));
+      lines.push(formatShotDeltaForClipboard(pkg));
       lines.push("");
       lines.push("---");
       lines.push("");
     }
   }
 
-  lines.push(`Generated by Lookbook Studio v3`);
+  lines.push(`Generated by Lookbook Studio v4`);
   return lines.join("\n");
 }
 

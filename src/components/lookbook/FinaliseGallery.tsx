@@ -14,6 +14,7 @@ interface FinaliseGalleryProps {
   tracker: TrackerState;
   generatedImages: Record<number, GeneratedImageAsset>;
   generationOrder: number[];
+  presentationOrder?: number[];
   onFinalMarkChange: (position: number, mark: FinalMark) => void;
 }
 
@@ -203,6 +204,7 @@ export default function FinaliseGallery({
   tracker,
   generatedImages,
   generationOrder,
+  presentationOrder,
   onFinalMarkChange,
 }: FinaliseGalleryProps) {
   // Derive generation phase for each shot position
@@ -219,10 +221,12 @@ export default function FinaliseGallery({
     }
   }
 
-  // Sort shots by generation order for visual consistency
+  // Sort shots by presentation order (contrast-maximised gallery sequence)
+  // Falls back to generation order if presentationOrder not available
+  const displayOrder = presentationOrder ?? generationOrder;
   const sortedShots = [...shots].sort((a, b) => {
-    const aIdx = generationOrder.indexOf(a.position - 1);
-    const bIdx = generationOrder.indexOf(b.position - 1);
+    const aIdx = displayOrder.indexOf(a.position);
+    const bIdx = displayOrder.indexOf(b.position);
     return aIdx - bIdx;
   });
 

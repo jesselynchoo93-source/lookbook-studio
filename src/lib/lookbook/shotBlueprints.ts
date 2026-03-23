@@ -38,6 +38,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "balanced",
     occlusionPenalties: ["garment hidden by arm crossing", "logo covered by hand placement"],
     generationCategoryOrder: ["hero", "silhouette", "product_focus", "detail", "editorial", "motion"],
+    setRhythm: {
+      idealSequence: ["hero", "contrast", "proof", "release", "editorial_finish", "contrast"],
+      requiredRoles: ["hero", "contrast", "proof"],
+      productOnlyPreference: "none",
+    },
     dnaHints: {
       environment: "Clean neutral studio or minimal location: seamless backdrop or simple architectural surface, no competing visual elements.",
       lighting: "Soft directional natural light from camera-right with natural bounce fill. Late-morning quality. Controlled highlights, preserved shadow depth.",
@@ -58,6 +63,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "balanced",
     occlusionPenalties: ["trouser hem covering shoe detail", "shoe floating above ground surface"],
     generationCategoryOrder: ["hero", "product_focus", "silhouette", "motion", "detail", "editorial"],
+    setRhythm: {
+      idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
+      requiredRoles: ["hero", "proof", "contrast"],
+      productOnlyPreference: "low",
+    },
     dnaHints: {
       environment: "Clean surface with visible ground plane. Urban concrete, studio floor, or minimal architectural surface. Ground texture matters for realism.",
       lighting: "Soft directional light with ground-level fill to define sole edges and material texture. Avoid overhead-only lighting that loses ground detail.",
@@ -78,6 +88,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "balanced",
     occlusionPenalties: ["bag hidden behind body", "strap occluded by arm", "hardware covered by hand grip"],
     generationCategoryOrder: ["hero", "product_focus", "detail", "silhouette", "editorial", "motion"],
+    setRhythm: {
+      idealSequence: ["hero", "proof", "contrast", "product_only", "proof", "editorial_finish"],
+      requiredRoles: ["hero", "proof", "contrast"],
+      productOnlyPreference: "strong",
+    },
     dnaHints: {
       environment: "Clean neutral studio or minimal urban surface. Background should not compete with the bag's shape and hardware.",
       lighting: "Directional key light to define bag shape and hardware. Controlled highlights on leather or fabric surfaces.",
@@ -98,6 +113,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "product_first",
     occlusionPenalties: ["hands covering product zone", "hair blocking jewelry", "clothing covering the piece", "strong rotation hiding the product"],
     generationCategoryOrder: ["hero", "product_focus", "detail", "editorial", "silhouette", "motion"],
+    setRhythm: {
+      idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
+      requiredRoles: ["hero", "proof", "contrast"],
+      productOnlyPreference: "low",
+    },
     dnaHints: {
       environment: "Clean neutral studio: seamless backdrop or solid matte surface. No competing patterns or textures. The product and skin are the only visual elements.",
       lighting: "Soft directional key light from camera-right with catchlight on metal and stone surfaces. Gentle fill to prevent harsh shadows on skin. Avoid flat overhead lighting that kills sparkle.",
@@ -118,6 +138,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "product_first",
     occlusionPenalties: ["hands touching frames", "hair covering temple arms", "lens glare hiding eyes"],
     generationCategoryOrder: ["hero", "product_focus", "detail", "editorial", "silhouette", "motion"],
+    setRhythm: {
+      idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
+      requiredRoles: ["hero", "proof", "contrast"],
+      productOnlyPreference: "low",
+    },
     dnaHints: {
       environment: "Clean studio or minimal backdrop. Nothing competing with the frames on the face.",
       lighting: "Soft beauty light from above with gentle fill. Controlled to prevent lens glare while maintaining catchlight in lenses.",
@@ -138,6 +163,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "product_first",
     occlusionPenalties: ["sleeve covering watch face", "hand position hiding dial", "wrist angle hiding case profile"],
     generationCategoryOrder: ["product_focus", "hero", "detail", "editorial", "silhouette", "motion"],
+    setRhythm: {
+      idealSequence: ["hero", "proof", "contrast", "product_only", "release", "editorial_finish"],
+      requiredRoles: ["hero", "proof", "contrast"],
+      productOnlyPreference: "strong",
+    },
     dnaHints: {
       environment: "Clean studio or minimal setting. Dark matte surfaces work well for watch photography.",
       lighting: "Directional key light to catch dial reflections and case edges. Controlled fill to prevent strap shadow from hiding detail.",
@@ -158,6 +188,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "balanced",
     occlusionPenalties: ["hair hiding hat structure", "hand covering brim detail"],
     generationCategoryOrder: ["hero", "product_focus", "silhouette", "detail", "editorial", "motion"],
+    setRhythm: {
+      idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
+      requiredRoles: ["hero", "proof"],
+      productOnlyPreference: "low",
+    },
     dnaHints: {
       environment: "Clean studio or urban exterior. Background should not compete with the headwear shape.",
       lighting: "Directional light from camera-right to define crown and brim shape. Avoid top-down lighting that flattens the hat.",
@@ -178,6 +213,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "balanced",
     occlusionPenalties: ["jacket covering belt buckle", "arms blocking waist view", "untucked shirt hiding belt"],
     generationCategoryOrder: ["hero", "detail", "product_focus", "silhouette", "editorial", "motion"],
+    setRhythm: {
+      idealSequence: ["hero", "proof", "contrast", "proof", "product_only", "editorial_finish"],
+      requiredRoles: ["hero", "proof"],
+      productOnlyPreference: "strong",
+    },
     dnaHints: {
       environment: "Clean studio or minimal location. Waist area must be well-lit and unobstructed.",
       lighting: "Directional key light at waist level to define buckle hardware and leather texture.",
@@ -198,6 +238,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "balanced",
     occlusionPenalties: ["scarf bunched and unreadable", "print hidden by tight wrapping"],
     generationCategoryOrder: ["hero", "product_focus", "detail", "silhouette", "editorial", "motion"],
+    setRhythm: {
+      idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
+      requiredRoles: ["hero", "proof", "contrast"],
+      productOnlyPreference: "medium",
+    },
     dnaHints: {
       environment: "Clean studio or minimal location. Background should not compete with scarf pattern or colour.",
       lighting: "Even, soft directional light to show fabric texture and print detail. Avoid harsh shadows that obscure the pattern.",
@@ -218,6 +263,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "product_first",
     occlusionPenalties: ["fingers covering product detail", "product lost in wide framing"],
     generationCategoryOrder: ["product_focus", "detail", "hero", "editorial", "silhouette", "motion"],
+    setRhythm: {
+      idealSequence: ["hero", "proof", "product_only", "contrast", "proof", "editorial_finish"],
+      requiredRoles: ["hero", "proof"],
+      productOnlyPreference: "strong",
+    },
     dnaHints: {
       environment: "Clean studio with neutral surface. Product should be the only visual focus.",
       lighting: "Focused directional light to catch material detail and finish. Macro-style lighting for small objects.",
@@ -238,6 +288,11 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
     brandingEmphasis: "balanced",
     occlusionPenalties: [],
     generationCategoryOrder: ["hero", "silhouette", "editorial", "motion", "product_focus", "detail"],
+    setRhythm: {
+      idealSequence: ["hero", "contrast", "proof", "release", "contrast", "editorial_finish"],
+      requiredRoles: ["hero", "contrast", "proof"],
+      productOnlyPreference: "none",
+    },
     dnaHints: {
       environment: "Environmental location or clean studio depending on style. The setting should support the outfit story.",
       lighting: "Soft directional natural light. Full-body illumination with controlled shadow depth.",
@@ -640,6 +695,9 @@ export function resolveBlueprint(input: LookbookInput): ResolvedBlueprint {
 
     // ── Evidence-based planning ──
     evidencePlan: resolveEvidencePlan(input),
+
+    // ── F5a: Composition rhythm ──
+    setRhythm: familyBP.setRhythm,
   };
 }
 

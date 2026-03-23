@@ -10,6 +10,9 @@ import type {
   PlanDiagnostics,
   RedundancyWarning,
   ShotCategory,
+  AngleBucket,
+  DistanceBucket,
+  PoseBucket,
 } from "./types";
 import { ALL_ARCHETYPES } from "./shotArchetypes";
 import { scoreArchetype, computeCoverage } from "./scoring";
@@ -436,8 +439,26 @@ function selectShots(
           }
         }
 
+        // F5b: Angle diversity penalty — discourage same-angle clustering (capped at -24)
+        let angleMatches = 0;
+        for (const existing of selected) {
+          if (existing.angleBucket === c.angleBucket) {
+            angleMatches += 1;
+          }
+        }
+        const angleDiversityPenalty = -Math.min(angleMatches * 12, 24);
+
+        // F5b: Pose diversity penalty — discourage all-same-pose sets
+        let poseDiversityPenalty = 0;
+        if (selected.length >= 2) {
+          const allSamePose = selected.every(s => s.poseBucket === c.poseBucket);
+          if (allSamePose) {
+            poseDiversityPenalty = -8;
+          }
+        }
+
         const combinedScore =
-          marginalGain + c.score + requiredDeficitBonus + framingDiversityBonus + redundancyPenalty + criticalPenalty;
+          marginalGain + c.score + requiredDeficitBonus + framingDiversityBonus + redundancyPenalty + criticalPenalty + angleDiversityPenalty + poseDiversityPenalty;
 
         return { candidate: c, combinedScore };
       })
@@ -512,8 +533,6 @@ function selectShots(
         if (!PRODUCT_ONLY_ELIGIBLE_FAMILIES.includes(input.productFamily)) continue;
         // Only for eligible categories
         if (!PRODUCT_ONLY_ELIGIBLE_CATEGORIES.includes(candidate.archetype.shotCategory)) continue;
-        // Bags: product_only only for detail category
-        if (input.productFamily === "bags" && candidate.archetype.shotCategory !== "detail") continue;
         // Only if all required on-body evidence already covered
         if (!allRequiredOnBodyCovered()) continue;
       }
@@ -559,12 +578,32 @@ function selectShots(
         }
       }
 
+      // F5b: Angle diversity penalty — discourage same-angle clustering (capped at -24)
+      let angleMatches = 0;
+      for (const existing of selected) {
+        if (existing.angleBucket === candidate.angleBucket) {
+          angleMatches += 1;
+        }
+      }
+      const angleDiversityPenalty = -Math.min(angleMatches * 12, 24);
+
+      // F5b: Pose diversity penalty — discourage all-same-pose sets
+      let poseDiversityPenalty = 0;
+      if (selected.length >= 2) {
+        const allSamePose = selected.every(s => s.poseBucket === candidate.poseBucket);
+        if (allSamePose) {
+          poseDiversityPenalty = -8;
+        }
+      }
+
       const combinedScore =
         marginalGain * 0.5 +
         candidate.score * 0.25 +
         roleMixBonus * 0.15 +
         redundancyPenalty * 0.1 +
-        requiredDeficitBonus;
+        requiredDeficitBonus +
+        angleDiversityPenalty +
+        poseDiversityPenalty;
 
       if (combinedScore > bestScore) {
         bestScore = combinedScore;
@@ -599,7 +638,6 @@ function selectShots(
           if (productOnlyCount >= 1) continue;
           if (!PRODUCT_ONLY_ELIGIBLE_FAMILIES.includes(input.productFamily)) continue;
           if (!PRODUCT_ONLY_ELIGIBLE_CATEGORIES.includes(candidate.archetype.shotCategory)) continue;
-          if (input.productFamily === "bags" && candidate.archetype.shotCategory !== "detail") continue;
           if (!allRequiredOnBodyCovered()) continue;
         }
 
@@ -625,12 +663,28 @@ function selectShots(
           else reqDeficitBonus = -20;
         }
 
+        // F5b: Angle + pose diversity penalties (same as Phase 2)
+        let angleMatches = 0;
+        for (const existing of selected) {
+          if (existing.angleBucket === candidate.angleBucket) {
+            angleMatches += 1;
+          }
+        }
+        const angleDiversityPenalty = -Math.min(angleMatches * 12, 24);
+        let poseDiversityPenalty = 0;
+        if (selected.length >= 2) {
+          const allSamePose = selected.every(s => s.poseBucket === candidate.poseBucket);
+          if (allSamePose) poseDiversityPenalty = -8;
+        }
+
         const combinedScore =
           marginalGain * 0.5 +
           candidate.score * 0.25 +
           roleMixBonus * 0.15 +
           (redundancyPenalty + critRedPenalty) * 0.1 +
-          reqDeficitBonus;
+          reqDeficitBonus +
+          angleDiversityPenalty +
+          poseDiversityPenalty;
 
         if (combinedScore > bestScore) {
           bestScore = combinedScore;
@@ -1119,6 +1173,182 @@ function deriveWhySelected(
   return catReasons[cat] || `Selected for ${cat} coverage`;
 }
 
+// ── Variety Score (F5a diagnostic) ──
+
+export function computeVarietyScore(
+  selected: ScoredArchetype[],
+  productOnlyPreference: "strong" | "medium" | "low" | "none",
+): { score: number; flags: string[] } {
+  if (selected.length === 0) return { score: 0, flags: [] };
+
+  const flags: string[] = [];
+
+  // Count buckets
+  const angleCounts: Partial<Record<AngleBucket, number>> = {};
+  const distanceCounts: Partial<Record<DistanceBucket, number>> = {};
+  const poseCounts: Partial<Record<PoseBucket, number>> = {};
+  const categoryCounts: Partial<Record<ShotCategory, number>> = {};
+  let hasProductOnly = false;
+
+  for (const s of selected) {
+    angleCounts[s.angleBucket] = (angleCounts[s.angleBucket] || 0) + 1;
+    distanceCounts[s.distanceBucket] = (distanceCounts[s.distanceBucket] || 0) + 1;
+    poseCounts[s.poseBucket] = (poseCounts[s.poseBucket] || 0) + 1;
+    const cat = s.archetype.shotCategory;
+    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    if (s.archetype.primaryDisplayZones.includes("product_only")) {
+      hasProductOnly = true;
+    }
+  }
+
+  const distinctAngles = Object.keys(angleCounts).length;
+  const distinctDistances = Object.keys(distanceCounts).length;
+  const distinctPoses = Object.keys(poseCounts).length;
+  const distinctCategories = Object.keys(categoryCounts).length;
+
+  // Scoring dimensions (weighted to 100)
+  // Angle bucket spread: 25 points (full marks at 3+ distinct)
+  const angleScore = Math.min(25, (distinctAngles / 3) * 25);
+  // Distance bucket spread: 25 points (full marks at 3 distinct)
+  const distanceScore = Math.min(25, (distinctDistances / 3) * 25);
+  // Pose bucket spread: 20 points (full marks at 3+ distinct)
+  const poseScore = Math.min(20, (distinctPoses / 3) * 20);
+  // Category spread: 15 points (full marks at 4+ distinct)
+  const categoryScore = Math.min(15, (distinctCategories / 4) * 15);
+  // Product-only inclusion: 15 points when family supports it
+  let productOnlyScore = 0;
+  if (productOnlyPreference === "strong" || productOnlyPreference === "medium") {
+    productOnlyScore = hasProductOnly ? 15 : 0;
+  } else {
+    // Families that don't need product-only get full marks automatically
+    productOnlyScore = 15;
+  }
+
+  const totalScore = Math.round(angleScore + distanceScore + poseScore + categoryScore + productOnlyScore);
+
+  // Flag triggers
+  if ((angleCounts["frontal"] || 0) >= 3) {
+    flags.push("3+ frontal portraits");
+  }
+  if (!distanceCounts["intimate"]) {
+    flags.push("No close-up relief");
+  }
+  if (!angleCounts["profile"] && !angleCounts["rear"]) {
+    flags.push("No profile or rear angle");
+  }
+  if (distinctPoses === 1 && poseCounts["standing"]) {
+    flags.push("All standing poses");
+  }
+  if (!categoryCounts["editorial"]) {
+    flags.push("No editorial release");
+  }
+  if (
+    (productOnlyPreference === "strong" || productOnlyPreference === "medium") &&
+    !hasProductOnly
+  ) {
+    flags.push("Missing product-only");
+  }
+
+  return { score: totalScore, flags };
+}
+
+// ── Presentation Order (F5a) ──
+
+function contrastScore(
+  a: ScoredArchetype,
+  b: ScoredArchetype,
+): number {
+  let score = 0;
+  if (a.angleBucket !== b.angleBucket) score += 3;
+  if (a.distanceBucket !== b.distanceBucket) score += 3;
+  if (a.poseBucket !== b.poseBucket) score += 2;
+  if (a.archetype.shotCategory !== b.archetype.shotCategory) score += 2;
+  return score;
+}
+
+export function computePresentationOrder(
+  selected: ScoredArchetype[],
+): number[] {
+  if (selected.length <= 1) return selected.map((_, i) => i + 1);
+
+  const remaining = new Set(selected.map((_, i) => i));
+
+  // Place the hero first (highest-scoring hero or product_focus)
+  let firstIdx = 0;
+  let bestHeroScore = -1;
+  for (const idx of remaining) {
+    const cat = selected[idx].archetype.shotCategory;
+    if (cat === "hero" || cat === "product_focus") {
+      if (selected[idx].score > bestHeroScore) {
+        bestHeroScore = selected[idx].score;
+        firstIdx = idx;
+      }
+    }
+  }
+  // If no hero/product_focus found, use highest scoring shot
+  if (bestHeroScore < 0) {
+    for (const idx of remaining) {
+      if (selected[idx].score > bestHeroScore) {
+        bestHeroScore = selected[idx].score;
+        firstIdx = idx;
+      }
+    }
+  }
+
+  const order: number[] = [firstIdx];
+  remaining.delete(firstIdx);
+
+  // Greedy contrast-maximisation pass
+  while (remaining.size > 0) {
+    const prev = selected[order[order.length - 1]];
+    let bestIdx = -1;
+    let bestContrast = -1;
+
+    // If this is the last slot, prefer editorial/mood for editorial_finish
+    const isLastSlot = remaining.size === 1;
+
+    for (const idx of remaining) {
+      const contrast = contrastScore(prev, selected[idx]);
+      if (contrast > bestContrast) {
+        bestContrast = contrast;
+        bestIdx = idx;
+      }
+    }
+
+    // If not the last slot, just pick the best contrast
+    if (!isLastSlot) {
+      order.push(bestIdx);
+      remaining.delete(bestIdx);
+      continue;
+    }
+
+    // Last slot: the only remaining shot goes here
+    order.push(bestIdx);
+    remaining.delete(bestIdx);
+  }
+
+  // Editorial finish: if the last shot is not editorial/silhouette and there's
+  // an editorial shot elsewhere (not position 0), swap it to the end
+  if (order.length >= 3) {
+    const lastIdx = order[order.length - 1];
+    const lastCat = selected[lastIdx].archetype.shotCategory;
+    if (lastCat !== "editorial" && lastCat !== "silhouette") {
+      // Find the last editorial shot that isn't the hero (position 0)
+      for (let i = order.length - 2; i >= 1; i--) {
+        const cat = selected[order[i]].archetype.shotCategory;
+        if (cat === "editorial" || cat === "silhouette") {
+          // Swap to end
+          [order[i], order[order.length - 1]] = [order[order.length - 1], order[i]];
+          break;
+        }
+      }
+    }
+  }
+
+  // Convert from 0-based selected indices to 1-based shot positions
+  return order.map((idx) => idx + 1);
+}
+
 // ── Main Entry Point ──
 
 export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
@@ -1196,16 +1426,26 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
   const diagnostics = computeDiagnostics(selected, blueprint.evidencePlan);
   diagnostics.shotCountRequested = input.shotCount;
   diagnostics.shotCountActual = shots.length;
+  diagnostics.varietyScore = computeVarietyScore(
+    selected,
+    blueprint.setRhythm?.productOnlyPreference ?? "none",
+  );
 
   // Step 10: Export text (includes diagnostics)
   const exportText = formatExportText(dna, shots, genOrder, input, diagnostics);
+
+  const generationOrder = genOrder.map((i) => i + 1); // 1-based positions
+
+  // F5a: Presentation order (contrast-maximised gallery sequence)
+  const presentationOrder = computePresentationOrder(selected);
 
   return {
     input,
     dna,
     shots,
     coverage,
-    generationOrder: genOrder.map((i) => i + 1), // 1-based positions
+    generationOrder,
+    presentationOrder,
     exportText,
     diagnostics,
   };
