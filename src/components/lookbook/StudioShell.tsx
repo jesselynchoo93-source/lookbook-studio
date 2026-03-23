@@ -15,6 +15,7 @@ import type {
   ReferenceType,
   ProjectRecord,
   GeneratedImageAsset,
+  FingerprintMeta,
 } from "@/lib/lookbook/types";
 import { generateLookbookPlan } from "@/lib/lookbook/recommendShots";
 import {
@@ -243,6 +244,20 @@ export default function StudioShell() {
     await deleteProjectFromDB(id);
     await refreshProjects();
   }, [refreshProjects]);
+
+  // ── Fingerprint meta update (vision extraction) ──
+
+  const handleFingerprintMetaChange = useCallback((meta: FingerprintMeta) => {
+    const project = activeProjectRef.current;
+    if (!project) return;
+    const updated: ProjectRecord = { ...project, fingerprintMeta: meta };
+    setActiveProject(updated);
+    debouncedSave({
+      ...updated,
+      references: toPersistedReferences(referencesRef.current),
+      generatedImages: toPersistedGeneratedImages(generatedImagesRef.current),
+    });
+  }, []);
 
   // ── Plan generation ──
 
@@ -589,9 +604,12 @@ export default function StudioShell() {
 
       {mode === "setup" && (
         <SetupMode
+          projectId={activeProject.id}
           initialInput={activeProject.input}
           references={references}
+          fingerprintMeta={activeProject.fingerprintMeta}
           onSubmit={handleSubmit}
+          onFingerprintMetaChange={handleFingerprintMetaChange}
           onAddReferences={handleAddReferences}
           onRemoveReference={handleRemoveReference}
           onSetPrimary={handleSetPrimary}

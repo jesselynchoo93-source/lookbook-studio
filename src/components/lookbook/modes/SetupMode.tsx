@@ -1,18 +1,21 @@
 "use client";
 
-import type { LookbookInput, ReferenceAsset, ReferenceType } from "@/lib/lookbook/types";
+import type { LookbookInput, ReferenceAsset, ReferenceType, FingerprintMeta } from "@/lib/lookbook/types";
 import CampaignForm from "../CampaignForm";
 import ReferencePanel from "../ReferencePanel";
 import ReferenceTrustCopy from "../ReferenceTrustCopy";
 
 interface SetupModeProps {
+  projectId: string;
   initialInput: LookbookInput;
   references: {
     model: ReferenceAsset[];
     product: ReferenceAsset[];
     styling: ReferenceAsset[];
   };
+  fingerprintMeta?: FingerprintMeta;
   onSubmit: (input: LookbookInput) => void;
+  onFingerprintMetaChange: (meta: FingerprintMeta) => void;
   onAddReferences: (type: ReferenceType, files: File[]) => void;
   onRemoveReference: (id: string) => void;
   onSetPrimary: (id: string) => void;
@@ -21,9 +24,12 @@ interface SetupModeProps {
 const FORM_ID = "lookbook-campaign-form";
 
 export default function SetupMode({
+  projectId,
   initialInput,
   references,
+  fingerprintMeta,
   onSubmit,
+  onFingerprintMetaChange,
   onAddReferences,
   onRemoveReference,
   onSetPrimary,
@@ -42,6 +48,10 @@ export default function SetupMode({
           onSubmit={onSubmit}
           initialInput={initialInput}
           formId={FORM_ID}
+          projectId={projectId}
+          productReferences={references.product}
+          fingerprintMeta={fingerprintMeta}
+          onFingerprintMetaChange={onFingerprintMetaChange}
         />
       </div>
 

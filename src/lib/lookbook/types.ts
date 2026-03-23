@@ -736,6 +736,9 @@ export interface ProjectRecord {
 
   // V4.2: Generated images (one per shot position)
   generatedImages: Record<number, PersistedGeneratedImage>;
+
+  // V4.3: Vision extraction metadata
+  fingerprintMeta?: FingerprintMeta;
 }
 
 /** Generation-ready prompt package for a single shot. */
@@ -878,6 +881,25 @@ export type ProductFingerprint =
   | WatchFingerprint
   | BeltFingerprint
   | JewelryFingerprint;
+
+// ── F7: Fingerprint Extraction Metadata ──
+
+/** How the product fingerprint was produced. */
+export type FingerprintSource = "auto" | "manual" | "edited";
+
+/** Metadata about the vision extraction stored on ProjectRecord. */
+export interface FingerprintMeta {
+  /** SHA-256 of the primary product image blob used for extraction. */
+  signature: string;
+  /** Overall confidence of the extraction result. */
+  confidence: "high" | "medium" | "low";
+  /** Caveats or notes from the extraction/normalisation pass. */
+  notes: string[];
+  /** How the fingerprint was produced. */
+  source: FingerprintSource;
+  /** ISO timestamp of when extraction completed. */
+  extractedAt: string;
+}
 
 // ── F7: Continuity World Tokens ──
 
