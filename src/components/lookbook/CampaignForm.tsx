@@ -22,6 +22,12 @@ import CampaignGoalSelector from "./CampaignGoalSelector";
 import ProductFingerprintForm from "./ProductFingerprintForm";
 import ContinuityWorldPicker from "./ContinuityWorldPicker";
 
+/** Classification result from the lightweight product classifier. */
+export interface ClassifiedProduct {
+  family: ProductFamily;
+  specificItem: string;
+}
+
 interface CampaignFormProps {
   onSubmit: (input: LookbookInput) => void;
   /** Pre-fill form with saved input when reopening a draft project. */
@@ -32,6 +38,8 @@ interface CampaignFormProps {
   onInputChange?: (input: LookbookInput) => void;
   /** When true, hides model-only styling field in Continuity World (product refs provide context). */
   hasProductRefs?: boolean;
+  /** Auto-fill family and item from image classification. Updates form when changed. */
+  classifiedProduct?: ClassifiedProduct;
 }
 
 const DEFAULT_INPUT: LookbookInput = {
@@ -52,8 +60,26 @@ export default function CampaignForm({
   formId,
   onInputChange,
   hasProductRefs,
+  classifiedProduct,
 }: CampaignFormProps) {
   const [input, setInput] = useState<LookbookInput>(initialInput ?? DEFAULT_INPUT);
+
+  // ── Auto-fill from image classification ──
+  const prevClassifiedRef = useRef<ClassifiedProduct | undefined>(undefined);
+  useEffect(() => {
+    if (!classifiedProduct) return;
+    if (
+      prevClassifiedRef.current?.family === classifiedProduct.family &&
+      prevClassifiedRef.current?.specificItem === classifiedProduct.specificItem
+    ) return;
+    prevClassifiedRef.current = classifiedProduct;
+    setInput(prev => ({
+      ...prev,
+      productFamily: classifiedProduct.family,
+      specificItem: classifiedProduct.specificItem,
+      productFingerprint: undefined, // reset fingerprint when family changes
+    }));
+  }, [classifiedProduct]);
 
   // ── Settings driver: tracks what is currently controlling goal/logo/creativity ──
   const [settingsDriver, setSettingsDriver] = useState<SettingsDriver>(() => {

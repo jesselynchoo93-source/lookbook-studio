@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type {
   LookbookInput,
   ReferenceAsset,
   ReferenceType,
   FingerprintMeta,
   ProductFingerprint,
+  ProductFamily,
 } from "@/lib/lookbook/types";
 import { useVisionExtractor } from "@/lib/lookbook/useVisionExtractor";
+import { db } from "@/lib/lookbook/projectStore";
 import CampaignForm from "../CampaignForm";
+import type { ClassifiedProduct } from "../CampaignForm";
 import ReferencePanel from "../ReferencePanel";
 import ReferenceTrustCopy from "../ReferenceTrustCopy";
 import ExtractedProductTruth from "../ExtractedProductTruth";
@@ -33,6 +36,45 @@ interface SetupModeProps {
 
 const FORM_ID = "lookbook-campaign-form";
 
+// ── Lightweight product classifier ──
+
+async function classifyProductImage(
+  ref: ReferenceAsset,
+): Promise<ClassifiedProduct | null> {
+  try {
+    const blobRecord = await db.referenceBlobs.get(ref.id);
+    if (!blobRecord) return null;
+
+    const buf = await blobRecord.blob.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+
+    const res = await fetch("/api/classify-product", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageBase64: base64,
+        mimeType: ref.mimeType,
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.confidence === "low") return null;
+
+    return {
+      family: data.family as ProductFamily,
+      specificItem: data.specificItem || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function SetupMode({
   projectId,
   initialInput,
@@ -53,6 +95,27 @@ export default function SetupMode({
   const [fingerprintView, setFingerprintView] = useState<"extracted" | "editing">(
     fingerprintMeta?.source === "manual" ? "editing" : "extracted",
   );
+
+  // ── Auto-classification from uploaded product images ──
+  const [classifiedProduct, setClassifiedProduct] = useState<ClassifiedProduct | undefined>();
+  const [classifying, setClassifying] = useState(false);
+  const classifiedRefIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (references.product.length === 0) return;
+    const primary = references.product.find((r) => r.isPrimary) ?? references.product[0];
+    // Don't re-classify the same image
+    if (classifiedRefIdRef.current === primary.id) return;
+    classifiedRefIdRef.current = primary.id;
+
+    setClassifying(true);
+    classifyProductImage(primary).then((result) => {
+      setClassifying(false);
+      if (result) {
+        setClassifiedProduct(result);
+      }
+    });
+  }, [references.product]);
 
   const handleInputChange = useCallback((input: LookbookInput) => {
     liveInputRef.current = input;
@@ -109,24 +172,7 @@ export default function SetupMode({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Section A: Creative Direction */}
-      <div
-        className="bg-[--surface-card] rounded-xl p-6"
-        style={{ boxShadow: "var(--shadow-card)" }}
-      >
-        <h2 className="text-lg font-semibold text-[--text-primary] mb-4">
-          Creative Direction
-        </h2>
-        <CampaignForm
-          onSubmit={handleSubmit}
-          initialInput={initialInput}
-          formId={FORM_ID}
-          onInputChange={handleInputChange}
-          hasProductRefs={hasProductRefs}
-        />
-      </div>
-
-      {/* Section B: Product & References */}
+      {/* Section A: Reference Images (upload first) */}
       <div
         className="bg-[--surface-card] rounded-xl p-6"
         style={{ boxShadow: "var(--shadow-card)" }}
@@ -147,7 +193,7 @@ export default function SetupMode({
         </div>
       </div>
 
-      {/* Section C: Detected Product Truth (between refs and Build button) */}
+      {/* Section B: Detected Product Truth (appears after image analysis) */}
       {showExtractionPanel && fingerprintView === "extracted" && (
         <div
           className="bg-[--surface-card] rounded-xl p-6"
@@ -171,7 +217,7 @@ export default function SetupMode({
         </div>
       )}
 
-      {/* Section C alt: Manual fingerprint editing */}
+      {/* Section B alt: Manual fingerprint editing */}
       {showExtractionPanel && fingerprintView === "editing" && (
         <div
           className="bg-[--surface-card] rounded-xl p-6"
@@ -198,6 +244,37 @@ export default function SetupMode({
           />
         </div>
       )}
+
+      {/* Section C: Creative Direction (auto-filled from classification) */}
+      <div
+        className="bg-[--surface-card] rounded-xl p-6"
+        style={{ boxShadow: "var(--shadow-card)" }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-[--text-primary]">
+            Creative Direction
+          </h2>
+          {classifying && (
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-[--text-tertiary] border-t-transparent rounded-full animate-spin" />
+              <span className="text-[10px] text-[--text-tertiary]">Detecting product...</span>
+            </div>
+          )}
+          {classifiedProduct && !classifying && (
+            <span className="text-[10px] text-[--text-tertiary] px-2 py-0.5 rounded-full bg-[--surface-inset] border border-[--border-subtle]">
+              Auto-filled from image
+            </span>
+          )}
+        </div>
+        <CampaignForm
+          onSubmit={handleSubmit}
+          initialInput={initialInput}
+          formId={FORM_ID}
+          onInputChange={handleInputChange}
+          hasProductRefs={hasProductRefs}
+          classifiedProduct={classifiedProduct}
+        />
+      </div>
 
       {/* CTA */}
       <button
