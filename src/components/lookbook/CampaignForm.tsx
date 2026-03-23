@@ -332,19 +332,23 @@ export default function CampaignForm({
         onKeepPreset={handleKeepPreset}
       />
 
-      {/* F7: Product Fingerprint (manual fallback, shown when editing) */}
-      <ProductFingerprintForm
-        family={input.productFamily}
-        value={input.productFingerprint}
-        onChange={handleFingerprintChange}
-      />
+      {/* F7: Product Fingerprint (only shown when no auto-extraction) */}
+      {!hasProductRefs && (
+        <ProductFingerprintForm
+          family={input.productFamily}
+          value={input.productFingerprint}
+          onChange={handleFingerprintChange}
+        />
+      )}
 
-      {/* F7: Continuity World */}
-      <ContinuityWorldPicker
-        value={input.continuityWorld}
-        onChange={handleWorldChange}
-        hasProductRefs={hasProductRefs}
-      />
+      {/* F7: Continuity World (only shown when no auto-fill from styling) */}
+      {!autoWorld && (
+        <ContinuityWorldPicker
+          value={input.continuityWorld}
+          onChange={handleWorldChange}
+          hasProductRefs={hasProductRefs}
+        />
+      )}
 
       {/* Submit (hidden when formId is set, allowing external submit button) */}
       {!formId && (
