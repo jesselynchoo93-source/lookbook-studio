@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
-import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 /**
  * Lightweight product classification endpoint.
- * Uses Haiku (cheapest model) to detect product family and specific item
- * from an uploaded image. Runs before the full fingerprint extraction.
+ * Uses Gemini 2.0 Flash (cheapest vision model) to detect product family
+ * and specific item from an uploaded image. Runs before fingerprint extraction.
  *
- * Cost: ~$0.001-0.003 per call.
+ * Cost: ~$0.0001-0.0005 per call (8-10x cheaper than Haiku).
  */
 
 const VALID_FAMILIES = [
@@ -44,15 +44,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY not configured" },
+        { error: "GEMINI_API_KEY not configured" },
         { status: 500 },
       );
     }
 
-    const anthropic = createAnthropic({ apiKey });
+    const google = createGoogleGenerativeAI({ apiKey });
 
     const systemPrompt = `You are a product classifier for fashion e-commerce photography. Given a product image, identify:
 1. The product family (category)
@@ -68,7 +68,7 @@ confidence is "high" if you're certain, "medium" if somewhat unsure, "low" if gu
 If the image doesn't show a fashion product, return: {"family": "apparel", "specificItem": "", "confidence": "low"}`;
 
     const { text } = await generateText({
-      model: anthropic("claude-haiku-4-5-20251001"),
+      model: google("gemini-2.0-flash"),
       system: systemPrompt,
       messages: [
         {
