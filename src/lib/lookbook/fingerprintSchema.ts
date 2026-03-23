@@ -29,7 +29,7 @@ export const BAG_EXTRACTION_SCHEMA = {
   constructionStyle: "construction: structured, semi-structured, soft, quilted, woven, or similar",
   materialFinish: "surface texture: smooth, pebbled, suede, patent, saffiano, canvas, nylon, or similar",
   materialColour: "primary colour name",
-  hardwareFinish: "one of: gold, silver, gunmetal, rose-gold, brass, matte-black, none",
+  hardwareFinish: "colour of FUNCTIONAL METAL PARTS ONLY (studs, buckles, clasps, zippers, d-rings, feet). Do NOT base this on logo colour. If no visible metal hardware exists, use 'none'. One of: gold, silver, gunmetal, rose-gold, brass, matte-black, none",
   logoPlacement: "where the logo appears: centre-front, side, tongue, base, handle, or empty if none visible",
   logoScale: "one of: subtle, medium, prominent, none",
   logoStyle: "one of: foil, embossed, engraved, metal-plate, printed, none",
@@ -51,7 +51,7 @@ export const WATCH_EXTRACTION_SCHEMA = {
   constructionStyle: "construction: polished, brushed, mixed-finish, or similar",
   materialFinish: "case material finish: polished steel, brushed titanium, ceramic, or similar",
   materialColour: "case colour name",
-  hardwareFinish: "one of: gold, silver, gunmetal, rose-gold, brass, matte-black, none",
+  hardwareFinish: "colour of FUNCTIONAL METAL PARTS ONLY (buckles, clasps, crowns, studs, feet). Do NOT base this on logo colour. If no metal hardware, use 'none'. One of: gold, silver, gunmetal, rose-gold, brass, matte-black, none",
   logoPlacement: "logo position on dial or case",
   logoScale: "one of: subtle, medium, prominent, none",
   logoStyle: "one of: foil, embossed, engraved, metal-plate, printed, none",
@@ -68,7 +68,7 @@ export const BELT_EXTRACTION_SCHEMA = {
   constructionStyle: "construction: single-layer, stitched-edge, bonded, woven, or similar",
   materialFinish: "surface: smooth, pebbled, suede, patent, braided, or similar",
   materialColour: "primary colour name",
-  hardwareFinish: "one of: gold, silver, gunmetal, rose-gold, brass, matte-black, none",
+  hardwareFinish: "colour of FUNCTIONAL METAL PARTS ONLY (buckles, clasps, crowns, studs, feet). Do NOT base this on logo colour. If no metal hardware, use 'none'. One of: gold, silver, gunmetal, rose-gold, brass, matte-black, none",
   logoPlacement: "logo position if visible",
   logoScale: "one of: subtle, medium, prominent, none",
   logoStyle: "one of: foil, embossed, engraved, metal-plate, printed, none",
@@ -88,7 +88,7 @@ export const JEWELRY_EXTRACTION_SCHEMA = {
   constructionStyle: "construction: cast, handcrafted, wire-wrapped, or similar",
   materialFinish: "metal finish: polished, matte, hammered, brushed, or similar",
   materialColour: "metal colour: yellow gold, white gold, rose gold, silver, etc.",
-  hardwareFinish: "one of: gold, silver, gunmetal, rose-gold, brass, matte-black, none",
+  hardwareFinish: "colour of FUNCTIONAL METAL PARTS ONLY (buckles, clasps, crowns, studs, feet). Do NOT base this on logo colour. If no metal hardware, use 'none'. One of: gold, silver, gunmetal, rose-gold, brass, matte-black, none",
   logoPlacement: "logo position if visible",
   logoScale: "one of: subtle, medium, prominent, none",
   logoStyle: "one of: foil, embossed, engraved, metal-plate, printed, none",
@@ -367,6 +367,7 @@ Also include these metadata fields:
 Rules:
 - Use descriptive but concise values. "smooth cognac leather" not "the material appears to be a smooth type of leather in a dark cognac colour."
 - For enum fields, pick the closest match from the allowed values.
+- CRITICAL: hardwareFinish refers to FUNCTIONAL METAL PARTS (buckles, clasps, studs, zippers, d-rings, feet), NOT the logo. A gold foil logo does NOT mean gold hardware. If the product has no metal hardware, use "none".
 - For forbiddenElements, list structural features ABSENT from the product that an AI generator might incorrectly add. Focus on straps, closures, hardware, chains, and structural elements NOT present.
 - If you cannot determine a field, use an empty string for text fields or the most neutral default for enum fields, and add a note.
 - If the image does not appear to show a ${family} product, add a note flagging this.
