@@ -13,6 +13,7 @@ import type {
   GeneratedImageAsset,
   FinalMark,
 } from "@/lib/lookbook/types";
+import { formatProviderForClipboard } from "@/lib/lookbook/generationPrompt";
 import StatusControl from "./StatusControl";
 import ContinuityFlagControl from "./ContinuityFlagControl";
 import SkinPolishBlock from "./SkinPolishBlock";
@@ -507,27 +508,33 @@ export default function GenerationShotCard({
         </div>
       )}
 
-      {/* Prompt preview (full planning prompt) */}
-      <div className="mx-4 mb-3 bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
-            Paste this into Higgsfield
-          </span>
-          {pp && (
+      {/* Provider prompt preview */}
+      {pp ? (
+        <div className="mx-4 mb-3 bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
+              Paste this into Higgsfield
+            </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[--surface-card] border border-[--border-default] text-[--text-tertiary]">
               {pp.mode}
             </span>
-          )}
+          </div>
+          <p className="text-xs text-[--text-secondary] leading-relaxed line-clamp-4">
+            {pp.positive}
+          </p>
         </div>
-        <p className="text-xs text-[--text-secondary] leading-relaxed line-clamp-4">
-          {pkg.generatorPrompt}
-        </p>
-      </div>
+      ) : (
+        <div className="mx-4 mb-3 bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-3">
+          <p className="text-xs text-[--text-secondary] leading-relaxed line-clamp-4">
+            {pkg.generatorPrompt}
+          </p>
+        </div>
+      )}
 
-      {/* Copy button (copies full planning prompt + negative) */}
+      {/* Copy button */}
       <div className="px-4 pb-3 flex gap-2">
         <CopyButton
-          text={`Positive prompt:\n${pkg.generatorPrompt}\n\nNegative prompt:\n${pkg.negativePrompt}`}
+          text={pp ? formatProviderForClipboard(pkg) : `Positive prompt:\n${pkg.generatorPrompt}\n\nNegative prompt:\n${pkg.negativePrompt}`}
           label="Copy Full Prompt"
           copiedLabel="Copied"
         />

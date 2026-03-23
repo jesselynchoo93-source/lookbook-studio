@@ -816,10 +816,10 @@ export function formatProviderForClipboard(
   return [
     `SHOT ${pkg.shotPosition}: ${pkg.archetypeTitle.toUpperCase()}`,
     "",
-    "POSITIVE:",
+    "Positive prompt:",
     pp.positive,
     "",
-    "NEGATIVE:",
+    "Negative prompt:",
     pp.negative,
   ].join("\n");
 }

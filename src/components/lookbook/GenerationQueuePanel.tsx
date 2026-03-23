@@ -17,6 +17,7 @@ import type {
 import {
   compileAllPackages,
   formatQueueForClipboard,
+  formatProviderQueueForClipboard,
 } from "@/lib/lookbook/generationPrompt";
 import { computeSetReadiness } from "@/lib/lookbook/setReadiness";
 import { formatFinalExport } from "@/lib/lookbook/exportShotPlan";
@@ -354,6 +355,10 @@ export default function GenerationQueuePanel({
   );
   const editorial = packages.filter((p) => p.generationPhase === "editorial");
 
+  const hasProviderPrompts = packages.some(p => p.providerPrompt);
+  const providerQueueText = hasProviderPrompts
+    ? formatProviderQueueForClipboard(packages, plan.input)
+    : "";
   const fullQueueText = formatQueueForClipboard(packages);
 
   const { summary, nextAction, nextActionTarget } = useProgressSummary(
@@ -426,12 +431,21 @@ export default function GenerationQueuePanel({
 
       {/* Queue-level actions */}
       <div className="flex gap-3 flex-wrap">
-        <CopyButton
-          text={fullQueueText}
-          label="Copy All Prompts"
-          copiedLabel="All prompts copied"
-          primary
-        />
+        {hasProviderPrompts ? (
+          <CopyButton
+            text={providerQueueText}
+            label="Copy All Prompts"
+            copiedLabel="All prompts copied"
+            primary
+          />
+        ) : (
+          <CopyButton
+            text={fullQueueText}
+            label="Copy All Prompts"
+            copiedLabel="All prompts copied"
+            primary
+          />
+        )}
       </div>
 
       {/* Phase sections */}
