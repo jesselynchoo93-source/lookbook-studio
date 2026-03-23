@@ -10,6 +10,8 @@ import type {
   LogoVisibilityPriority,
   CreativityLevel,
   SettingsDriver,
+  ProductFingerprint,
+  ContinuityWorldTokens,
 } from "@/lib/lookbook/types";
 import type { RecommendedSettings } from "@/lib/lookbook/recommendSettings";
 import { getRecommendedSettings } from "@/lib/lookbook/recommendSettings";
@@ -17,6 +19,8 @@ import { STARTER_PRESETS } from "@/lib/lookbook/starterPresets";
 import StarterPresetPicker from "./StarterPresetPicker";
 import ProductSelector from "./ProductSelector";
 import CampaignGoalSelector from "./CampaignGoalSelector";
+import ProductFingerprintForm from "./ProductFingerprintForm";
+import ContinuityWorldPicker from "./ContinuityWorldPicker";
 
 interface CampaignFormProps {
   onSubmit: (input: LookbookInput) => void;
@@ -177,8 +181,16 @@ export default function CampaignForm({ onSubmit, initialInput, formId }: Campaig
     setPendingRecommendation(null);
   }, []);
 
+  const handleFingerprintChange = useCallback((fp: ProductFingerprint | undefined) => {
+    setInput(prev => ({ ...prev, productFingerprint: fp }));
+  }, []);
+
+  const handleWorldChange = useCallback((world: ContinuityWorldTokens | undefined) => {
+    setInput(prev => ({ ...prev, continuityWorld: world }));
+  }, []);
+
   const handleFamilyChange = useCallback((f: ProductFamily) => {
-    setInput(prev => ({ ...prev, productFamily: f, specificItem: "" }));
+    setInput(prev => ({ ...prev, productFamily: f, specificItem: "", productFingerprint: undefined }));
   }, []);
 
   const handleItemChange = useCallback((item: string) => {
@@ -255,6 +267,19 @@ export default function CampaignForm({ onSubmit, initialInput, formId }: Campaig
         onNotesChange={(v: string) => setInput(prev => ({ ...prev, notes: v }))}
         onApplyRecommendation={handleApplyRecommendation}
         onKeepPreset={handleKeepPreset}
+      />
+
+      {/* F7: Product Fingerprint (optional, family-specific) */}
+      <ProductFingerprintForm
+        family={input.productFamily}
+        value={input.productFingerprint}
+        onChange={handleFingerprintChange}
+      />
+
+      {/* F7: Continuity World */}
+      <ContinuityWorldPicker
+        value={input.continuityWorld}
+        onChange={handleWorldChange}
       />
 
       {/* Submit (hidden when formId is set, allowing external submit button) */}

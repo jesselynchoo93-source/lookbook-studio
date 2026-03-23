@@ -12,7 +12,9 @@ import type {
   ProductFamily,
   GeneratedImageAsset,
   FinalMark,
+  ProviderPromptOutput,
 } from "@/lib/lookbook/types";
+import { formatProviderForClipboard } from "@/lib/lookbook/generationPrompt";
 import StatusControl from "./StatusControl";
 import ContinuityFlagControl from "./ContinuityFlagControl";
 import SkinPolishBlock from "./SkinPolishBlock";
@@ -319,27 +321,11 @@ export default function CurrentShotWorkspace({
   const hasImage = !!generatedImage;
   const canMarkFinal = (stage === "reviewing" || stage === "finalised") && hasImage;
 
-  const fullPackageText = [
-    `SHOT ${pkg.shotPosition}: ${pkg.archetypeTitle.toUpperCase()}`,
-    `Phase: ${pkg.generationPhase === "detail_validation" ? "Detail Validation" : pkg.generationPhase === "anchor" ? "Anchor" : "Editorial"} | Priority: #${pkg.generationPriority} | ${pkg.reliabilityLabel}`,
-    "",
-    pkg.whySelected ? `WHY: ${pkg.whySelected}` : "",
-    pkg.whyGenerateNow ? `GENERATE NOW: ${pkg.whyGenerateNow}` : "",
-    "",
-    "PROMPT:",
-    pkg.generatorPrompt,
-    "",
-    "NEGATIVE:",
-    pkg.negativePrompt,
-    "",
-    "GUARDRAIL CHECKLIST:",
-    ...pkg.guardrailChecklist.map((g) => `  [ ] ${g}`),
-    "",
-    "ENHANCOR NOTES:",
-    ...pkg.enhancorNotes.map((n) => `  - ${n}`),
-  ]
-    .filter((line) => line !== undefined)
-    .join("\n");
+  // F7: Provider prompt is primary copy target
+  const pp = pkg.providerPrompt;
+  const providerClipboardText = pp
+    ? formatProviderForClipboard(pkg)
+    : "";
 
   return (
     <div
@@ -408,25 +394,52 @@ export default function CurrentShotWorkspace({
         onRemove={() => onRemoveImage(pkg.shotPosition)}
       />
 
-      {/* Prompt block: full text, no line-clamp */}
-      <div className="bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-4">
-        <p className="text-sm text-[--text-secondary] leading-relaxed">
-          {pkg.generatorPrompt}
-        </p>
-      </div>
+      {/* F7: Provider prompt block (what gets pasted into Higgsfield) */}
+      {pp ? (
+        <div className="bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-medium text-[--text-tertiary] uppercase tracking-wider">
+                Paste this into Higgsfield
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[--surface-card] border border-[--border-default] text-[--text-tertiary]">
+                {pp.mode}
+              </span>
+            </div>
+            <span className="text-[10px] text-[--text-tertiary]">
+              {pp.wordCount} words
+            </span>
+          </div>
+          <div className="space-y-2">
+            <div>
+              <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">Positive:</span>
+              <p className="text-sm text-[--text-secondary] leading-relaxed mt-0.5">
+                {pp.positive}
+              </p>
+            </div>
+            <div>
+              <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">Negative:</span>
+              <p className="text-xs text-[--text-tertiary] leading-relaxed mt-0.5 break-words">
+                {pp.negative}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-4">
+          <p className="text-sm text-[--text-secondary] leading-relaxed">
+            {pkg.generatorPrompt}
+          </p>
+        </div>
+      )}
 
-      {/* Primary + secondary actions */}
+      {/* F7: Single copy button */}
       <div className="flex gap-3">
         <CopyButton
-          text={pkg.generatorPrompt}
-          label="Copy Prompt"
-          copiedLabel="Prompt copied"
+          text={pp ? providerClipboardText : pkg.generatorPrompt}
+          label={pp ? "Copy Full Prompt" : "Copy Prompt"}
+          copiedLabel="Copied"
           primary
-        />
-        <CopyButton
-          text={fullPackageText}
-          label="Copy Full Package"
-          copiedLabel="Package copied"
         />
       </div>
 
@@ -505,14 +518,22 @@ export default function CurrentShotWorkspace({
               </div>
             )}
 
-            {/* Technical details */}
+            {/* Internal planning prompt (QA only) */}
             <div className="space-y-3">
               <span className="text-[10px] font-medium text-[--text-tertiary] uppercase tracking-wider">
-                Technical Details
+                Internal QA
               </span>
               <div>
                 <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
-                  Negative Prompt
+                  Planning Prompt (4-layer)
+                </span>
+                <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                  {pkg.generatorPrompt}
+                </p>
+              </div>
+              <div>
+                <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
+                  Internal Negative (3-tier)
                 </span>
                 <p className="text-xs text-[--text-tertiary] mt-1 break-words">
                   {pkg.negativePrompt}

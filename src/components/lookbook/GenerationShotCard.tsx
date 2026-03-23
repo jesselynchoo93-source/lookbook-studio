@@ -12,7 +12,9 @@ import type {
   ProductFamily,
   GeneratedImageAsset,
   FinalMark,
+  ProviderPromptOutput,
 } from "@/lib/lookbook/types";
+import { formatProviderForClipboard } from "@/lib/lookbook/generationPrompt";
 import StatusControl from "./StatusControl";
 import ContinuityFlagControl from "./ContinuityFlagControl";
 import SkinPolishBlock from "./SkinPolishBlock";
@@ -443,27 +445,11 @@ export default function GenerationShotCard({
   const canMarkFinal =
     (stage === "reviewing" || stage === "finalised") && hasImage;
 
-  const fullPackageText = [
-    `SHOT ${pkg.shotPosition}: ${pkg.archetypeTitle.toUpperCase()}`,
-    `Phase: ${pkg.generationPhase === "detail_validation" ? "Detail Validation" : pkg.generationPhase === "anchor" ? "Anchor" : "Editorial"} | Priority: #${pkg.generationPriority} | ${pkg.reliabilityLabel}`,
-    "",
-    pkg.whySelected ? `WHY: ${pkg.whySelected}` : "",
-    pkg.whyGenerateNow ? `GENERATE NOW: ${pkg.whyGenerateNow}` : "",
-    "",
-    "PROMPT:",
-    pkg.generatorPrompt,
-    "",
-    "NEGATIVE:",
-    pkg.negativePrompt,
-    "",
-    "GUARDRAIL CHECKLIST:",
-    ...pkg.guardrailChecklist.map((g) => `  [ ] ${g}`),
-    "",
-    "ENHANCOR NOTES:",
-    ...pkg.enhancorNotes.map((n) => `  - ${n}`),
-  ]
-    .filter((line) => line !== undefined)
-    .join("\n");
+  // F7: Provider prompt is primary copy target
+  const pp = pkg.providerPrompt;
+  const providerClipboardText = pp
+    ? formatProviderForClipboard(pkg)
+    : "";
 
   return (
     <div
@@ -527,24 +513,35 @@ export default function GenerationShotCard({
         </div>
       )}
 
-      {/* Prompt preview: 4-line clamp */}
-      <div className="mx-4 mb-3 bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-3">
-        <p className="text-sm text-[--text-secondary] leading-relaxed line-clamp-4">
-          {pkg.generatorPrompt}
-        </p>
-      </div>
+      {/* F7: Provider prompt preview */}
+      {pp ? (
+        <div className="mx-4 mb-3 bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
+              Paste this into Higgsfield
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[--surface-card] border border-[--border-default] text-[--text-tertiary]">
+              {pp.mode}
+            </span>
+          </div>
+          <p className="text-xs text-[--text-secondary] leading-relaxed line-clamp-4">
+            {pp.positive}
+          </p>
+        </div>
+      ) : (
+        <div className="mx-4 mb-3 bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-3">
+          <p className="text-sm text-[--text-secondary] leading-relaxed line-clamp-4">
+            {pkg.generatorPrompt}
+          </p>
+        </div>
+      )}
 
-      {/* Action buttons */}
+      {/* F7: Single copy button */}
       <div className="px-4 pb-3 flex gap-2">
         <CopyButton
-          text={pkg.generatorPrompt}
-          label="Copy Prompt"
-          copiedLabel="Prompt copied"
-        />
-        <CopyButton
-          text={fullPackageText}
-          label="Copy Full Package"
-          copiedLabel="Package copied"
+          text={pp ? providerClipboardText : pkg.generatorPrompt}
+          label={pp ? "Copy Full Prompt" : "Copy Prompt"}
+          copiedLabel="Copied"
         />
       </div>
 
@@ -632,20 +629,20 @@ export default function GenerationShotCard({
 
         {expanded && (
           <div className="mt-3 space-y-4">
-            {/* Full Prompt */}
+            {/* Internal Planning Prompt (QA only) */}
             <div>
               <span className="text-xs font-medium text-[--text-tertiary] uppercase tracking-wider">
-                Full Prompt
+                Planning Prompt (4-layer, internal)
               </span>
               <p className="text-xs text-[--text-secondary] mt-1 leading-relaxed">
                 {pkg.generatorPrompt}
               </p>
             </div>
 
-            {/* Negative Prompt */}
+            {/* Internal Negative */}
             <div>
               <span className="text-xs font-medium text-[--text-tertiary] uppercase tracking-wider">
-                Negative Prompt
+                Internal Negative (3-tier)
               </span>
               <p className="text-xs text-[--text-tertiary] mt-1 break-words">
                 {pkg.negativePrompt}

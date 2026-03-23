@@ -87,7 +87,8 @@ export default function GenerateMode({
   onRemoveReference,
   onSetPrimary,
 }: GenerateModeProps) {
-  const packages = useMemo(() => compileAllPackages(plan), [plan]);
+  const hasProductRef = references.product.length > 0;
+  const packages = useMemo(() => compileAllPackages(plan, hasProductRef), [plan, hasProductRef]);
 
   const [activeShot, setActiveShot] = useState<number>(() =>
     selectDefaultActiveShot(tracker, plan.generationOrder),

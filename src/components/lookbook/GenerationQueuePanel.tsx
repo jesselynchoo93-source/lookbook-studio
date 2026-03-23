@@ -17,6 +17,7 @@ import type {
 import {
   compileAllPackages,
   formatQueueForClipboard,
+  formatProviderQueueForClipboard,
 } from "@/lib/lookbook/generationPrompt";
 import { computeSetReadiness } from "@/lib/lookbook/setReadiness";
 import { formatFinalExport } from "@/lib/lookbook/exportShotPlan";
@@ -67,6 +68,7 @@ interface GenerationQueuePanelProps {
   plan: LookbookPlanResult;
   tracker: TrackerState | null;
   generatedImages: Record<number, GeneratedImageAsset>;
+  hasProductRef?: boolean;
   onStatusChange: (
     position: number,
     status: GenerationStatus,
@@ -336,6 +338,7 @@ export default function GenerationQueuePanel({
   plan,
   tracker,
   generatedImages,
+  hasProductRef,
   onStatusChange,
   onContinuityChange,
   onSkinPolishChange,
@@ -344,7 +347,7 @@ export default function GenerationQueuePanel({
   onFinalMarkChange,
   projectName,
 }: GenerationQueuePanelProps) {
-  const packages = useMemo(() => compileAllPackages(plan), [plan]);
+  const packages = useMemo(() => compileAllPackages(plan, hasProductRef), [plan, hasProductRef]);
 
   const anchors = packages.filter((p) => p.generationPhase === "anchor");
   const details = packages.filter(
@@ -352,12 +355,11 @@ export default function GenerationQueuePanel({
   );
   const editorial = packages.filter((p) => p.generationPhase === "editorial");
 
-  const allPromptsText = packages
-    .map(
-      (p) =>
-        `SHOT ${p.shotPosition}: ${p.archetypeTitle}\n${p.generatorPrompt}`,
-    )
-    .join("\n\n---\n\n");
+  // F7: Provider queue is primary copy target
+  const hasProviderPrompts = packages.some(p => p.providerPrompt);
+  const providerQueueText = hasProviderPrompts
+    ? formatProviderQueueForClipboard(packages, plan.input)
+    : "";
   const fullQueueText = formatQueueForClipboard(packages);
 
   const { summary, nextAction, nextActionTarget } = useProgressSummary(
@@ -430,17 +432,21 @@ export default function GenerationQueuePanel({
 
       {/* Queue-level actions */}
       <div className="flex gap-3 flex-wrap">
-        <CopyButton
-          text={allPromptsText}
-          label="Copy All Prompts"
-          copiedLabel="All prompts copied"
-          primary
-        />
-        <CopyButton
-          text={fullQueueText}
-          label="Copy Full Queue"
-          copiedLabel="Full queue copied"
-        />
+        {hasProviderPrompts ? (
+          <CopyButton
+            text={providerQueueText}
+            label="Copy All Prompts"
+            copiedLabel="All prompts copied"
+            primary
+          />
+        ) : (
+          <CopyButton
+            text={fullQueueText}
+            label="Copy Full Queue"
+            copiedLabel="Full queue copied"
+            primary
+          />
+        )}
       </div>
 
       {/* Phase sections */}

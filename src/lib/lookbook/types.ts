@@ -269,6 +269,10 @@ export interface LookbookInput {
   creativityLevel: CreativityLevel;
   shotCount: number;
   notes?: string;
+  /** F7: Reference-grounded product fingerprint. */
+  productFingerprint?: ProductFingerprint;
+  /** F7: Concrete visual continuity tokens. */
+  continuityWorld?: ContinuityWorldTokens;
 }
 
 // ── Settings Driver ──
@@ -781,4 +785,114 @@ export interface GenerationPromptPackage {
     familyDrift: string;             // Tier 2: family drift negatives
     shotSpecific: string;            // Tier 3: per-shot negative cues
   };
+
+  // F7: Provider-compiled prompt (short, generation-native)
+  providerPrompt?: ProviderPromptOutput;
+}
+
+// ── F7: Provider-Facing Prompt Compiler Types ──
+
+/** Provider compilation mode based on shot type. */
+export type ProviderCompilationMode = "on-body" | "product-only" | "detail";
+
+/** Output from the provider prompt compiler. */
+export interface ProviderPromptOutput {
+  positive: string;
+  negative: string;
+  mode: ProviderCompilationMode;
+  wordCount: number;
+}
+
+/** Provider-level settings for prompt compilation. */
+export interface ProviderPromptConfig {
+  provider: "higgsfield" | "generic";
+  model: string;
+  maxPromptWords: number;
+  renderLogoText: boolean;
+}
+
+// ── F7: Product Fingerprint Types ──
+
+/** Base fingerprint fields shared by all accessory families. */
+export interface ProductFingerprintBase {
+  materialFinish: string;
+  materialColour: string;
+  hardwareFinish: "gold" | "silver" | "gunmetal" | "rose-gold" | "brass" | "matte-black" | "none";
+  logoPlacement: string;
+  logoScale: "subtle" | "medium" | "prominent" | "none";
+  logoStyle: "foil" | "embossed" | "engraved" | "metal-plate" | "printed" | "none";
+  forbiddenElements: string[];
+  additionalNotes?: string;
+}
+
+export interface BagFingerprint extends ProductFingerprintBase {
+  family: "bags";
+  silhouettePrimary: string;
+  silhouetteShape: string;
+  handleCount: number;
+  handleType: string;
+  handleAttachment: string;
+  strapPresent: boolean;
+  strapType?: string;
+  closureType: string;
+  constructionStyle: string;
+}
+
+export interface WatchFingerprint extends ProductFingerprintBase {
+  family: "watches";
+  caseShape: string;
+  caseSize: string;
+  dialColour: string;
+  dialType: string;
+  bezelType: string;
+  strapType: string;
+  strapColour: string;
+  crownPosition: string;
+  complicationCount: number;
+  constructionStyle: string;
+}
+
+export interface BeltFingerprint extends ProductFingerprintBase {
+  family: "belts";
+  beltWidth: string;
+  buckleType: string;
+  buckleShape: string;
+  tipStyle: string;
+  constructionStyle: string;
+}
+
+export interface JewelryFingerprint extends ProductFingerprintBase {
+  family: "jewelry";
+  jewelryType: string;
+  pairSymmetry?: boolean;
+  dropLength?: string;
+  chainType?: string;
+  settingType?: string;
+  stonePresent: boolean;
+  stoneType?: string;
+  constructionStyle: string;
+}
+
+export type ProductFingerprint =
+  | BagFingerprint
+  | WatchFingerprint
+  | BeltFingerprint
+  | JewelryFingerprint;
+
+// ── F7: Continuity World Tokens ──
+
+/** Concrete visual tokens for provider continuity. */
+export interface ContinuityWorldTokens {
+  backdrop: string;
+  lighting: string;
+  tonalTemperature: string;
+  styling: string;
+  modelTokens: string;
+}
+
+/** Named world preset. */
+export interface WorldPreset {
+  id: string;
+  label: string;
+  tokens: ContinuityWorldTokens;
 }
