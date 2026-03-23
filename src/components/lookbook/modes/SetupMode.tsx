@@ -38,6 +38,45 @@ interface SetupModeProps {
 
 const FORM_ID = "lookbook-campaign-form";
 
+// ── Resize image for API calls (AI doesn't need full resolution) ──
+
+const MAX_DIMENSION = 1024;
+
+async function resizeImageBlob(
+  blob: Blob,
+): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+
+      // Only resize if larger than max dimension
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        const scale = MAX_DIMENSION / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const base64 = dataUrl.split(",")[1];
+      resolve({ base64, mimeType: "image/jpeg" });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image for resizing"));
+    };
+    img.src = url;
+  });
+}
+
 // ── Lightweight product classifier ──
 
 async function classifyProductImage(
@@ -47,21 +86,12 @@ async function classifyProductImage(
     const blobRecord = await db.referenceBlobs.get(ref.id);
     if (!blobRecord) return null;
 
-    const buf = await blobRecord.blob.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
+    const { base64, mimeType } = await resizeImageBlob(blobRecord.blob);
 
     const res = await fetch("/api/classify-product", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        imageBase64: base64,
-        mimeType: ref.mimeType,
-      }),
+      body: JSON.stringify({ imageBase64: base64, mimeType }),
     });
 
     if (!res.ok) return null;
@@ -93,21 +123,12 @@ async function analyseStylingImage(
     const blobRecord = await db.referenceBlobs.get(ref.id);
     if (!blobRecord) return { data: null, error: "Could not load image from storage" };
 
-    const buf = await blobRecord.blob.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
+    const { base64, mimeType } = await resizeImageBlob(blobRecord.blob);
 
     const res = await fetch("/api/analyse-styling", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        imageBase64: base64,
-        mimeType: ref.mimeType,
-      }),
+      body: JSON.stringify({ imageBase64: base64, mimeType }),
     });
 
     if (!res.ok) {
