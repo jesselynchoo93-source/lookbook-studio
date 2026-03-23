@@ -86,7 +86,10 @@ If the image doesn't show a fashion product, return: {"family": "apparel", "spec
           ],
         },
       ],
-      maxOutputTokens: 128,
+      maxOutputTokens: 1024,
+      providerOptions: {
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      },
     });
 
     // Parse response - strip markdown fencing, extract JSON, remove trailing commas

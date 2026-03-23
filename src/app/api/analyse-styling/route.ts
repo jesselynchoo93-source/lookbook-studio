@@ -83,7 +83,10 @@ Respond with ONLY valid JSON. No markdown, no comments, no extra text.`;
           ],
         },
       ],
-      maxOutputTokens: 512,
+      maxOutputTokens: 2048,
+      providerOptions: {
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      },
     });
 
     // Strip markdown fencing, trailing commas, and any text before/after JSON
