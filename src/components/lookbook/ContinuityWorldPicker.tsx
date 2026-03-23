@@ -12,10 +12,10 @@ interface ContinuityWorldPickerProps {
 }
 
 const PRESET_DESCRIPTIONS: Record<string, string> = {
-  neutral_studio: "Clean, minimal. Even lighting, no mood bias.",
-  warm_editorial: "Warm tones, directional light. Fashion editorial feel.",
-  cool_modern: "Dark, cool tones. Architectural, contemporary.",
-  natural_light: "Daylight, organic textures. Relaxed, approachable.",
+  neutral_studio: "Clean, restrained, product-first",
+  warm_editorial: "Soft contrast, warm concrete, luxury tone",
+  cool_modern: "Architectural, sharper light, cooler mood",
+  natural_light: "Daylit, tactile, approachable",
 };
 
 export default function ContinuityWorldPicker({
@@ -65,7 +65,7 @@ export default function ContinuityWorldPicker({
           Continuity World
         </span>
         <p className="text-[10px] text-[--text-tertiary] mt-0.5">
-          Environment and lighting for all shots. Auto-derived if not selected.
+          Visual environment for all shots
         </p>
       </div>
 
@@ -80,7 +80,7 @@ export default function ContinuityWorldPicker({
               onClick={() => handlePresetSelect(preset.id)}
               className={`text-left px-3 py-2 rounded-lg border transition-colors ${
                 isActive
-                  ? "border-[--text-tertiary] bg-[--surface-inset]"
+                  ? "border-[--text-primary] bg-[--surface-inset] ring-1 ring-[--text-primary]/10"
                   : "border-[--border-subtle] hover:border-[--border-default] bg-transparent"
               }`}
             >
@@ -103,8 +103,11 @@ export default function ContinuityWorldPicker({
       {value && !hasProductRefs && (
         <div>
           <label className="text-[10px] text-[--text-tertiary] uppercase tracking-wider block mb-1">
-            Styling (model-only reference)
+            Outfit & Styling
           </label>
+          <p className="text-[10px] text-[--text-tertiary] mb-1.5">
+            Describes the model's outfit for consistency across shots
+          </p>
           <input
             type="text"
             className="w-full text-xs bg-[--surface-inset] border border-[--border-subtle] rounded-lg px-3 py-1.5 text-[--text-primary] placeholder-[--text-tertiary]"

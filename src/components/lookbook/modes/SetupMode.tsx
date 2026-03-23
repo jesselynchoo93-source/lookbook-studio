@@ -291,10 +291,10 @@ export default function SetupMode({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Section A: Reference Images (upload first) */}
+      {/* Section A: Reference Images + Product Truth + Brand Guidelines */}
       <div
         className="bg-[--surface-card] rounded-xl p-6"
-        style={{ boxShadow: "var(--shadow-card)" }}
+        style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
       >
         <h2 className="text-lg font-semibold text-[--text-primary] mb-4">
           Reference Images
@@ -310,145 +310,135 @@ export default function SetupMode({
           />
           <ReferenceTrustCopy />
         </div>
+
+        {/* Detected Product Truth (inline section) */}
+        {showExtractionPanel && fingerprintView === "extracted" && (
+          <div className="border-t border-[--border-subtle] pt-5 mt-5">
+            <ExtractedProductTruth
+              status={extractor.status}
+              fingerprint={extractor.fingerprint}
+              meta={extractor.meta}
+              error={extractor.error}
+              notes={extractor.notes}
+              onEdit={() => setFingerprintView("editing")}
+              onRerun={extractor.rerun}
+              onManualEntry={() => {
+                setFingerprintView("editing");
+                if (fingerprintMeta) {
+                  onFingerprintMetaChange({ ...fingerprintMeta, source: "manual" });
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {/* Manual fingerprint editing (inline section) */}
+        {showExtractionPanel && fingerprintView === "editing" && (
+          <div className="border-t border-[--border-subtle] pt-5 mt-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[11px] font-medium text-[--text-secondary] uppercase tracking-wider">
+                Product Fingerprint
+              </span>
+              {extractor.fingerprint && (
+                <button
+                  type="button"
+                  onClick={() => setFingerprintView("extracted")}
+                  className="text-[11px] px-2.5 py-1 rounded bg-[--surface-inset] border border-[--border-default] text-[--text-tertiary] hover:text-[--text-secondary] transition-colors"
+                >
+                  Back to detected
+                </button>
+              )}
+            </div>
+            <ProductFingerprintForm
+              family={liveFamily}
+              value={extractedFpRef.current ?? liveInputRef.current.productFingerprint}
+              onChange={handleManualFingerprintEdit}
+            />
+          </div>
+        )}
+
+        {/* Brand Guidelines (inline section) */}
+        {(references.styling.length > 0 || brandGuidelines) && (
+          <div className="border-t border-[--border-subtle] pt-5 mt-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-medium text-[--text-secondary] uppercase tracking-wider">
+                Brand Guidelines
+              </span>
+              {stylingAnalysed && !analysingStyling && (
+                <span className="text-[10px] text-[--text-tertiary] px-2 py-0.5 rounded-full bg-[--surface-inset] border border-[--border-subtle]">
+                  Auto-filled from styling ref
+                </span>
+              )}
+            </div>
+
+            {/* Loading state */}
+            {analysingStyling && (
+              <div className="flex items-center gap-3 py-4 px-3 bg-[--surface-inset] rounded-lg mb-3">
+                <div className="w-4 h-4 border-2 border-[--text-tertiary] border-t-transparent rounded-full animate-spin shrink-0" />
+                <div>
+                  <p className="text-sm text-[--text-secondary]">Analysing styling reference...</p>
+                  <p className="text-[11px] text-[--text-tertiary] mt-0.5">Extracting mood, lighting, and brand direction</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error state */}
+            {stylingError && !analysingStyling && (
+              <div className="flex items-center justify-between gap-3 py-3 px-3 bg-red-50 border border-red-200 rounded-lg mb-3">
+                <p className="text-xs text-red-700">{stylingError}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    analysedStylingRefIdRef.current = null;
+                    setStylingError(null);
+                    if (references.styling.length > 0) {
+                      const primary = references.styling.find((r) => r.isPrimary) ?? references.styling[0];
+                      setAnalysingStyling(true);
+                      analyseStylingImage(primary).then(({ data, error: err }) => {
+                        setAnalysingStyling(false);
+                        if (err) {
+                          setStylingError(err);
+                          return;
+                        }
+                        if (data) {
+                          analysedStylingRefIdRef.current = primary.id;
+                          const world = resolveWorldFromAnalysis(data);
+                          if (world) setAutoWorld(world);
+                          if (data.brandGuidelines) setBrandGuidelines(data.brandGuidelines);
+                          setStylingAnalysed(true);
+                        }
+                      });
+                    }
+                  }}
+                  className="shrink-0 text-[11px] px-2.5 py-1 rounded bg-white border border-red-200 text-red-700 hover:bg-red-50 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Textarea */}
+            {!analysingStyling && (
+              <>
+                <textarea
+                  value={brandGuidelines}
+                  onChange={(e) => setBrandGuidelines(e.target.value)}
+                  placeholder="e.g. warm earth tones, clean backgrounds, logo visible but not dominant"
+                  className="w-full bg-[--surface-inset] border border-[--border-subtle] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary] min-h-[72px] resize-y"
+                />
+                <p className="mt-1.5 text-[11px] text-[--text-tertiary]">
+                  Auto-extracted from styling reference. Edit to refine.
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Section B: Detected Product Truth (appears after image analysis) */}
-      {showExtractionPanel && fingerprintView === "extracted" && (
-        <div
-          className="bg-[--surface-card] rounded-xl p-6"
-          style={{ boxShadow: "var(--shadow-card)" }}
-        >
-          <ExtractedProductTruth
-            status={extractor.status}
-            fingerprint={extractor.fingerprint}
-            meta={extractor.meta}
-            error={extractor.error}
-            notes={extractor.notes}
-            onEdit={() => setFingerprintView("editing")}
-            onRerun={extractor.rerun}
-            onManualEntry={() => {
-              setFingerprintView("editing");
-              if (fingerprintMeta) {
-                onFingerprintMetaChange({ ...fingerprintMeta, source: "manual" });
-              }
-            }}
-          />
-        </div>
-      )}
-
-      {/* Section B alt: Manual fingerprint editing */}
-      {showExtractionPanel && fingerprintView === "editing" && (
-        <div
-          className="bg-[--surface-card] rounded-xl p-6"
-          style={{ boxShadow: "var(--shadow-card)" }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[--text-primary]">
-              Product Fingerprint
-            </h2>
-            {extractor.fingerprint && (
-              <button
-                type="button"
-                onClick={() => setFingerprintView("extracted")}
-                className="text-[11px] px-2.5 py-1 rounded bg-[--surface-inset] border border-[--border-default] text-[--text-tertiary] hover:text-[--text-secondary] transition-colors"
-              >
-                Back to detected
-              </button>
-            )}
-          </div>
-          <ProductFingerprintForm
-            family={liveFamily}
-            value={extractedFpRef.current ?? liveInputRef.current.productFingerprint}
-            onChange={handleManualFingerprintEdit}
-          />
-        </div>
-      )}
-
-      {/* Section C: Brand Guidelines (auto-filled from styling ref) */}
-      {(references.styling.length > 0 || brandGuidelines) && (
-        <div
-          className="bg-[--surface-card] rounded-xl p-6"
-          style={{ boxShadow: "var(--shadow-card)" }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium text-[--text-primary]">
-              Brand Guidelines
-            </h2>
-            {stylingAnalysed && !analysingStyling && (
-              <span className="text-[10px] text-[--text-tertiary] px-2 py-0.5 rounded-full bg-[--surface-inset] border border-[--border-subtle]">
-                Auto-filled from styling ref
-              </span>
-            )}
-          </div>
-
-          {/* Loading state */}
-          {analysingStyling && (
-            <div className="flex items-center gap-3 py-4 px-3 bg-[--surface-inset] rounded-lg mb-3">
-              <div className="w-4 h-4 border-2 border-[--text-tertiary] border-t-transparent rounded-full animate-spin shrink-0" />
-              <div>
-                <p className="text-sm text-[--text-secondary]">Analysing styling reference...</p>
-                <p className="text-[11px] text-[--text-tertiary] mt-0.5">Extracting mood, lighting, and brand direction</p>
-              </div>
-            </div>
-          )}
-
-          {/* Error state */}
-          {stylingError && !analysingStyling && (
-            <div className="flex items-center justify-between gap-3 py-3 px-3 bg-red-50 border border-red-200 rounded-lg mb-3">
-              <p className="text-xs text-red-700">{stylingError}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  analysedStylingRefIdRef.current = null;
-                  setStylingError(null);
-                  // Re-trigger by forcing a new ref check
-                  if (references.styling.length > 0) {
-                    const primary = references.styling.find((r) => r.isPrimary) ?? references.styling[0];
-                    setAnalysingStyling(true);
-                    analyseStylingImage(primary).then(({ data, error }) => {
-                      setAnalysingStyling(false);
-                      if (error) {
-                        setStylingError(error);
-                        return;
-                      }
-                      if (data) {
-                        analysedStylingRefIdRef.current = primary.id;
-                        const world = resolveWorldFromAnalysis(data);
-                        if (world) setAutoWorld(world);
-                        if (data.brandGuidelines) setBrandGuidelines(data.brandGuidelines);
-                        setStylingAnalysed(true);
-                      }
-                    });
-                  }
-                }}
-                className="shrink-0 text-[11px] px-2.5 py-1 rounded bg-white border border-red-200 text-red-700 hover:bg-red-50 transition-colors"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {/* Textarea (always visible, editable even during loading) */}
-          {!analysingStyling && (
-            <>
-              <textarea
-                value={brandGuidelines}
-                onChange={(e) => setBrandGuidelines(e.target.value)}
-                placeholder="Visual brand rules for this client, e.g. 'Maintain warm earth tones. Keep backgrounds clean and uncluttered. Logo must be visible but not dominant.'"
-                className="w-full bg-[--surface-inset] border border-[--border-subtle] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary] min-h-[72px] resize-y"
-              />
-              <p className="mt-1.5 text-[11px] text-[--text-tertiary]">
-                Describes the visual identity for this project. Auto-extracted from styling references, or write your own.
-              </p>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Section D: Creative Direction (auto-filled from classification) */}
+      {/* Section B: Creative Direction */}
       <div
         className="bg-[--surface-card] rounded-xl p-6"
-        style={{ boxShadow: "var(--shadow-card)" }}
+        style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-[--text-primary]">

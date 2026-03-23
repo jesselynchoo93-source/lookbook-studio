@@ -919,3 +919,53 @@ export interface WorldPreset {
   label: string;
   tokens: ContinuityWorldTokens;
 }
+
+// ── F8: Bag Shot Classification & Proof Zones ──
+
+/** Classifies a bag shot by its primary purpose. */
+export type BagShotClass =
+  | "proof_hero"
+  | "proof_profile"
+  | "proof_macro_construction"
+  | "proof_macro_attachment_or_brand_zone"
+  | "proof_open_top_or_capacity"
+  | "editorial_desire";
+
+/** Specific zones on a bag that can be proven in a shot. */
+export type BagProofZone =
+  | "silhouette"
+  | "handle_attachment"
+  | "closure"
+  | "panel_seam"
+  | "logo_zone"
+  | "opening_geometry"
+  | "interior"
+  | "hardware_finish"
+  | "leather_surface"
+  | "edge_finishing";
+
+/** Physical behavior constraint for a shot. */
+export interface PhysicalBehaviorConstraint {
+  zone: string;
+  behavior: string;
+  antiPattern: string;
+}
+
+/** Critic violation found during prompt review. */
+export type CriticSeverity = "error" | "warning";
+
+export interface CriticViolation {
+  severity: CriticSeverity;
+  code: string;
+  message: string;
+  /** If the critic can auto-fix, the replacement fragment. */
+  fix?: string;
+}
+
+/** F8: Extended provider prompt output with critic metadata. */
+export interface ProviderPromptOutputV2 extends ProviderPromptOutput {
+  shotClass?: BagShotClass;
+  criticViolations: CriticViolation[];
+  /** Whether the normalizer was applied. */
+  normalized: boolean;
+}

@@ -31,14 +31,12 @@ const SECTIONS: {
   supportsPrimary: boolean;
   maxFiles: number;
   badge?: string;
-  warning?: string;
 }[] = [
   {
     type: "model",
     title: "Model Reference",
     urgency: "recommended",
-    description:
-      "Upload the main face or model reference for this set. One clear, well-lit reference is ideal.",
+    description: "Face and identity for the set",
     supportsPrimary: true,
     maxFiles: 3,
   },
@@ -46,8 +44,7 @@ const SECTIONS: {
     type: "product",
     title: "Product References",
     urgency: "strongly_recommended",
-    description:
-      "Upload the product or garment images that every shot must match. Product accuracy is the foundation of a credible lookbook.",
+    description: "Source of truth for shape, hardware, and construction",
     badge: "Source of truth",
     supportsPrimary: true,
     maxFiles: 10,
@@ -56,11 +53,8 @@ const SECTIONS: {
     type: "styling",
     title: "Styling References",
     urgency: "optional",
-    description:
-      "Optional inspiration only. Use these to guide mood or composition, not product accuracy.",
+    description: "Mood and composition reference only",
     badge: "Inspiration only",
-    warning:
-      "Styling references do not affect product accuracy. They influence mood and composition only.",
     supportsPrimary: false,
     maxFiles: 6,
   },
@@ -217,8 +211,6 @@ function ReferenceSection({
   title,
   description,
   urgency,
-  badge,
-  warning,
   supportsPrimary,
   maxFiles,
   assets,
@@ -229,8 +221,6 @@ function ReferenceSection({
   title: string;
   description: string;
   urgency: SectionUrgency;
-  badge?: string;
-  warning?: string;
   supportsPrimary: boolean;
   maxFiles: number;
   assets: ReferenceAsset[];
@@ -241,20 +231,13 @@ function ReferenceSection({
   const atLimit = assets.length >= maxFiles;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
         <h4 className="text-sm font-medium text-[--text-primary]">{title}</h4>
         <UrgencyBadge urgency={urgency} />
-        {badge && (
-          <span className="text-[10px] text-[--text-tertiary] italic">{badge}</span>
-        )}
       </div>
 
-      <p className="text-xs text-[--text-tertiary]">{description}</p>
-
-      {warning && (
-        <p className="text-[10px] text-[--text-tertiary] italic">{warning}</p>
-      )}
+      <p className="text-[11px] text-[--text-tertiary]">{description}</p>
 
       {assets.length === 0 ? (
         <UploadZone onFiles={onAdd} />
@@ -299,26 +282,13 @@ export default function ReferencePanel({
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-base font-semibold text-[--text-primary] mb-1">
-          Reference Images
-        </h3>
-        <p className="text-xs text-[--text-tertiary]">
-          Upload your visual references before generating. Product references
-          are the most important; they define what must stay accurate across
-          every shot.
-        </p>
-      </div>
-
+    <div className="space-y-5">
       {SECTIONS.map((section) => (
         <ReferenceSection
           key={section.type}
           title={section.title}
           description={section.description}
           urgency={section.urgency}
-          badge={section.badge}
-          warning={section.warning}
           supportsPrimary={section.supportsPrimary}
           maxFiles={section.maxFiles}
           assets={assetsByType[section.type]}
