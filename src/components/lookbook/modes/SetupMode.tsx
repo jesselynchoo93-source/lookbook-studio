@@ -88,10 +88,10 @@ interface StylingAnalysis {
 
 async function analyseStylingImage(
   ref: ReferenceAsset,
-): Promise<StylingAnalysis | null> {
+): Promise<{ data: StylingAnalysis | null; error: string | null }> {
   try {
     const blobRecord = await db.referenceBlobs.get(ref.id);
-    if (!blobRecord) return null;
+    if (!blobRecord) return { data: null, error: "Could not load image from storage" };
 
     const buf = await blobRecord.blob.arrayBuffer();
     const bytes = new Uint8Array(buf);
@@ -110,10 +110,13 @@ async function analyseStylingImage(
       }),
     });
 
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      return { data: null, error: body.error || `API error ${res.status}` };
+    }
+    return { data: await res.json(), error: null };
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
 
@@ -185,6 +188,7 @@ export default function SetupMode({
   const [autoWorld, setAutoWorld] = useState<ContinuityWorldTokens | undefined>();
   const [brandGuidelines, setBrandGuidelines] = useState("");
   const [stylingAnalysed, setStylingAnalysed] = useState(false);
+  const [stylingError, setStylingError] = useState<string | null>(null);
   const analysedStylingRefIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -195,12 +199,17 @@ export default function SetupMode({
 
     setAnalysingStyling(true);
     setStylingAnalysed(false);
-    analyseStylingImage(primary).then((result) => {
+    setStylingError(null);
+    analyseStylingImage(primary).then(({ data, error }) => {
       setAnalysingStyling(false);
-      if (result) {
-        const world = resolveWorldFromAnalysis(result);
+      if (error) {
+        setStylingError(error);
+        return;
+      }
+      if (data) {
+        const world = resolveWorldFromAnalysis(data);
         if (world) setAutoWorld(world);
-        if (result.brandGuidelines) setBrandGuidelines(result.brandGuidelines);
+        if (data.brandGuidelines) setBrandGuidelines(data.brandGuidelines);
         setStylingAnalysed(true);
       }
     });
@@ -344,27 +353,74 @@ export default function SetupMode({
             <h2 className="text-sm font-medium text-[--text-primary]">
               Brand Guidelines
             </h2>
-            {analysingStyling && (
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 border-2 border-[--text-tertiary] border-t-transparent rounded-full animate-spin" />
-                <span className="text-[10px] text-[--text-tertiary]">Analysing styling...</span>
-              </div>
-            )}
             {stylingAnalysed && !analysingStyling && (
               <span className="text-[10px] text-[--text-tertiary] px-2 py-0.5 rounded-full bg-[--surface-inset] border border-[--border-subtle]">
                 Auto-filled from styling ref
               </span>
             )}
           </div>
-          <textarea
-            value={brandGuidelines}
-            onChange={(e) => setBrandGuidelines(e.target.value)}
-            placeholder="Visual brand rules for this client, e.g. 'Maintain warm earth tones. Keep backgrounds clean and uncluttered. Logo must be visible but not dominant.'"
-            className="w-full bg-[--surface-inset] border border-[--border-subtle] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary] min-h-[72px] resize-y"
-          />
-          <p className="mt-1.5 text-[11px] text-[--text-tertiary]">
-            Describes the visual identity for this project. Auto-extracted from styling references, or write your own.
-          </p>
+
+          {/* Loading state */}
+          {analysingStyling && (
+            <div className="flex items-center gap-3 py-4 px-3 bg-[--surface-inset] rounded-lg mb-3">
+              <div className="w-4 h-4 border-2 border-[--text-tertiary] border-t-transparent rounded-full animate-spin shrink-0" />
+              <div>
+                <p className="text-sm text-[--text-secondary]">Analysing styling reference...</p>
+                <p className="text-[11px] text-[--text-tertiary] mt-0.5">Extracting mood, lighting, and brand direction</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error state */}
+          {stylingError && !analysingStyling && (
+            <div className="flex items-center justify-between gap-3 py-3 px-3 bg-red-50 border border-red-200 rounded-lg mb-3">
+              <p className="text-xs text-red-700">{stylingError}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  analysedStylingRefIdRef.current = null;
+                  setStylingError(null);
+                  // Re-trigger by forcing a new ref check
+                  if (references.styling.length > 0) {
+                    const primary = references.styling.find((r) => r.isPrimary) ?? references.styling[0];
+                    setAnalysingStyling(true);
+                    analyseStylingImage(primary).then(({ data, error }) => {
+                      setAnalysingStyling(false);
+                      if (error) {
+                        setStylingError(error);
+                        return;
+                      }
+                      if (data) {
+                        analysedStylingRefIdRef.current = primary.id;
+                        const world = resolveWorldFromAnalysis(data);
+                        if (world) setAutoWorld(world);
+                        if (data.brandGuidelines) setBrandGuidelines(data.brandGuidelines);
+                        setStylingAnalysed(true);
+                      }
+                    });
+                  }
+                }}
+                className="shrink-0 text-[11px] px-2.5 py-1 rounded bg-white border border-red-200 text-red-700 hover:bg-red-50 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Textarea (always visible, editable even during loading) */}
+          {!analysingStyling && (
+            <>
+              <textarea
+                value={brandGuidelines}
+                onChange={(e) => setBrandGuidelines(e.target.value)}
+                placeholder="Visual brand rules for this client, e.g. 'Maintain warm earth tones. Keep backgrounds clean and uncluttered. Logo must be visible but not dominant.'"
+                className="w-full bg-[--surface-inset] border border-[--border-subtle] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary] min-h-[72px] resize-y"
+              />
+              <p className="mt-1.5 text-[11px] text-[--text-tertiary]">
+                Describes the visual identity for this project. Auto-extracted from styling references, or write your own.
+              </p>
+            </>
+          )}
         </div>
       )}
 
