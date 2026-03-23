@@ -12,18 +12,14 @@ import type {
   SettingsDriver,
   ProductFingerprint,
   ContinuityWorldTokens,
-  ReferenceAsset,
-  FingerprintMeta,
 } from "@/lib/lookbook/types";
 import type { RecommendedSettings } from "@/lib/lookbook/recommendSettings";
 import { getRecommendedSettings } from "@/lib/lookbook/recommendSettings";
 import { STARTER_PRESETS } from "@/lib/lookbook/starterPresets";
-import { useVisionExtractor } from "@/lib/lookbook/useVisionExtractor";
 import StarterPresetPicker from "./StarterPresetPicker";
 import ProductSelector from "./ProductSelector";
 import CampaignGoalSelector from "./CampaignGoalSelector";
 import ProductFingerprintForm from "./ProductFingerprintForm";
-import ExtractedProductTruth from "./ExtractedProductTruth";
 import ContinuityWorldPicker from "./ContinuityWorldPicker";
 
 interface CampaignFormProps {
@@ -32,14 +28,8 @@ interface CampaignFormProps {
   initialInput?: LookbookInput;
   /** HTML form id. When set, the internal submit button is hidden so an external button can use form={formId}. */
   formId?: string;
-  /** Project ID for blob lookups. */
-  projectId: string;
-  /** Product reference images (for auto-extraction). */
-  productReferences: ReferenceAsset[];
-  /** Existing extraction metadata from the project record. */
-  fingerprintMeta?: FingerprintMeta;
-  /** Called when extraction produces or updates metadata. */
-  onFingerprintMetaChange: (meta: FingerprintMeta) => void;
+  /** Called whenever the form input changes (for parent components that need live family/item). */
+  onInputChange?: (input: LookbookInput) => void;
 }
 
 const DEFAULT_INPUT: LookbookInput = {
@@ -58,18 +48,9 @@ export default function CampaignForm({
   onSubmit,
   initialInput,
   formId,
-  projectId,
-  productReferences,
-  fingerprintMeta,
-  onFingerprintMetaChange,
+  onInputChange,
 }: CampaignFormProps) {
   const [input, setInput] = useState<LookbookInput>(initialInput ?? DEFAULT_INPUT);
-
-  // ── Vision extraction toggle ──
-  // "extracted" = compact panel (default), "editing" = manual form
-  const [fingerprintView, setFingerprintView] = useState<"extracted" | "editing">(
-    fingerprintMeta?.source === "manual" ? "editing" : "extracted",
-  );
 
   // ── Settings driver: tracks what is currently controlling goal/logo/creativity ──
   const [settingsDriver, setSettingsDriver] = useState<SettingsDriver>(() => {
@@ -211,37 +192,6 @@ export default function CampaignForm({
     setInput(prev => ({ ...prev, productFingerprint: fp }));
   }, []);
 
-  // ── Vision extractor: auto-extraction of product fingerprint ──
-
-  const handleExtractedFingerprint = useCallback(
-    (fp: ProductFingerprint, meta: FingerprintMeta) => {
-      setInput((prev) => ({ ...prev, productFingerprint: fp }));
-      onFingerprintMetaChange(meta);
-    },
-    [onFingerprintMetaChange],
-  );
-
-  const extractor = useVisionExtractor({
-    projectId,
-    family: input.productFamily,
-    productReferences,
-    currentFingerprint: input.productFingerprint,
-    currentMeta: fingerprintMeta,
-    onFingerprint: handleExtractedFingerprint,
-    specificItem: input.specificItem || undefined,
-  });
-
-  // When user edits a field in the manual form after extraction, mark source as "edited"
-  const handleManualFingerprintEdit = useCallback(
-    (fp: ProductFingerprint | undefined) => {
-      setInput((prev) => ({ ...prev, productFingerprint: fp }));
-      if (fp && fingerprintMeta) {
-        onFingerprintMetaChange({ ...fingerprintMeta, source: "edited" });
-      }
-    },
-    [fingerprintMeta, onFingerprintMetaChange],
-  );
-
   const handleWorldChange = useCallback((world: ContinuityWorldTokens | undefined) => {
     setInput(prev => ({ ...prev, continuityWorld: world }));
   }, []);
@@ -261,6 +211,11 @@ export default function CampaignForm({
   const handleGenderChange = useCallback((v: GenderPresentation) => {
     setInput(prev => ({ ...prev, genderPresentation: v }));
   }, []);
+
+  // Notify parent of input changes (family, item, fingerprint)
+  useEffect(() => {
+    onInputChange?.(input);
+  }, [input, onInputChange]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -326,46 +281,12 @@ export default function CampaignForm({
         onKeepPreset={handleKeepPreset}
       />
 
-      {/* F7: Product Fingerprint (vision extraction or manual) */}
-      {fingerprintView === "extracted" ? (
-        <ExtractedProductTruth
-          status={extractor.status}
-          fingerprint={extractor.fingerprint}
-          meta={extractor.meta}
-          error={extractor.error}
-          notes={extractor.notes}
-          onEdit={() => setFingerprintView("editing")}
-          onRerun={extractor.rerun}
-          onManualEntry={() => {
-            setFingerprintView("editing");
-            if (fingerprintMeta) {
-              onFingerprintMetaChange({ ...fingerprintMeta, source: "manual" });
-            }
-          }}
-        />
-      ) : (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-[--text-secondary] uppercase tracking-wider">
-              Product Fingerprint
-            </span>
-            {extractor.fingerprint && (
-              <button
-                type="button"
-                onClick={() => setFingerprintView("extracted")}
-                className="text-[10px] px-2 py-1 rounded bg-[--surface-card] border border-[--border-default] text-[--text-tertiary] hover:text-[--text-secondary] transition-colors"
-              >
-                Back to detected
-              </button>
-            )}
-          </div>
-          <ProductFingerprintForm
-            family={input.productFamily}
-            value={input.productFingerprint}
-            onChange={handleManualFingerprintEdit}
-          />
-        </div>
-      )}
+      {/* F7: Product Fingerprint (manual fallback, shown when editing) */}
+      <ProductFingerprintForm
+        family={input.productFamily}
+        value={input.productFingerprint}
+        onChange={handleFingerprintChange}
+      />
 
       {/* F7: Continuity World */}
       <ContinuityWorldPicker
