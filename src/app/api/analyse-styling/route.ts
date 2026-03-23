@@ -4,7 +4,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 /**
  * Styling reference analyser.
- * Uses Gemini 2.0 Flash to extract mood, lighting, and brand direction
+ * Uses Gemini 2.5 Flash to extract mood, lighting, and brand direction
  * from a styling reference image. Auto-derives Continuity World settings
  * and brand guidelines.
  *
@@ -62,7 +62,7 @@ worldPreset rules:
 Respond with ONLY valid JSON. No markdown fencing.`;
 
     const { text } = await generateText({
-      model: google("gemini-2.0-flash"),
+      model: google("gemini-2.5-flash"),
       system: systemPrompt,
       messages: [
         {

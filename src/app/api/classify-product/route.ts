@@ -4,7 +4,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 /**
  * Lightweight product classification endpoint.
- * Uses Gemini 2.0 Flash (cheapest vision model) to detect product family
+ * Uses Gemini 2.5 Flash (cheapest vision model) to detect product family
  * and specific item from an uploaded image. Runs before fingerprint extraction.
  *
  * Cost: ~$0.0001-0.0005 per call (8-10x cheaper than Haiku).
@@ -68,7 +68,7 @@ confidence is "high" if you're certain, "medium" if somewhat unsure, "low" if gu
 If the image doesn't show a fashion product, return: {"family": "apparel", "specificItem": "", "confidence": "low"}`;
 
     const { text } = await generateText({
-      model: google("gemini-2.0-flash"),
+      model: google("gemini-2.5-flash"),
       system: systemPrompt,
       messages: [
         {
