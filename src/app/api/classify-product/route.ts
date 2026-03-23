@@ -89,8 +89,11 @@ If the image doesn't show a fashion product, return: {"family": "apparel", "spec
       maxOutputTokens: 128,
     });
 
-    // Parse response
-    const cleaned = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+    // Parse response - strip markdown fencing, extract JSON, remove trailing commas
+    let cleaned = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) cleaned = jsonMatch[0];
+    cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
     const result = JSON.parse(cleaned);
 
     // Validate family

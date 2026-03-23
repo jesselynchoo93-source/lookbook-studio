@@ -38,28 +38,31 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `You are a fashion photography art director analysing a styling reference image.
 
-Extract the visual mood and brand direction from this image. Return a JSON object with:
+Extract the visual mood and brand direction from this image.
 
-{
-  "worldPreset": "neutral_studio" | "warm_editorial" | "cool_modern" | "natural_light" | null,
-  "worldTokens": {
-    "backdrop": "brief description of background/setting",
-    "lighting": "brief description of lighting setup and quality",
-    "tonalTemperature": "warm" | "cool" | "neutral" | "warm neutral" | "cool neutral" | "warm daylight",
-    "styling": "brief wardrobe/styling direction"
-  },
-  "brandGuidelines": "2-4 concise sentences describing the visual brand rules visible in this image. Focus on: colour palette, aesthetic (minimalist, editorial, streetwear, luxury), mood (relaxed, commanding, aspirational), composition preferences, and any consistent visual patterns. Write as instructions, e.g. 'Maintain warm earth tones. Keep backgrounds clean and uncluttered.'",
-  "confidence": "high" | "medium" | "low"
-}
+Return a JSON object with these exact fields:
 
-worldPreset rules:
-- "neutral_studio": clean grey/white backdrop, even lighting, no mood bias
-- "warm_editorial": warm tones, directional light, fashion editorial feel
-- "cool_modern": dark/cool tones, hard light, architectural/contemporary
-- "natural_light": daylight, organic textures, relaxed and approachable
-- null: if the image doesn't clearly match any preset
+worldPreset: one of "neutral_studio", "warm_editorial", "cool_modern", "natural_light", or null.
+- "neutral_studio" = clean grey/white backdrop, even lighting, no mood bias
+- "warm_editorial" = warm tones, directional light, fashion editorial feel
+- "cool_modern" = dark/cool tones, hard light, architectural/contemporary
+- "natural_light" = daylight, organic textures, relaxed and approachable
+- null = if the image doesn't clearly match any preset
 
-Respond with ONLY valid JSON. No markdown fencing.`;
+worldTokens: object with these string fields:
+- backdrop: brief description of background/setting
+- lighting: brief description of lighting setup and quality
+- tonalTemperature: one of "warm", "cool", "neutral", "warm neutral", "cool neutral", "warm daylight"
+- styling: brief wardrobe/styling direction
+
+brandGuidelines: 2-4 concise sentences describing the visual brand rules. Focus on colour palette, aesthetic, mood, composition. Write as instructions, e.g. "Maintain warm earth tones. Keep backgrounds clean."
+
+confidence: one of "high", "medium", "low"
+
+Example response:
+{"worldPreset":"warm_editorial","worldTokens":{"backdrop":"warm concrete wall","lighting":"directional key light, soft warm","tonalTemperature":"warm","styling":"earth tones, tailored"},"brandGuidelines":"Maintain warm earth tones throughout. Keep backgrounds clean and textured. Favour directional lighting with soft shadows.","confidence":"high"}
+
+Respond with ONLY valid JSON. No markdown, no comments, no extra text.`;
 
     const { text } = await generateText({
       model: google("gemini-2.5-flash"),
@@ -83,7 +86,13 @@ Respond with ONLY valid JSON. No markdown fencing.`;
       maxOutputTokens: 512,
     });
 
-    const cleaned = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+    // Strip markdown fencing, trailing commas, and any text before/after JSON
+    let cleaned = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+    // Extract JSON object if surrounded by other text
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) cleaned = jsonMatch[0];
+    // Remove trailing commas before } or ]
+    cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
     const result = JSON.parse(cleaned);
 
     return NextResponse.json({
