@@ -2,7 +2,11 @@
 
 /**
  * Compact "Detected Product Truth" panel.
- * Shows extracted fingerprint attributes in a key-value layout.
+ * Shows extracted fingerprint attributes in a layered layout:
+ *   Layer 1: Header (confidence badge + actions)
+ *   Layer 2: Core summary (silhouette, handles, closure, material, hardware)
+ *   Layer 3: Secondary details (logo, exclusions, reference observations)
+ *
  * States: analysing / ready / error.
  * Actions: Edit, Re-run, Enter manually (on error).
  */
@@ -28,77 +32,100 @@ interface ExtractedProductTruthProps {
   onManualEntry: () => void;
 }
 
-// ── Attribute rows by family ──
+// ── Core attributes by family (primary identity) ──
 
-function getBagAttributes(fp: BagFingerprint): [string, string][] {
+function getBagCore(fp: BagFingerprint): [string, string][] {
   return [
     ["Silhouette", `${fp.silhouetteShape} ${fp.silhouettePrimary}`],
-    ["Handles", `${fp.handleCount} ${fp.handleType}${fp.handleAttachment ? `, ${fp.handleAttachment} attachment` : ""}`],
+    ["Handles", `${fp.handleCount} ${fp.handleType}${fp.handleAttachment ? `, ${fp.handleAttachment}` : ""}`],
     ["Closure", fp.closureType],
-    ["Construction", fp.constructionStyle],
-    ...(fp.strapPresent && fp.strapType ? [["Strap", fp.strapType] as [string, string]] : []),
+    ["Material", `${fp.materialFinish} ${fp.materialColour}`],
+    ["Hardware", fp.hardwareFinish],
   ];
 }
 
-function getWatchAttributes(fp: WatchFingerprint): [string, string][] {
+function getWatchCore(fp: WatchFingerprint): [string, string][] {
   return [
     ["Case", `${fp.caseShape} ${fp.caseSize}`],
     ["Dial", `${fp.dialColour} ${fp.dialType}`],
     ["Bezel", fp.bezelType],
     ["Strap", `${fp.strapColour} ${fp.strapType}`],
-    ["Crown", fp.crownPosition],
-    ...(fp.complicationCount > 0 ? [["Complications", String(fp.complicationCount)] as [string, string]] : []),
+    ["Material", `${fp.materialFinish} ${fp.materialColour}`],
+    ["Hardware", fp.hardwareFinish],
   ];
 }
 
-function getBeltAttributes(fp: BeltFingerprint): [string, string][] {
+function getBeltCore(fp: BeltFingerprint): [string, string][] {
   return [
     ["Width", fp.beltWidth],
     ["Buckle", `${fp.buckleShape} ${fp.buckleType}`],
     ["Tip", fp.tipStyle],
-    ["Construction", fp.constructionStyle],
-  ];
-}
-
-function getJewelryAttributes(fp: JewelryFingerprint): [string, string][] {
-  return [
-    ["Type", fp.jewelryType],
-    ["Construction", fp.constructionStyle],
-    ...(fp.chainType ? [["Chain", fp.chainType] as [string, string]] : []),
-    ...(fp.settingType ? [["Setting", fp.settingType] as [string, string]] : []),
-    ...(fp.stonePresent && fp.stoneType ? [["Stone", fp.stoneType] as [string, string]] : []),
-    ...(fp.dropLength ? [["Drop", fp.dropLength] as [string, string]] : []),
-  ];
-}
-
-function getFamilyAttributes(fp: ProductFingerprint): [string, string][] {
-  switch (fp.family) {
-    case "bags":
-      return getBagAttributes(fp);
-    case "watches":
-      return getWatchAttributes(fp);
-    case "belts":
-      return getBeltAttributes(fp);
-    case "jewelry":
-      return getJewelryAttributes(fp);
-  }
-}
-
-function getCommonAttributes(fp: ProductFingerprint): [string, string][] {
-  const rows: [string, string][] = [
     ["Material", `${fp.materialFinish} ${fp.materialColour}`],
     ["Hardware", fp.hardwareFinish],
   ];
-  if (fp.logoPlacement && fp.logoScale !== "none") {
-    rows.push(["Logo", `${fp.logoStyle} ${fp.logoScale}, ${fp.logoPlacement}`]);
-  }
-  if (fp.forbiddenElements.length > 0) {
-    rows.push(["Exclusions", fp.forbiddenElements.map((e) => `no ${e}`).join(", ")]);
-  }
-  if (fp.additionalNotes) {
-    rows.push(["Notes", fp.additionalNotes]);
-  }
+}
+
+function getJewelryCore(fp: JewelryFingerprint): [string, string][] {
+  const rows: [string, string][] = [
+    ["Type", fp.jewelryType],
+    ["Construction", fp.constructionStyle],
+  ];
+  if (fp.chainType) rows.push(["Chain", fp.chainType]);
+  if (fp.settingType) rows.push(["Setting", fp.settingType]);
+  if (fp.stonePresent && fp.stoneType) rows.push(["Stone", fp.stoneType]);
+  rows.push(
+    ["Material", `${fp.materialFinish} ${fp.materialColour}`],
+    ["Hardware", fp.hardwareFinish],
+  );
   return rows;
+}
+
+function getCoreAttributes(fp: ProductFingerprint): [string, string][] {
+  switch (fp.family) {
+    case "bags": return getBagCore(fp);
+    case "watches": return getWatchCore(fp);
+    case "belts": return getBeltCore(fp);
+    case "jewelry": return getJewelryCore(fp);
+  }
+}
+
+// ── Secondary details ──
+
+interface SecondaryDetails {
+  construction?: string;
+  strap?: string;
+  logo?: string;
+  drop?: string;
+  crown?: string;
+  complications?: string;
+}
+
+function getSecondaryDetails(fp: ProductFingerprint): SecondaryDetails {
+  const details: SecondaryDetails = {};
+
+  if (fp.family === "bags") {
+    const bag = fp as BagFingerprint;
+    details.construction = bag.constructionStyle;
+    if (bag.strapPresent && bag.strapType) details.strap = bag.strapType;
+  }
+  if (fp.family === "watches") {
+    const w = fp as WatchFingerprint;
+    details.crown = w.crownPosition;
+    if (w.complicationCount > 0) details.complications = String(w.complicationCount);
+  }
+  if (fp.family === "belts") {
+    details.construction = (fp as BeltFingerprint).constructionStyle;
+  }
+  if (fp.family === "jewelry") {
+    const j = fp as JewelryFingerprint;
+    if (j.dropLength) details.drop = j.dropLength;
+  }
+
+  if (fp.logoScale !== "none" && fp.logoPlacement) {
+    details.logo = `${fp.logoStyle} ${fp.logoScale}, ${fp.logoPlacement}`;
+  }
+
+  return details;
 }
 
 // ── Confidence badge ──
@@ -111,7 +138,7 @@ function ConfidenceBadge({ confidence }: { confidence: "high" | "medium" | "low"
   };
   const labels = {
     high: "High confidence",
-    medium: "Medium confidence",
+    medium: "Review suggested",
     low: "Low confidence",
   };
   return (
@@ -136,13 +163,13 @@ export default function ExtractedProductTruth({
   // ── Analysing state ──
   if (status === "analysing") {
     return (
-      <div className="bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-[--text-secondary] uppercase tracking-wider">
             Detected Product Truth
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 py-2">
           <div className="w-4 h-4 border-2 border-[--text-tertiary] border-t-transparent rounded-full animate-spin" />
           <span className="text-sm text-[--text-tertiary]">Analysing reference...</span>
         </div>
@@ -153,13 +180,13 @@ export default function ExtractedProductTruth({
   // ── Error state ──
   if (status === "error") {
     return (
-      <div className="bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-[--text-secondary] uppercase tracking-wider">
             Detected Product Truth
           </span>
         </div>
-        <p className="text-sm text-[--text-tertiary] mb-3">
+        <p className="text-sm text-[--text-tertiary]">
           Could not detect product attributes confidently.
           {error && <span className="block text-xs text-[--status-error-text] mt-1">{error}</span>}
         </p>
@@ -186,15 +213,24 @@ export default function ExtractedProductTruth({
     return null;
   }
 
-  // ── Ready state ──
-  const familyRows = getFamilyAttributes(fingerprint);
-  const commonRows = getCommonAttributes(fingerprint);
-  const allRows = [...familyRows, ...commonRows];
+  // ── Ready state: 3-layer layout ──
+  const coreRows = getCoreAttributes(fingerprint);
+  const secondary = getSecondaryDetails(fingerprint);
+  const exclusions = fingerprint.forbiddenElements;
+  const hasSecondary =
+    secondary.construction ||
+    secondary.strap ||
+    secondary.logo ||
+    secondary.drop ||
+    secondary.crown ||
+    secondary.complications ||
+    exclusions.length > 0 ||
+    notes.length > 0;
 
   return (
-    <div className="bg-[--surface-inset] border border-[--border-subtle] rounded-lg p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+    <div className="space-y-4">
+      {/* ── Layer 1: Header ── */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-medium text-[--text-secondary] uppercase tracking-wider">
             Detected Product Truth
@@ -217,24 +253,95 @@ export default function ExtractedProductTruth({
         </div>
       </div>
 
-      {/* Attribute grid */}
-      <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5">
-        {allRows.map(([label, value]) => (
+      {/* ── Layer 2: Core product identity ── */}
+      <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+        {coreRows.map(([label, value]) => (
           <div key={label} className="contents">
-            <span className="text-[11px] text-[--text-tertiary] whitespace-nowrap">
+            <span className="text-[11px] text-[--text-tertiary] whitespace-nowrap py-0.5">
               {label}
             </span>
-            <span className="text-[11px] text-[--text-secondary]">{value}</span>
+            <span className="text-[11px] text-[--text-primary] py-0.5">{value}</span>
           </div>
         ))}
       </div>
 
-      {/* Notes/warnings */}
-      {notes.length > 0 && (
-        <div className="mt-3 pt-2 border-t border-[--border-subtle]">
-          {notes.map((note, i) => (
-            <p key={i} className="text-[10px] text-[--text-tertiary]">{note}</p>
-          ))}
+      {/* ── Layer 3: Secondary details ── */}
+      {hasSecondary && (
+        <div className="pt-3 border-t border-[--border-subtle] space-y-3">
+          {/* Extra attributes (construction, strap, logo, etc.) */}
+          {(secondary.construction || secondary.strap || secondary.logo || secondary.crown || secondary.complications || secondary.drop) && (
+            <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+              {secondary.construction && (
+                <div className="contents">
+                  <span className="text-[11px] text-[--text-tertiary] py-0.5">Construction</span>
+                  <span className="text-[11px] text-[--text-secondary] py-0.5">{secondary.construction}</span>
+                </div>
+              )}
+              {secondary.strap && (
+                <div className="contents">
+                  <span className="text-[11px] text-[--text-tertiary] py-0.5">Strap</span>
+                  <span className="text-[11px] text-[--text-secondary] py-0.5">{secondary.strap}</span>
+                </div>
+              )}
+              {secondary.logo && (
+                <div className="contents">
+                  <span className="text-[11px] text-[--text-tertiary] py-0.5">Logo</span>
+                  <span className="text-[11px] text-[--text-secondary] py-0.5">{secondary.logo}</span>
+                </div>
+              )}
+              {secondary.crown && (
+                <div className="contents">
+                  <span className="text-[11px] text-[--text-tertiary] py-0.5">Crown</span>
+                  <span className="text-[11px] text-[--text-secondary] py-0.5">{secondary.crown}</span>
+                </div>
+              )}
+              {secondary.complications && (
+                <div className="contents">
+                  <span className="text-[11px] text-[--text-tertiary] py-0.5">Complications</span>
+                  <span className="text-[11px] text-[--text-secondary] py-0.5">{secondary.complications}</span>
+                </div>
+              )}
+              {secondary.drop && (
+                <div className="contents">
+                  <span className="text-[11px] text-[--text-tertiary] py-0.5">Drop</span>
+                  <span className="text-[11px] text-[--text-secondary] py-0.5">{secondary.drop}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Exclusions as pill chips */}
+          {exclusions.length > 0 && (
+            <div>
+              <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider block mb-1.5">
+                Exclusions
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {exclusions.map((item) => (
+                  <span
+                    key={item}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/8 text-red-400/90 border border-red-500/15"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reference observations */}
+          {notes.length > 0 && (
+            <div>
+              <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider block mb-1">
+                Reference observations
+              </span>
+              <div className="space-y-0.5">
+                {notes.map((note, i) => (
+                  <p key={i} className="text-[10px] text-[--text-tertiary] leading-relaxed">{note}</p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

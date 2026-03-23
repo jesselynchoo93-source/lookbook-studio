@@ -122,6 +122,7 @@ export default function SetupMode({
           initialInput={initialInput}
           formId={FORM_ID}
           onInputChange={handleInputChange}
+          hasProductRefs={hasProductRefs}
         />
       </div>
 

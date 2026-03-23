@@ -8,7 +8,15 @@
  * Also provides family drift negatives (Layer 5 tier 2).
  */
 
-import type { ProductFamily, LookbookInput } from "./types";
+import type {
+  ProductFamily,
+  LookbookInput,
+  ProductFingerprint,
+  BagFingerprint,
+  WatchFingerprint,
+  BeltFingerprint,
+  JewelryFingerprint,
+} from "./types";
 
 // ── Layer 2: Product Truth ──
 // Invariant physical properties that must be consistent across all shots.
@@ -353,8 +361,85 @@ function findItemTruthOverride(input: LookbookInput): ItemTruthOverride | null {
   );
 }
 
+// ── Fingerprint-Specific Product Truth ──
+// When a ProductFingerprint exists (from vision extraction or manual entry),
+// build a concrete truth lock with actual product attributes instead of
+// generic family placeholders.
+
+function buildFingerprintTruth(fp: ProductFingerprint): string {
+  const parts: string[] = [];
+
+  switch (fp.family) {
+    case "bags": {
+      const bag = fp as BagFingerprint;
+      parts.push(
+        `${bag.silhouetteShape} ${bag.silhouettePrimary} silhouette is fixed.`,
+        `${bag.handleCount} ${bag.handleType} handle(s)${bag.handleAttachment ? ` with ${bag.handleAttachment} attachment` : ""}, consistent across all shots.`,
+        `Closure: ${bag.closureType}. Construction: ${bag.constructionStyle}.`,
+      );
+      if (bag.strapPresent && bag.strapType) {
+        parts.push(`Strap: ${bag.strapType}, attachment points do not change.`);
+      }
+      break;
+    }
+    case "watches": {
+      const w = fp as WatchFingerprint;
+      parts.push(
+        `${w.caseShape} ${w.caseSize} case is fixed.`,
+        `Dial: ${w.dialColour} ${w.dialType}. Bezel: ${w.bezelType}.`,
+        `Strap: ${w.strapColour} ${w.strapType}, consistent across all shots.`,
+        `Crown at ${w.crownPosition}.`,
+      );
+      if (w.complicationCount > 0) {
+        parts.push(`${w.complicationCount} complication(s), layout does not change.`);
+      }
+      break;
+    }
+    case "belts": {
+      const b = fp as BeltFingerprint;
+      parts.push(
+        `${b.beltWidth} width belt is fixed.`,
+        `Buckle: ${b.buckleShape} ${b.buckleType}. Tip: ${b.tipStyle}.`,
+        `Construction: ${b.constructionStyle}, consistent across all shots.`,
+      );
+      break;
+    }
+    case "jewelry": {
+      const j = fp as JewelryFingerprint;
+      parts.push(
+        `${j.jewelryType}, ${j.constructionStyle} construction is fixed.`,
+      );
+      if (j.chainType) parts.push(`Chain: ${j.chainType}.`);
+      if (j.settingType) parts.push(`Setting: ${j.settingType}.`);
+      if (j.stonePresent && j.stoneType) parts.push(`Stone: ${j.stoneType}, count and cut do not change.`);
+      if (j.dropLength) parts.push(`Drop: ${j.dropLength}.`);
+      break;
+    }
+  }
+
+  // Common attributes
+  parts.push(
+    `Material: ${fp.materialFinish} ${fp.materialColour}.`,
+    `Hardware: ${fp.hardwareFinish} finish, consistent across all shots.`,
+  );
+  if (fp.logoScale !== "none" && fp.logoPlacement) {
+    parts.push(`Logo: ${fp.logoStyle} ${fp.logoScale} at ${fp.logoPlacement}, does not move.`);
+  }
+  if (fp.forbiddenElements.length > 0) {
+    parts.push(`Must NOT appear: ${fp.forbiddenElements.join(", ")}.`);
+  }
+
+  return parts.join(" ");
+}
+
 /** Resolve the product truth lock text for Layer 2. */
 export function resolveProductTruth(input: LookbookInput): string {
+  // When a fingerprint exists, use concrete extracted attributes
+  if (input.productFingerprint) {
+    return buildFingerprintTruth(input.productFingerprint);
+  }
+
+  // Fallback: generic family-level truth
   const family = FAMILY_PRODUCT_TRUTH[input.productFamily];
   const override = findItemTruthOverride(input);
   let truth = family.truthLock;

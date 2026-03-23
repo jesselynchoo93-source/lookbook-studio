@@ -30,6 +30,8 @@ interface CampaignFormProps {
   formId?: string;
   /** Called whenever the form input changes (for parent components that need live family/item). */
   onInputChange?: (input: LookbookInput) => void;
+  /** When true, hides model-only styling field in Continuity World (product refs provide context). */
+  hasProductRefs?: boolean;
 }
 
 const DEFAULT_INPUT: LookbookInput = {
@@ -49,6 +51,7 @@ export default function CampaignForm({
   initialInput,
   formId,
   onInputChange,
+  hasProductRefs,
 }: CampaignFormProps) {
   const [input, setInput] = useState<LookbookInput>(initialInput ?? DEFAULT_INPUT);
 
@@ -292,6 +295,7 @@ export default function CampaignForm({
       <ContinuityWorldPicker
         value={input.continuityWorld}
         onChange={handleWorldChange}
+        hasProductRefs={hasProductRefs}
       />
 
       {/* Submit (hidden when formId is set, allowing external submit button) */}

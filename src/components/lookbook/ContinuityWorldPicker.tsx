@@ -7,6 +7,8 @@ import { WORLD_PRESETS } from "@/lib/lookbook/providerCompiler";
 interface ContinuityWorldPickerProps {
   value?: ContinuityWorldTokens;
   onChange: (world: ContinuityWorldTokens | undefined) => void;
+  /** When true, hides the model-only styling field (product refs provide styling context). */
+  hasProductRefs?: boolean;
 }
 
 const PRESET_DESCRIPTIONS: Record<string, string> = {
@@ -19,6 +21,7 @@ const PRESET_DESCRIPTIONS: Record<string, string> = {
 export default function ContinuityWorldPicker({
   value,
   onChange,
+  hasProductRefs,
 }: ContinuityWorldPickerProps) {
   const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>(() => {
     if (!value) return undefined;
@@ -58,11 +61,11 @@ export default function ContinuityWorldPicker({
   return (
     <div className="space-y-3">
       <div>
-        <span className="text-sm font-medium text-[--text-primary]">
+        <span className="text-xs font-medium text-[--text-secondary]">
           Continuity World
         </span>
         <p className="text-[10px] text-[--text-tertiary] mt-0.5">
-          Sets the environment, lighting, and tone for all shots. Auto-derived from DNA if not selected.
+          Environment and lighting for all shots. Auto-derived if not selected.
         </p>
       </div>
 
@@ -75,14 +78,14 @@ export default function ContinuityWorldPicker({
               key={preset.id}
               type="button"
               onClick={() => handlePresetSelect(preset.id)}
-              className={`text-left p-3 rounded-lg border transition-colors ${
+              className={`text-left px-3 py-2 rounded-lg border transition-colors ${
                 isActive
-                  ? "border-[--text-primary] bg-[--surface-inset]"
-                  : "border-[--border-default] hover:border-[--text-tertiary] bg-[--surface-card]"
+                  ? "border-[--text-tertiary] bg-[--surface-inset]"
+                  : "border-[--border-subtle] hover:border-[--border-default] bg-transparent"
               }`}
             >
               <span
-                className={`text-xs font-medium block ${
+                className={`text-[11px] font-medium block ${
                   isActive ? "text-[--text-primary]" : "text-[--text-secondary]"
                 }`}
               >
@@ -96,15 +99,15 @@ export default function ContinuityWorldPicker({
         })}
       </div>
 
-      {/* Styling field (for Case B: model-only reference) */}
-      {value && (
+      {/* Styling field: hidden when product refs exist (product refs provide styling context) */}
+      {value && !hasProductRefs && (
         <div>
           <label className="text-[10px] text-[--text-tertiary] uppercase tracking-wider block mb-1">
-            Styling (for model-only reference, leave blank if product ref uploaded)
+            Styling (model-only reference)
           </label>
           <input
             type="text"
-            className="w-full text-sm bg-[--surface-inset] border border-[--border-default] rounded-lg px-3 py-2 text-[--text-primary] placeholder-[--text-tertiary]"
+            className="w-full text-xs bg-[--surface-inset] border border-[--border-subtle] rounded-lg px-3 py-1.5 text-[--text-primary] placeholder-[--text-tertiary]"
             placeholder="charcoal wool overcoat, black turtleneck, dark trousers..."
             value={value.styling || ""}
             onChange={(e) => handleOverrideField("styling", e.target.value)}
