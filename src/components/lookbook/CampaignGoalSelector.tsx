@@ -77,7 +77,6 @@ interface CampaignGoalSelectorProps {
   gender: GenderPresentation;
   logo: LogoVisibilityPriority;
   creativity: CreativityLevel;
-  notes: string;
   productFamily: ProductFamily;
   specificItem?: string;
   settingsDriver: SettingsDriver;
@@ -88,7 +87,6 @@ interface CampaignGoalSelectorProps {
   onGenderChange: (v: GenderPresentation) => void;
   onLogoChange: (v: LogoVisibilityPriority) => void;
   onCreativityChange: (v: CreativityLevel) => void;
-  onNotesChange: (v: string) => void;
   onApplyRecommendation: (rec: RecommendedSettings) => void;
   onKeepPreset: () => void;
 }
@@ -278,7 +276,6 @@ export default function CampaignGoalSelector({
   gender,
   logo,
   creativity,
-  notes,
   productFamily,
   specificItem,
   settingsDriver,
@@ -289,7 +286,6 @@ export default function CampaignGoalSelector({
   onGenderChange,
   onLogoChange,
   onCreativityChange,
-  onNotesChange,
   onApplyRecommendation,
   onKeepPreset,
 }: CampaignGoalSelectorProps) {
@@ -402,20 +398,6 @@ export default function CampaignGoalSelector({
 
       {/* Warnings for risky combinations */}
       <WarningList warnings={warnings} />
-
-      {/* Notes */}
-      <div>
-        <label className="block text-sm font-medium text-[--text-primary] mb-1">
-          Notes (optional)
-        </label>
-        <textarea
-          value={notes}
-          onChange={(e) => onNotesChange(e.target.value)}
-          placeholder="e.g. 'Focus on the back panel detail' or 'Model should feel relaxed, not stiff'"
-          className="w-full bg-[--surface-card] border border-[--border-default] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary] min-h-[60px] resize-y"
-        />
-        <p className="mt-1 text-xs text-[--text-tertiary]">Any specific direction or constraints for this lookbook.</p>
-      </div>
     </div>
   );
 }

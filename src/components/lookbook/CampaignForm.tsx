@@ -40,6 +40,10 @@ interface CampaignFormProps {
   hasProductRefs?: boolean;
   /** Auto-fill family and item from image classification. Updates form when changed. */
   classifiedProduct?: ClassifiedProduct;
+  /** Auto-fill Continuity World from styling analysis. */
+  autoWorld?: ContinuityWorldTokens;
+  /** Auto-fill notes (brand guidelines) from styling analysis. */
+  brandGuidelines?: string;
 }
 
 const DEFAULT_INPUT: LookbookInput = {
@@ -61,6 +65,8 @@ export default function CampaignForm({
   onInputChange,
   hasProductRefs,
   classifiedProduct,
+  autoWorld,
+  brandGuidelines,
 }: CampaignFormProps) {
   const [input, setInput] = useState<LookbookInput>(initialInput ?? DEFAULT_INPUT);
 
@@ -80,6 +86,24 @@ export default function CampaignForm({
       productFingerprint: undefined, // reset fingerprint when family changes
     }));
   }, [classifiedProduct]);
+
+  // ── Auto-fill Continuity World from styling analysis ──
+  const prevAutoWorldRef = useRef<ContinuityWorldTokens | undefined>(undefined);
+  useEffect(() => {
+    if (!autoWorld) return;
+    if (prevAutoWorldRef.current === autoWorld) return;
+    prevAutoWorldRef.current = autoWorld;
+    setInput(prev => ({ ...prev, continuityWorld: autoWorld }));
+  }, [autoWorld]);
+
+  // ── Auto-fill notes (brand guidelines) from styling analysis ──
+  const prevBrandGuidelinesRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (brandGuidelines === undefined) return;
+    if (prevBrandGuidelinesRef.current === brandGuidelines) return;
+    prevBrandGuidelinesRef.current = brandGuidelines;
+    setInput(prev => ({ ...prev, notes: brandGuidelines }));
+  }, [brandGuidelines]);
 
   // ── Settings driver: tracks what is currently controlling goal/logo/creativity ──
   const [settingsDriver, setSettingsDriver] = useState<SettingsDriver>(() => {
@@ -294,7 +318,6 @@ export default function CampaignForm({
         gender={input.genderPresentation}
         logo={input.logoVisibilityPriority}
         creativity={input.creativityLevel}
-        notes={input.notes || ""}
         productFamily={input.productFamily}
         specificItem={input.specificItem}
         settingsDriver={settingsDriver}
@@ -305,7 +328,6 @@ export default function CampaignForm({
         onGenderChange={handleGenderChange}
         onLogoChange={handleLogoChange}
         onCreativityChange={handleCreativityChange}
-        onNotesChange={(v: string) => setInput(prev => ({ ...prev, notes: v }))}
         onApplyRecommendation={handleApplyRecommendation}
         onKeepPreset={handleKeepPreset}
       />

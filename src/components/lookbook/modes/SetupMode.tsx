@@ -8,7 +8,9 @@ import type {
   FingerprintMeta,
   ProductFingerprint,
   ProductFamily,
+  ContinuityWorldTokens,
 } from "@/lib/lookbook/types";
+import { WORLD_PRESETS } from "@/lib/lookbook/providerCompiler";
 import { useVisionExtractor } from "@/lib/lookbook/useVisionExtractor";
 import { db } from "@/lib/lookbook/projectStore";
 import CampaignForm from "../CampaignForm";
@@ -75,6 +77,67 @@ async function classifyProductImage(
   }
 }
 
+// ── Styling reference analyser ──
+
+interface StylingAnalysis {
+  worldPreset: string | null;
+  worldTokens: { backdrop: string; lighting: string; tonalTemperature: string; styling: string } | null;
+  brandGuidelines: string;
+  confidence: "high" | "medium" | "low";
+}
+
+async function analyseStylingImage(
+  ref: ReferenceAsset,
+): Promise<StylingAnalysis | null> {
+  try {
+    const blobRecord = await db.referenceBlobs.get(ref.id);
+    if (!blobRecord) return null;
+
+    const buf = await blobRecord.blob.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+
+    const res = await fetch("/api/analyse-styling", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageBase64: base64,
+        mimeType: ref.mimeType,
+      }),
+    });
+
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function resolveWorldFromAnalysis(
+  analysis: StylingAnalysis,
+): ContinuityWorldTokens | undefined {
+  // Try matching to a named preset first
+  if (analysis.worldPreset) {
+    const preset = WORLD_PRESETS.find((p) => p.id === analysis.worldPreset);
+    if (preset) return { ...preset.tokens };
+  }
+  // Fall back to raw tokens from the analysis
+  if (analysis.worldTokens) {
+    return {
+      backdrop: analysis.worldTokens.backdrop,
+      lighting: analysis.worldTokens.lighting,
+      tonalTemperature: analysis.worldTokens.tonalTemperature,
+      styling: analysis.worldTokens.styling || "",
+      modelTokens: "",
+    };
+  }
+  return undefined;
+}
+
 export default function SetupMode({
   projectId,
   initialInput,
@@ -116,6 +179,32 @@ export default function SetupMode({
       }
     });
   }, [references.product]);
+
+  // ── Auto-analyse styling references ──
+  const [analysingStyling, setAnalysingStyling] = useState(false);
+  const [autoWorld, setAutoWorld] = useState<ContinuityWorldTokens | undefined>();
+  const [brandGuidelines, setBrandGuidelines] = useState("");
+  const [stylingAnalysed, setStylingAnalysed] = useState(false);
+  const analysedStylingRefIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (references.styling.length === 0) return;
+    const primary = references.styling.find((r) => r.isPrimary) ?? references.styling[0];
+    if (analysedStylingRefIdRef.current === primary.id) return;
+    analysedStylingRefIdRef.current = primary.id;
+
+    setAnalysingStyling(true);
+    setStylingAnalysed(false);
+    analyseStylingImage(primary).then((result) => {
+      setAnalysingStyling(false);
+      if (result) {
+        const world = resolveWorldFromAnalysis(result);
+        if (world) setAutoWorld(world);
+        if (result.brandGuidelines) setBrandGuidelines(result.brandGuidelines);
+        setStylingAnalysed(true);
+      }
+    });
+  }, [references.styling]);
 
   const handleInputChange = useCallback((input: LookbookInput) => {
     liveInputRef.current = input;
@@ -245,7 +334,41 @@ export default function SetupMode({
         </div>
       )}
 
-      {/* Section C: Creative Direction (auto-filled from classification) */}
+      {/* Section C: Brand Guidelines (auto-filled from styling ref) */}
+      {(references.styling.length > 0 || brandGuidelines) && (
+        <div
+          className="bg-[--surface-card] rounded-xl p-6"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-[--text-primary]">
+              Brand Guidelines
+            </h2>
+            {analysingStyling && (
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 border-2 border-[--text-tertiary] border-t-transparent rounded-full animate-spin" />
+                <span className="text-[10px] text-[--text-tertiary]">Analysing styling...</span>
+              </div>
+            )}
+            {stylingAnalysed && !analysingStyling && (
+              <span className="text-[10px] text-[--text-tertiary] px-2 py-0.5 rounded-full bg-[--surface-inset] border border-[--border-subtle]">
+                Auto-filled from styling ref
+              </span>
+            )}
+          </div>
+          <textarea
+            value={brandGuidelines}
+            onChange={(e) => setBrandGuidelines(e.target.value)}
+            placeholder="Visual brand rules for this client, e.g. 'Maintain warm earth tones. Keep backgrounds clean and uncluttered. Logo must be visible but not dominant.'"
+            className="w-full bg-[--surface-inset] border border-[--border-subtle] rounded-lg px-3 py-2 text-[--text-primary] text-sm focus:outline-none focus:border-[--text-tertiary] min-h-[72px] resize-y"
+          />
+          <p className="mt-1.5 text-[11px] text-[--text-tertiary]">
+            Describes the visual identity for this project. Auto-extracted from styling references, or write your own.
+          </p>
+        </div>
+      )}
+
+      {/* Section D: Creative Direction (auto-filled from classification) */}
       <div
         className="bg-[--surface-card] rounded-xl p-6"
         style={{ boxShadow: "var(--shadow-card)" }}
@@ -273,6 +396,8 @@ export default function SetupMode({
           onInputChange={handleInputChange}
           hasProductRefs={hasProductRefs}
           classifiedProduct={classifiedProduct}
+          autoWorld={autoWorld}
+          brandGuidelines={brandGuidelines || undefined}
         />
       </div>
 
