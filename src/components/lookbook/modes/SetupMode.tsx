@@ -8,11 +8,12 @@ import type {
   FingerprintMeta,
   ProductFingerprint,
   ProductFamily,
-  ContinuityWorldTokens,
+  GenderPresentation,
+  TargetStyle,
+  ExtractedWorldTokens,
 } from "@/lib/lookbook/types";
-import { WORLD_PRESETS } from "@/lib/lookbook/providerCompiler";
 import { useVisionExtractor } from "@/lib/lookbook/useVisionExtractor";
-import { db } from "@/lib/lookbook/projectStore";
+import { db, hashBlob, getVisionCache, setVisionCache } from "@/lib/lookbook/projectStore";
 import CampaignForm from "../CampaignForm";
 import type { ClassifiedProduct } from "../CampaignForm";
 import ReferencePanel from "../ReferencePanel";
@@ -86,6 +87,11 @@ async function classifyProductImage(
     const blobRecord = await db.referenceBlobs.get(ref.id);
     if (!blobRecord) return null;
 
+    // Check cache by image hash
+    const hash = await hashBlob(blobRecord.blob);
+    const cached = await getVisionCache(hash, "classify-product");
+    if (cached) return cached as ClassifiedProduct;
+
     const { base64, mimeType } = await resizeImageBlob(blobRecord.blob);
 
     const res = await fetch("/api/classify-product", {
@@ -98,10 +104,15 @@ async function classifyProductImage(
     const data = await res.json();
     if (data.confidence === "low") return null;
 
-    return {
+    const result: ClassifiedProduct = {
       family: data.family as ProductFamily,
       specificItem: data.specificItem || "",
+      genderPresentation: data.genderPresentation as GenderPresentation | undefined,
+      targetStyle: data.targetStyle as TargetStyle | undefined,
     };
+
+    await setVisionCache(hash, "classify-product", result);
+    return result;
   } catch {
     return null;
   }
@@ -110,8 +121,7 @@ async function classifyProductImage(
 // ── Styling reference analyser ──
 
 interface StylingAnalysis {
-  worldPreset: string | null;
-  worldTokens: { backdrop: string; lighting: string; tonalTemperature: string; styling: string } | null;
+  extractedWorld: ExtractedWorldTokens | null;
   brandGuidelines: string;
   confidence: "high" | "medium" | "low";
 }
@@ -122,6 +132,11 @@ async function analyseStylingImage(
   try {
     const blobRecord = await db.referenceBlobs.get(ref.id);
     if (!blobRecord) return { data: null, error: "Could not load image from storage" };
+
+    // Check cache by image hash
+    const hash = await hashBlob(blobRecord.blob);
+    const cached = await getVisionCache(hash, "analyse-styling");
+    if (cached) return { data: cached as StylingAnalysis, error: null };
 
     const { base64, mimeType } = await resizeImageBlob(blobRecord.blob);
 
@@ -135,31 +150,12 @@ async function analyseStylingImage(
       const body = await res.json().catch(() => ({ error: res.statusText }));
       return { data: null, error: body.error || `API error ${res.status}` };
     }
-    return { data: await res.json(), error: null };
+    const data: StylingAnalysis = await res.json();
+    await setVisionCache(hash, "analyse-styling", data);
+    return { data, error: null };
   } catch (err) {
     return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
   }
-}
-
-function resolveWorldFromAnalysis(
-  analysis: StylingAnalysis,
-): ContinuityWorldTokens | undefined {
-  // Try matching to a named preset first
-  if (analysis.worldPreset) {
-    const preset = WORLD_PRESETS.find((p) => p.id === analysis.worldPreset);
-    if (preset) return { ...preset.tokens };
-  }
-  // Fall back to raw tokens from the analysis
-  if (analysis.worldTokens) {
-    return {
-      backdrop: analysis.worldTokens.backdrop,
-      lighting: analysis.worldTokens.lighting,
-      tonalTemperature: analysis.worldTokens.tonalTemperature,
-      styling: analysis.worldTokens.styling || "",
-      modelTokens: "",
-    };
-  }
-  return undefined;
 }
 
 export default function SetupMode({
@@ -206,7 +202,7 @@ export default function SetupMode({
 
   // ── Auto-analyse styling references ──
   const [analysingStyling, setAnalysingStyling] = useState(false);
-  const [autoWorld, setAutoWorld] = useState<ContinuityWorldTokens | undefined>();
+  const [extractedWorld, setExtractedWorld] = useState<ExtractedWorldTokens | undefined>();
   const [brandGuidelines, setBrandGuidelines] = useState("");
   const [stylingAnalysed, setStylingAnalysed] = useState(false);
   const [stylingError, setStylingError] = useState<string | null>(null);
@@ -228,8 +224,7 @@ export default function SetupMode({
         return;
       }
       if (data) {
-        const world = resolveWorldFromAnalysis(data);
-        if (world) setAutoWorld(world);
+        if (data.extractedWorld) setExtractedWorld(data.extractedWorld);
         if (data.brandGuidelines) setBrandGuidelines(data.brandGuidelines);
         setStylingAnalysed(true);
       }
@@ -402,8 +397,7 @@ export default function SetupMode({
                         }
                         if (data) {
                           analysedStylingRefIdRef.current = primary.id;
-                          const world = resolveWorldFromAnalysis(data);
-                          if (world) setAutoWorld(world);
+                          if (data.extractedWorld) setExtractedWorld(data.extractedWorld);
                           if (data.brandGuidelines) setBrandGuidelines(data.brandGuidelines);
                           setStylingAnalysed(true);
                         }
@@ -463,7 +457,7 @@ export default function SetupMode({
           onInputChange={handleInputChange}
           hasProductRefs={hasProductRefs}
           classifiedProduct={classifiedProduct}
-          autoWorld={autoWorld}
+          extractedWorld={extractedWorld}
           brandGuidelines={brandGuidelines || undefined}
         />
       </div>

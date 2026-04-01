@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SHOT_CATEGORY_LABELS } from "@/lib/lookbook/types";
 import type { RecommendedShot } from "@/lib/lookbook/types";
 
 interface ShotCardProps {
@@ -70,11 +71,11 @@ export default function ShotCard({ shot, isTopPriority, compact }: ShotCardProps
               </span>
             )}
           </div>
-          <span className="text-xs text-[--text-tertiary] capitalize">
-            {a.shotCategory.replace("_", " ")}
+          <span className="text-xs text-[--text-tertiary]">
+            {SHOT_CATEGORY_LABELS[a.shotCategory]}
           </span>
         </div>
-        <h3 className="text-[--text-primary] font-semibold text-base mb-1">{a.title}</h3>
+        <h3 className="text-[--text-primary] font-semibold text-base mb-1">{shot.resolvedTitle ?? a.title}</h3>
         {!compact && (
           <p className="text-[--text-secondary] text-sm">{shot.shotPurpose}</p>
         )}

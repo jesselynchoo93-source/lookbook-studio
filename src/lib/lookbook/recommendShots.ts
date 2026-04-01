@@ -13,13 +13,16 @@ import type {
   AngleBucket,
   DistanceBucket,
   PoseBucket,
+  RhythmSlotSpec,
+  SlotFillEntry,
+  RhythmSlot,
 } from "./types";
 import { ALL_ARCHETYPES } from "./shotArchetypes";
 import { scoreArchetype, computeCoverage } from "./scoring";
 import { buildMasterShootDNA } from "./shootDNA";
 import { buildRecommendedShot, deduplicateSellsText } from "./buildShotDelta";
 import { formatExportText } from "./exportShotPlan";
-import { resolveBlueprint, UNIVERSAL_RULES } from "./shotBlueprints";
+import { resolveBlueprint, UNIVERSAL_RULES, APPAREL_RHYTHM, SLOT_TO_BEAT } from "./shotBlueprints";
 import type { ShotArchetype } from "./types";
 import {
   PRODUCT_ONLY_ELIGIBLE_FAMILIES,
@@ -211,13 +214,18 @@ function computeRedundancyPenalty(
 
 // ── Selection with Greedy Set-Cover ──
 
+interface SelectShotsResult {
+  selected: ScoredArchetype[];
+  slotFillLog: SlotFillEntry[];
+}
+
 function selectShots(
   scored: ScoredArchetype[],
   input: LookbookInput,
   count: number,
   blueprint: ResolvedBlueprint,
   dna: MasterShootDNA,
-): ScoredArchetype[] {
+): SelectShotsResult {
   const selected: ScoredArchetype[] = [];
   const categoryCount: Record<string, number> = {};
   let motionCount = 0;
@@ -276,45 +284,11 @@ function selectShots(
       }
     }
 
-    // Semantic compatibility gate: block archetypes with strongly category-specific
-    // semantics from being reused across unrelated families.
-    const id = candidate.archetype.id;
-    const fam = input.productFamily;
-    // "jewelry" in the archetype name/semantics should not leak to non-jewelry families
-    if (id === "profile_jewelry_focus" || id === "mood_portrait_jewelry") {
-      if (fam !== "jewelry") return false;
-    }
-    // Ear-specific archetypes only for jewelry
-    if (id === "ear_detail_crop" || id === "three_quarter_ear_reveal" || id === "pair_symmetry_validation") {
-      if (fam !== "jewelry") return false;
-    }
-    // Jewelry neckline focus only for jewelry
-    if (id === "jewelry_neckline_focus") {
-      if (fam !== "jewelry") return false;
-    }
-    // Bag-specific archetypes only for bags
-    if (id === "bag_carry_profile" || id === "bag_hardware_detail" || id === "bag_construction_detail") {
-      if (fam !== "bags") return false;
-    }
-    // Footwear-specific archetypes only for footwear
-    if (id === "footwear_ground_focus" || id === "footwear_material_detail") {
-      if (fam !== "footwear") return false;
-    }
-    // Eyewear-specific archetypes only for eyewear
-    if (id === "eyewear_portrait_halfbody" || id === "eyewear_temple_detail") {
-      if (fam !== "eyewear") return false;
-    }
-    // Watch-specific archetypes only for watches
-    if (id === "watch_dial_closeup" || id === "watch_wrist_hero" || id === "watch_strap_detail") {
-      if (fam !== "watches") return false;
-    }
-    // Apparel tailoring archetypes only for apparel
-    if (id === "tailoring_lapel_touch" || id === "cuff_adjustment_tailoring" || id === "open_jacket_ease" || id === "back_view_shape") {
-      if (fam !== "apparel") return false;
-    }
-    // Hand interaction only for small wrist/hand products
-    if (id === "accessory_hand_interaction") {
-      if (!["jewelry", "watches", "small_accessories"].includes(fam)) return false;
+    // Semantic compatibility gate: data-driven via exclusiveTo on the archetype.
+    // New archetypes only need to set exclusiveTo in shotArchetypes.ts, no code changes here.
+    const { exclusiveTo } = candidate.archetype;
+    if (exclusiveTo?.length && !exclusiveTo.includes(input.productFamily)) {
+      return false;
     }
 
     // Max per category
@@ -328,6 +302,22 @@ function selectShots(
 
     // No duplicate archetypes
     if (UNIVERSAL_RULES.noDuplicateArchetypes && isSelected(candidate)) return false;
+
+    // Visual signature hard block: identical pose + angle + framing = blocked
+    // Two shots with the same visual signature always look like near-duplicates
+    if (!candidate.archetype.primaryDisplayZones.includes("product_only")) {
+      for (const existing of selected) {
+        if (existing.archetype.primaryDisplayZones.includes("product_only")) continue;
+        if (
+          existing.poseBucket === candidate.poseBucket &&
+          existing.angleBucket === candidate.angleBucket &&
+          getFramingBucket(existing.archetype.defaultFraming) ===
+            getFramingBucket(candidate.archetype.defaultFraming)
+        ) {
+          return false;
+        }
+      }
+    }
 
     // Framing diversity: for accessory-led families, max 1 front full-body
     if (isAccessoryLed) {
@@ -373,30 +363,45 @@ function selectShots(
     return true;
   };
 
-  // ── Phase 1: Satisfy role mix minimums ──
-  const roleMixOrder: ShotCategory[] = ["hero", "product_focus", "detail", "silhouette", "editorial", "motion"];
+  // ── Phase 1: Fill visual rhythm slots ──
+  const rhythmTemplate: RhythmSlotSpec[] = blueprint.setRhythm?.rhythmSlots ?? APPAREL_RHYTHM;
+  const slotFillLog: SlotFillEntry[] = [];
 
-  for (const category of roleMixOrder) {
-    const target = evidencePlan.categoryRoleMix[category] ?? 0;
-    if (target < 1) continue;
+  for (const slotSpec of rhythmTemplate) {
     if (selected.length >= count) break;
 
-    // Find the best archetype for this category
+    // Evidence escalation: after slot 3, double deficit bonus weight
+    // so evidence pressure ramps for the remaining slots
+    const escalation = selected.length >= 3 ? 2 : 1;
+
+    // Find candidates that match this slot's rhythm constraints
     const candidates = scored
       .filter(
-        (c) =>
-          c.archetype.shotCategory === category &&
-          !isSelected(c) &&
-          !isProductOnly(c) && // product_only excluded from Phase 1
-          passesHardConstraints(c),
+        (c) => {
+          if (isSelected(c)) return false;
+          if (isProductOnly(c) && slotSpec.slot !== "detail_close") return false;
+          if (!passesHardConstraints(c)) return false;
+
+          // Rhythm constraints: angle
+          if (slotSpec.requiredAngle?.length && !slotSpec.requiredAngle.includes(c.angleBucket)) return false;
+          // Rhythm constraints: pose
+          if (slotSpec.requiredPose?.length && !slotSpec.requiredPose.includes(c.poseBucket)) return false;
+          // Rhythm constraints: framing
+          if (slotSpec.requiredFraming?.length) {
+            const bucket = getFramingBucket(c.archetype.defaultFraming);
+            if (!slotSpec.requiredFraming.includes(bucket)) return false;
+          }
+          return true;
+        },
       )
       .map((c) => {
         const marginalGain = computeMarginalEvidenceGain(c, coveredEvidence, evidencePlan);
         const { penalty: redundancyPenalty } = computeRedundancyPenalty(c, selected);
 
-        // Required evidence deficit: strongly prefer candidates that fill required evidence gaps.
-        // This is the key mechanism that ensures family-native archetypes beat generic ones
-        // when required evidence is still uncovered.
+        // Category match bonus: prefer archetypes that naturally fit this rhythm slot
+        const categoryBonus = slotSpec.preferredCategories.includes(c.archetype.shotCategory) ? 15 : 0;
+
+        // Required evidence deficit with escalation
         const uncoveredRequired = evidencePlan.orderedEvidence
           .filter((e) => e.priority === "required" && !coveredEvidence.has(e.evidence))
           .map((e) => e.evidence);
@@ -405,21 +410,13 @@ function selectShots(
           const coversCount = c.archetype.evidenceCapabilities
             .filter((ev) => uncoveredRequired.includes(ev)).length;
           if (coversCount > 0) {
-            requiredDeficitBonus = coversCount * 25;
+            requiredDeficitBonus = coversCount * 25 * escalation;
           } else {
             requiredDeficitBonus = -20;
           }
         }
 
-        // Framing diversity check: penalise if we already have this bucket
-        let framingDiversityBonus = 0;
-        const bucket = getFramingBucket(c.archetype.defaultFraming);
-        const existingBuckets = selected.map((s) => getFramingBucket(s.archetype.defaultFraming));
-        if (existingBuckets.includes(bucket)) {
-          framingDiversityBonus = -15;
-        }
-
-        // Critical redundancy avoidance in Phase 1 (uses distinctive evidence)
+        // Critical redundancy avoidance (uses distinctive evidence)
         let criticalPenalty = 0;
         if (selected.length > 0) {
           const candidateBucket = getFramingBucket(c.archetype.defaultFraming);
@@ -439,33 +436,71 @@ function selectShots(
           }
         }
 
-        // F5b: Angle diversity penalty — discourage same-angle clustering (capped at -24)
-        let angleMatches = 0;
-        for (const existing of selected) {
-          if (existing.angleBucket === c.angleBucket) {
-            angleMatches += 1;
-          }
-        }
-        const angleDiversityPenalty = -Math.min(angleMatches * 12, 24);
-
-        // F5b: Pose diversity penalty — discourage all-same-pose sets
-        let poseDiversityPenalty = 0;
-        if (selected.length >= 2) {
-          const allSamePose = selected.every(s => s.poseBucket === c.poseBucket);
-          if (allSamePose) {
-            poseDiversityPenalty = -8;
+        // Editorial beat scoring: meaningful bonuses across all 6 beats
+        let editorialBeatBonus = 0;
+        if (slotSpec.editorialBeat) {
+          const beat = slotSpec.editorialBeat;
+          const arch = c.archetype;
+          switch (beat) {
+            case "establish":
+              if (arch.editorialStrength === "high") editorialBeatBonus += 15;
+              if (arch.shotCategory === "hero" && arch.productClaritySuitability === "high") editorialBeatBonus += 10;
+              break;
+            case "build":
+              if (arch.shotCategory === "silhouette") editorialBeatBonus += 15;
+              if (arch.bodyDirection?.includes("profile") || arch.bodyDirection?.includes("rear")) editorialBeatBonus += 10;
+              break;
+            case "pivot":
+              if (arch.defaultFraming?.includes("three") || arch.defaultFraming?.includes("upper")) editorialBeatBonus += 15;
+              if (arch.editorialStrength !== "low") editorialBeatBonus += 5;
+              break;
+            case "breathe":
+              if (arch.poseFamily?.includes("seated") || arch.poseFamily?.includes("leaning")) editorialBeatBonus += 20;
+              if (arch.editorialStrength === "high") editorialBeatBonus += 5;
+              break;
+            case "resolve":
+              if (arch.showsProductInMotion) editorialBeatBonus += 20;
+              if (arch.movementSuitability === "high") editorialBeatBonus += 5;
+              break;
+            case "reveal":
+              if (arch.detailSuitability === "high") editorialBeatBonus += 15;
+              if (arch.shotCategory === "detail" || arch.shotCategory === "product_focus") editorialBeatBonus += 10;
+              break;
           }
         }
 
         const combinedScore =
-          marginalGain + c.score + requiredDeficitBonus + framingDiversityBonus + redundancyPenalty + criticalPenalty + angleDiversityPenalty + poseDiversityPenalty;
+          marginalGain + c.score + categoryBonus + requiredDeficitBonus + redundancyPenalty + criticalPenalty + editorialBeatBonus;
 
         return { candidate: c, combinedScore };
       })
       .sort((a, b) => b.combinedScore - a.combinedScore);
 
     if (candidates.length > 0) {
-      addToSelected(candidates[0].candidate);
+      const winner = candidates[0].candidate;
+      winner.rhythmSlot = slotSpec.slot;
+      addToSelected(winner);
+      slotFillLog.push({ slot: slotSpec.slot, label: slotSpec.label, status: "filled", archetypeId: winner.archetype.id });
+    } else if (slotSpec.required) {
+      // Required slot couldn't be filled with rhythm constraints; relax and pick best available
+      const relaxed = scored
+        .filter((c) =>
+          !isSelected(c) &&
+          !isProductOnly(c) &&
+          passesHardConstraints(c) &&
+          slotSpec.preferredCategories.includes(c.archetype.shotCategory),
+        )
+        .sort((a, b) => b.score - a.score);
+      if (relaxed.length > 0) {
+        relaxed[0].rhythmSlot = slotSpec.slot;
+        addToSelected(relaxed[0]);
+        slotFillLog.push({ slot: slotSpec.slot, label: slotSpec.label, status: "relaxed", archetypeId: relaxed[0].archetype.id });
+      } else {
+        slotFillLog.push({ slot: slotSpec.slot, label: slotSpec.label, status: "failed" });
+      }
+    } else {
+      // Optional slot that couldn't be filled; skip
+      slotFillLog.push({ slot: slotSpec.slot, label: slotSpec.label, status: "skipped_optional" });
     }
   }
 
@@ -578,22 +613,45 @@ function selectShots(
         }
       }
 
-      // F5b: Angle diversity penalty — discourage same-angle clustering (capped at -24)
+      // F5b: Angle diversity penalty — discourage same-angle clustering
       let angleMatches = 0;
+      let frontalCount = 0;
       for (const existing of selected) {
-        if (existing.angleBucket === candidate.angleBucket) {
-          angleMatches += 1;
-        }
+        if (existing.angleBucket === candidate.angleBucket) angleMatches += 1;
+        if (existing.angleBucket === "frontal") frontalCount += 1;
       }
-      const angleDiversityPenalty = -Math.min(angleMatches * 12, 24);
+      const angleDiversityPenalty = -Math.min(angleMatches * 18, 54);
+      const frontalSurcharge = candidate.angleBucket === "frontal" && frontalCount >= 2 ? -30 : 0;
 
-      // F5b: Pose diversity penalty — discourage all-same-pose sets
-      let poseDiversityPenalty = 0;
-      if (selected.length >= 2) {
-        const allSamePose = selected.every(s => s.poseBucket === candidate.poseBucket);
-        if (allSamePose) {
-          poseDiversityPenalty = -8;
-        }
+      // F5b: Pose diversity penalty — per-match scaling
+      let poseMatches = 0;
+      for (const existing of selected) {
+        if (existing.poseBucket === candidate.poseBucket) poseMatches += 1;
+      }
+      const poseDiversityPenalty = -Math.min(poseMatches * 15, 45);
+
+      // F5b: Framing diversity penalty
+      const framingBucket = getFramingBucket(candidate.archetype.defaultFraming);
+      let framingMatches = 0;
+      for (const existing of selected) {
+        if (getFramingBucket(existing.archetype.defaultFraming) === framingBucket) framingMatches += 1;
+      }
+      const framingDiversityPenalty = -Math.min(framingMatches * 20, 40);
+
+      // Secondary object policy: penalise archetypes that mention competing accessories
+      let secondaryObjectPenalty = 0;
+      if (dna.secondaryObjectPolicy === "forbid") {
+        const blueprint = (candidate.archetype.deltaBlueprint || "").toLowerCase();
+        const COMPETING_ACCESSORY_CUES = ["clutch", "handbag", "tote", "watch", "bracelet", "necklace", "earring", "sunglasses"];
+        const heroFamily = input.productFamily;
+        const hasCompeting = COMPETING_ACCESSORY_CUES.some(cue => {
+          if (heroFamily === "bags" && (cue === "clutch" || cue === "handbag" || cue === "tote")) return false;
+          if (heroFamily === "watches" && cue === "watch") return false;
+          if (heroFamily === "jewelry" && (cue === "bracelet" || cue === "necklace" || cue === "earring")) return false;
+          if (heroFamily === "eyewear" && cue === "sunglasses") return false;
+          return blueprint.includes(cue);
+        });
+        if (hasCompeting) secondaryObjectPenalty = -10;
       }
 
       const combinedScore =
@@ -603,7 +661,10 @@ function selectShots(
         redundancyPenalty * 0.1 +
         requiredDeficitBonus +
         angleDiversityPenalty +
-        poseDiversityPenalty;
+        frontalSurcharge +
+        poseDiversityPenalty +
+        framingDiversityPenalty +
+        secondaryObjectPenalty;
 
       if (combinedScore > bestScore) {
         bestScore = combinedScore;
@@ -663,19 +724,30 @@ function selectShots(
           else reqDeficitBonus = -20;
         }
 
-        // F5b: Angle + pose diversity penalties (same as Phase 2)
+        // F5b: Angle diversity penalty (strengthened)
         let angleMatches = 0;
+        let frontalCount = 0;
         for (const existing of selected) {
-          if (existing.angleBucket === candidate.angleBucket) {
-            angleMatches += 1;
-          }
+          if (existing.angleBucket === candidate.angleBucket) angleMatches += 1;
+          if (existing.angleBucket === "frontal") frontalCount += 1;
         }
-        const angleDiversityPenalty = -Math.min(angleMatches * 12, 24);
-        let poseDiversityPenalty = 0;
-        if (selected.length >= 2) {
-          const allSamePose = selected.every(s => s.poseBucket === candidate.poseBucket);
-          if (allSamePose) poseDiversityPenalty = -8;
+        const angleDiversityPenalty = -Math.min(angleMatches * 18, 54);
+        const frontalSurcharge = candidate.angleBucket === "frontal" && frontalCount >= 2 ? -30 : 0;
+
+        // F5b: Pose diversity penalty (per-match)
+        let poseMatches = 0;
+        for (const existing of selected) {
+          if (existing.poseBucket === candidate.poseBucket) poseMatches += 1;
         }
+        const poseDiversityPenalty = -Math.min(poseMatches * 15, 45);
+
+        // F5b: Framing diversity penalty
+        const framingBucket = getFramingBucket(candidate.archetype.defaultFraming);
+        let framingMatches = 0;
+        for (const existing of selected) {
+          if (getFramingBucket(existing.archetype.defaultFraming) === framingBucket) framingMatches += 1;
+        }
+        const framingDiversityPenalty = -Math.min(framingMatches * 20, 40);
 
         const combinedScore =
           marginalGain * 0.5 +
@@ -684,7 +756,9 @@ function selectShots(
           (redundancyPenalty + critRedPenalty) * 0.1 +
           reqDeficitBonus +
           angleDiversityPenalty +
-          poseDiversityPenalty;
+          frontalSurcharge +
+          poseDiversityPenalty +
+          framingDiversityPenalty;
 
         if (combinedScore > bestScore) {
           bestScore = combinedScore;
@@ -746,8 +820,8 @@ function selectShots(
   // Guarantee: at least 1 editorial shot when creativity is balanced or directional
   if (UNIVERSAL_RULES.guaranteeEditorialWhenCreative) {
     if (
-      input.creativityLevel === "balanced" ||
-      input.creativityLevel === "directional"
+      input.poseDirection === "balanced" ||
+      input.poseDirection === "directional"
     ) {
       const hasEditorial = selected.some(
         (s) => s.archetype.shotCategory === "editorial",
@@ -764,7 +838,7 @@ function selectShots(
     }
   }
 
-  return selected;
+  return { selected, slotFillLog };
 }
 
 // ── Generation Order ──
@@ -1271,9 +1345,68 @@ export function computePresentationOrder(
 ): number[] {
   if (selected.length <= 1) return selected.map((_, i) => i + 1);
 
+  // Rhythm-aware gallery order: shots with rhythm slots are placed in
+  // rhythm sequence first; untagged backfill shots fill remaining positions
+  // via contrast-maximisation.
+  const RHYTHM_SEQUENCE: RhythmSlot[] = [
+    "anchor", "contrast1", "contrast2", "release", "movement", "detail_close",
+  ];
+
+  const slotted = new Map<RhythmSlot, number>(); // slot -> selected index
+  const unslotted: number[] = [];
+
+  for (let i = 0; i < selected.length; i++) {
+    const slot = selected[i].rhythmSlot;
+    if (slot && !slotted.has(slot)) {
+      slotted.set(slot, i);
+    } else {
+      unslotted.push(i);
+    }
+  }
+
+  // If most shots have rhythm slots, use rhythm sequence ordering
+  if (slotted.size >= 3) {
+    const order: number[] = [];
+    const placed = new Set<number>();
+
+    // Place slotted shots in rhythm sequence order
+    for (const slot of RHYTHM_SEQUENCE) {
+      const idx = slotted.get(slot);
+      if (idx !== undefined) {
+        order.push(idx);
+        placed.add(idx);
+      }
+    }
+
+    // Interleave unslotted shots via contrast-maximisation
+    for (const idx of unslotted) {
+      if (placed.has(idx)) continue;
+
+      // Find the best insertion point based on contrast with neighbours
+      let bestPos = order.length; // default: append at end
+      let bestContrast = -1;
+
+      for (let pos = 0; pos <= order.length; pos++) {
+        let score = 0;
+        if (pos > 0) score += contrastScore(selected[order[pos - 1]], selected[idx]);
+        if (pos < order.length) score += contrastScore(selected[idx], selected[order[pos]]);
+        if (score > bestContrast) {
+          bestContrast = score;
+          bestPos = pos;
+        }
+      }
+
+      order.splice(bestPos, 0, idx);
+      placed.add(idx);
+    }
+
+    return order.map((idx) => idx + 1);
+  }
+
+  // Fallback: no rhythm slots assigned (all backfill). Use original
+  // hero-first + contrast-maximisation logic.
   const remaining = new Set(selected.map((_, i) => i));
 
-  // Place the hero first (highest-scoring hero or product_focus)
   let firstIdx = 0;
   let bestHeroScore = -1;
   for (const idx of remaining) {
@@ -1285,7 +1418,6 @@ export function computePresentationOrder(
       }
     }
   }
-  // If no hero/product_focus found, use highest scoring shot
   if (bestHeroScore < 0) {
     for (const idx of remaining) {
       if (selected[idx].score > bestHeroScore) {
@@ -1298,14 +1430,10 @@ export function computePresentationOrder(
   const order: number[] = [firstIdx];
   remaining.delete(firstIdx);
 
-  // Greedy contrast-maximisation pass
   while (remaining.size > 0) {
     const prev = selected[order[order.length - 1]];
     let bestIdx = -1;
     let bestContrast = -1;
-
-    // If this is the last slot, prefer editorial/mood for editorial_finish
-    const isLastSlot = remaining.size === 1;
 
     for (const idx of remaining) {
       const contrast = contrastScore(prev, selected[idx]);
@@ -1315,37 +1443,10 @@ export function computePresentationOrder(
       }
     }
 
-    // If not the last slot, just pick the best contrast
-    if (!isLastSlot) {
-      order.push(bestIdx);
-      remaining.delete(bestIdx);
-      continue;
-    }
-
-    // Last slot: the only remaining shot goes here
     order.push(bestIdx);
     remaining.delete(bestIdx);
   }
 
-  // Editorial finish: if the last shot is not editorial/silhouette and there's
-  // an editorial shot elsewhere (not position 0), swap it to the end
-  if (order.length >= 3) {
-    const lastIdx = order[order.length - 1];
-    const lastCat = selected[lastIdx].archetype.shotCategory;
-    if (lastCat !== "editorial" && lastCat !== "silhouette") {
-      // Find the last editorial shot that isn't the hero (position 0)
-      for (let i = order.length - 2; i >= 1; i--) {
-        const cat = selected[order[i]].archetype.shotCategory;
-        if (cat === "editorial" || cat === "silhouette") {
-          // Swap to end
-          [order[i], order[order.length - 1]] = [order[order.length - 1], order[i]];
-          break;
-        }
-      }
-    }
-  }
-
-  // Convert from 0-based selected indices to 1-based shot positions
   return order.map((idx) => idx + 1);
 }
 
@@ -1364,7 +1465,7 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
   const scored = ALL_ARCHETYPES.map((arch) => scoreArchetype(arch, input, blueprint));
 
   // Step 4: Select shots with constraints
-  const selected = selectShots(scored, input, input.shotCount, blueprint, dna);
+  const { selected, slotFillLog } = selectShots(scored, input, input.shotCount, blueprint, dna);
 
   // Step 5: Compute generation order
   const genOrder = computeGenerationOrder(selected, blueprint);
@@ -1376,8 +1477,8 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
   });
 
   // Step 7: Build recommended shots (pass selected for whyGenerateNow context)
-  const shots = selected.map((s, idx) =>
-    buildRecommendedShot(
+  const shots = selected.map((s, idx) => {
+    const shot = buildRecommendedShot(
       s,
       idx + 1,
       priorityMap.get(idx) || idx + 1,
@@ -1385,8 +1486,16 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
       input,
       blueprint,
       selected,
-    ),
-  );
+    );
+    if (s.rhythmSlot) {
+      shot.rhythmSlot = s.rhythmSlot;
+      // Assign editorial beat from rhythm slot (only meaningful for editorial sets)
+      if (input.primaryObjective === "editorial_story") {
+        shot.editorialBeat = SLOT_TO_BEAT[s.rhythmSlot];
+      }
+    }
+    return shot;
+  });
 
   // Step 7b: Deduplicate identical "what it sells" text across shots
   deduplicateSellsText(shots, input, blueprint);
@@ -1430,6 +1539,7 @@ export function generateLookbookPlan(input: LookbookInput): LookbookPlanResult {
     selected,
     blueprint.setRhythm?.productOnlyPreference ?? "none",
   );
+  diagnostics.slotFillLog = slotFillLog;
 
   // Step 10: Export text (includes diagnostics)
   const exportText = formatExportText(dna, shots, genOrder, input, diagnostics);

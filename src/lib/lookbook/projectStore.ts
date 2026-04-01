@@ -20,6 +20,7 @@ import type {
   TrackerState,
   ProjectRecord,
   ProjectStatus,
+  StudioEngine,
   ReferenceBlobRecord,
   PersistedReferenceAsset,
   ReferenceAsset,
@@ -32,10 +33,23 @@ import { PROJECT_SCHEMA_VERSION } from "./types";
 
 // ── Database ──
 
+/** Vision API cache entry. Keyed by SHA-256 hash + endpoint. */
+export interface VisionCacheEntry {
+  /** Composite key: `${hash}:${endpoint}` */
+  id: string;
+  hash: string;
+  endpoint: string;
+  result: unknown;
+  cachedAt: string;
+}
+
+const VISION_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
 const db = new Dexie("LookbookStudio") as Dexie & {
   projects: EntityTable<ProjectRecord, "id">;
   referenceBlobs: EntityTable<ReferenceBlobRecord, "id">;
   generatedBlobs: EntityTable<GeneratedBlobRecord, "id">;
+  visionCache: EntityTable<VisionCacheEntry, "id">;
 };
 
 db.version(1).stores({
@@ -49,7 +63,51 @@ db.version(2).stores({
   generatedBlobs: "id, projectId",
 });
 
+db.version(3).stores({
+  projects: "id, updatedAt, status",
+  referenceBlobs: "id, projectId",
+  generatedBlobs: "id, projectId",
+  visionCache: "id, hash, endpoint",
+});
+
+// ── Vision Cache Helpers ──
+
+export async function getVisionCache(hash: string, endpoint: string): Promise<unknown | null> {
+  const key = `${hash}:${endpoint}`;
+  const entry = await db.visionCache.get(key);
+  if (!entry) return null;
+  // Check expiry
+  const age = Date.now() - new Date(entry.cachedAt).getTime();
+  if (age > VISION_CACHE_MAX_AGE_MS) {
+    await db.visionCache.delete(key);
+    return null;
+  }
+  return entry.result;
+}
+
+export async function setVisionCache(hash: string, endpoint: string, result: unknown): Promise<void> {
+  const key = `${hash}:${endpoint}`;
+  await db.visionCache.put({
+    id: key,
+    hash,
+    endpoint,
+    result,
+    cachedAt: new Date().toISOString(),
+  });
+}
+
 export { db };
+
+// ── Shared hash utility ──
+
+export async function hashBlob(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer();
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  const arr = new Uint8Array(hash);
+  return Array.from(arr)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 // ── Status computation ──
 
@@ -122,7 +180,10 @@ export function generateProjectName(input: LookbookInput): string {
 
 // ── CRUD: Projects ──
 
-export async function createProject(input: LookbookInput): Promise<ProjectRecord> {
+export async function createProject(
+  input: LookbookInput,
+  engine: StudioEngine = "editorial",
+): Promise<ProjectRecord> {
   const now = new Date().toISOString();
   const record: ProjectRecord = {
     id: crypto.randomUUID(),
@@ -132,6 +193,7 @@ export async function createProject(input: LookbookInput): Promise<ProjectRecord
     createdAt: now,
     updatedAt: now,
     status: "draft",
+    engine,
     input,
     references: { model: [], product: [], styling: [] },
     plan: null,
@@ -142,7 +204,7 @@ export async function createProject(input: LookbookInput): Promise<ProjectRecord
   return record;
 }
 
-export async function saveProject(record: ProjectRecord): Promise<void> {
+export async function saveProject(record: ProjectRecord): Promise<ProjectRecord> {
   const status = computeProjectStatus(record);
   const updated: ProjectRecord = {
     ...record,
@@ -150,6 +212,7 @@ export async function saveProject(record: ProjectRecord): Promise<void> {
     updatedAt: new Date().toISOString(),
   };
   await db.projects.put(updated);
+  return updated;
 }
 
 export async function loadProject(id: string): Promise<ProjectRecord | null> {
@@ -158,6 +221,10 @@ export async function loadProject(id: string): Promise<ProjectRecord | null> {
   // Backfill generatedImages for projects created before V4.2
   if (!record.generatedImages) {
     record.generatedImages = {};
+  }
+  // Backfill engine for projects created before V4 (commerce engine)
+  if (!record.engine) {
+    record.engine = "editorial";
   }
   return record;
 }
@@ -250,10 +317,51 @@ export async function cleanupOrphanBlobs(
   return orphans.length;
 }
 
+// ── Commerce Run Config Hash ──
+
+/**
+ * Compute a deterministic hash from all inputs that define a commerce generation run.
+ * If any of these change, existing results are invalidated (aggressive kill rule).
+ */
+export function computeRunConfigHash(config: {
+  familyId: string;
+  familyRefImageIds: string[];
+  fingerprint: Record<string, unknown>;
+  swapMode: string;
+  productRefIds: string[];
+  modelRefIds: string[];
+}): string {
+  const payload = JSON.stringify({
+    f: config.familyId,
+    fr: [...config.familyRefImageIds].sort(),
+    fp: config.fingerprint,
+    sw: config.swapMode,
+    p: [...config.productRefIds].sort(),
+    m: [...config.modelRefIds].sort(),
+  });
+  let hash = 0;
+  for (let i = 0; i < payload.length; i++) {
+    hash = ((hash << 5) - hash + payload.charCodeAt(i)) | 0;
+  }
+  return hash.toString(36);
+}
+
 // ── CRUD: Generated Image Blobs ──
 
-/** Build the deterministic blob key for a shot's generated image. */
-export function generatedBlobKey(projectId: string, shotPosition: number): string {
+/**
+ * Build the deterministic blob key for a shot's generated image.
+ * Commerce engine: includes familyId + runId for run isolation.
+ * Editorial engine: falls back to position-only key.
+ */
+export function generatedBlobKey(
+  projectId: string,
+  shotPosition: number,
+  familyId?: string,
+  runId?: string,
+): string {
+  if (familyId && runId) {
+    return `${projectId}_${familyId}_${runId}_shot_${shotPosition}`;
+  }
   return `${projectId}_shot_${shotPosition}`;
 }
 
@@ -262,8 +370,10 @@ export async function addGeneratedBlob(
   projectId: string,
   shotPosition: number,
   blob: Blob,
+  familyId?: string,
+  runId?: string,
 ): Promise<void> {
-  const id = generatedBlobKey(projectId, shotPosition);
+  const id = generatedBlobKey(projectId, shotPosition, familyId, runId);
   await db.generatedBlobs.put({ id, projectId, blob });
 }
 
@@ -271,9 +381,16 @@ export async function addGeneratedBlob(
 export async function removeGeneratedBlob(
   projectId: string,
   shotPosition: number,
+  familyId?: string,
+  runId?: string,
 ): Promise<void> {
-  const id = generatedBlobKey(projectId, shotPosition);
+  const id = generatedBlobKey(projectId, shotPosition, familyId, runId);
   await db.generatedBlobs.delete(id);
+}
+
+/** Delete all generated image blobs for a project. */
+export async function clearGeneratedBlobsForProject(projectId: string): Promise<void> {
+  await db.generatedBlobs.where("projectId").equals(projectId).delete();
 }
 
 /** Load all generated image blobs for a project. */
@@ -286,18 +403,34 @@ export async function loadGeneratedBlobs(
 /**
  * Restore session-only GeneratedImageAsset map from persisted metadata + blobs.
  * Creates Object URLs for each blob. Metadata entries without matching blobs are dropped.
+ *
+ * For commerce engine: validates that persisted metadata matches the current run identity.
+ * Non-matching entries are silently dropped (aggressive kill rule).
  */
 export function restoreGeneratedImages(
   persisted: Record<number, PersistedGeneratedImage>,
   blobs: GeneratedBlobRecord[],
   projectId: string,
+  runMeta?: { familyId: string; runId: string; configHash: string },
 ): Record<number, GeneratedImageAsset> {
   const blobMap = new Map(blobs.map((b) => [b.id, b.blob]));
   const result: Record<number, GeneratedImageAsset> = {};
 
   for (const [posStr, meta] of Object.entries(persisted)) {
     const pos = Number(posStr);
-    const key = generatedBlobKey(projectId, pos);
+
+    // Commerce run isolation: validate metadata matches current run
+    if (runMeta) {
+      if (
+        meta.familyId !== runMeta.familyId ||
+        meta.runId !== runMeta.runId ||
+        meta.configHash !== runMeta.configHash
+      ) {
+        continue; // Stale result from a different run, skip
+      }
+    }
+
+    const key = generatedBlobKey(projectId, pos, runMeta?.familyId, runMeta?.runId);
     const blob = blobMap.get(key);
     if (blob) {
       result[pos] = {
@@ -319,8 +452,8 @@ export function restoreGeneratedImages(
  *   - continuity → "unreviewed" (old verdict was about a different image)
  *   - continuityConcerns → [] (concerns were about the old image)
  *   - skinPolish → "not_applicable" (polish work on the old image is invalidated)
- *   - status: if "enhancing" or "done", step back to "accepted"
- *             (shot needs re-review; should not remain marked finished)
+ *   - status: if "enhancing" or "done", step back to "generating"
+ *             (new image needs fresh review; should not remain marked approved)
  *             all other statuses are left unchanged
  *   - retryCount / retryReasons: left unchanged (track generation history, not current image)
  *
@@ -337,7 +470,7 @@ export function resetShotForNewImage(tracker: TrackerState, position: number): T
     continuityConcerns: [],
     skinPolish: "not_applicable",
     status: current.status === "enhancing" || current.status === "done"
-      ? "accepted"
+      ? "generating"  // new image needs fresh review, not pre-approved
       : current.status,
     lastUpdated: new Date().toISOString(),
   };
@@ -385,27 +518,29 @@ export function toPersistedGeneratedImages(
 // ── Debounced save ──
 
 const SAVE_DEBOUNCE_MS = 500;
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
+const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /**
  * Schedule a debounced project save. Each call resets the timer.
- * Returns a promise that resolves when the save completes.
+ * Scoped per project ID to prevent cross-project race conditions.
  */
 export function debouncedSave(record: ProjectRecord): Promise<void> {
-  if (saveTimer) clearTimeout(saveTimer);
+  const existing = saveTimers.get(record.id);
+  if (existing) clearTimeout(existing);
   return new Promise((resolve, reject) => {
-    saveTimer = setTimeout(() => {
-      saveTimer = null;
-      saveProject(record).then(resolve).catch(reject);
-    }, SAVE_DEBOUNCE_MS);
+    saveTimers.set(record.id, setTimeout(() => {
+      saveTimers.delete(record.id);
+      saveProject(record).then(() => resolve()).catch(reject);
+    }, SAVE_DEBOUNCE_MS));
   });
 }
 
 /** Flush any pending debounced save immediately. */
 export async function flushPendingSave(record: ProjectRecord): Promise<void> {
-  if (saveTimer) {
-    clearTimeout(saveTimer);
-    saveTimer = null;
+  const existing = saveTimers.get(record.id);
+  if (existing) {
+    clearTimeout(existing);
+    saveTimers.delete(record.id);
   }
   await saveProject(record);
 }

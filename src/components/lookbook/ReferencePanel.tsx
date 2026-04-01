@@ -1,12 +1,41 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import type { ReferenceAsset, ReferenceType } from "@/lib/lookbook/types";
 
 // ── Constants ──
 
-const ACCEPTED_FORMATS = ".jpg,.jpeg,.png,.webp,.heic,.heif";
-const FORMAT_LABEL = "JPG, PNG, WebP, or HEIC";
+const ACCEPTED_FORMATS = ".jpg,.jpeg,.png,.webp";
+const FORMAT_LABEL = "JPG, PNG, or WebP";
+
+/**
+ * Image component with error fallback. Shows file extension when the
+ * blob URL is invalid (e.g. after page refresh if IndexedDB blob was lost).
+ */
+function RefImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  const ext = alt.split(".").pop()?.toUpperCase() || "IMG";
+
+  // Reset error state when src changes (new image uploaded)
+  useEffect(() => { setFailed(false); }, [src]);
+
+  if (failed || !src) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-[--surface-inset] text-[10px] text-[--text-tertiary]">
+        {ext}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 // ── Props ──
 
@@ -105,11 +134,7 @@ function Thumbnail({
             : "border-[--border-default]"
         }`}
       >
-        <img
-          src={asset.previewUrl}
-          alt={asset.fileName}
-          className="w-full h-full object-cover"
-        />
+        <RefImage src={asset.previewUrl} alt={asset.fileName} />
       </div>
       <button
         onClick={onRemove}

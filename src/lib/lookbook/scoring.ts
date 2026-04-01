@@ -11,6 +11,7 @@ import type {
   PoseBucket,
 } from "./types";
 import { getEvidenceWeight } from "./productEvidence";
+import { deriveGoals, poseDirectionToCreativity, brandVisibilityToLogoPriority } from "./deriveGoals";
 
 // ── F5a: Visual Diversity Bucket Derivation ──
 
@@ -128,10 +129,24 @@ export function scoreArchetype(
     contextReasons.push("specific item match");
   }
 
-  // Campaign goal match (+25)
-  if (archetype.suitableGoals.includes(input.campaignGoal)) {
+  // ── Derived goals from new control hierarchy ──
+  const derived = deriveGoals(input.primaryObjective, input.secondaryEmphasis);
+  const effectiveCreativity = poseDirectionToCreativity(input.poseDirection);
+  const effectiveLogo = brandVisibilityToLogoPriority(input.brandVisibility);
+
+  // Primary objective goal match (+25)
+  const hasPrimaryMatch = derived.primaryGoals.some((g) =>
+    archetype.suitableGoals.includes(g),
+  );
+  if (hasPrimaryMatch) {
     contextRaw += 25;
-    contextReasons.push("campaign goal match");
+    contextReasons.push("primary objective match");
+  }
+
+  // Secondary emphasis goal match (+15)
+  if (derived.secondaryGoal && archetype.suitableGoals.includes(derived.secondaryGoal)) {
+    contextRaw += 15;
+    contextReasons.push("secondary emphasis match");
   }
 
   // Style match (+15)
@@ -146,68 +161,40 @@ export function scoreArchetype(
     contextReasons.push("gender match");
   }
 
-  // Creativity band match (+10)
-  if (archetype.creativityBand.includes(input.creativityLevel)) {
+  // Pose direction band match (+10)
+  if (archetype.creativityBand.includes(effectiveCreativity)) {
     contextRaw += 10;
-    contextReasons.push("creativity band match");
+    contextReasons.push("pose direction match");
   }
 
-  // Logo visibility alignment (+20 for high match, -15 for mismatch)
-  if (input.logoVisibilityPriority === "high") {
+  // Brand visibility alignment (+20 for high match, -15 for mismatch)
+  if (effectiveLogo === "high") {
     if (archetype.logoVisibilitySuitability === "high") {
       contextRaw += 20;
-      contextReasons.push("high logo visibility match");
+      contextReasons.push("high brand visibility match");
     } else if (archetype.logoVisibilitySuitability === "low") {
       contextRaw -= 15;
     }
-  } else if (input.logoVisibilityPriority === "low") {
+  } else if (effectiveLogo === "low") {
     if (archetype.logoVisibilitySuitability === "low") {
       contextRaw += 10;
     }
   }
 
-  // Campaign-specific suitability boosts (+10)
-  if (
-    input.campaignGoal === "product_clarity" &&
-    archetype.productClaritySuitability === "high"
-  ) {
+  // Primary objective suitability boost (+10)
+  if (archetype[derived.primarySuitabilityField] === "high") {
     contextRaw += 10;
-    contextReasons.push("high product clarity");
+    contextReasons.push(`high ${derived.primarySuitabilityField}`);
   }
+
+  // Secondary emphasis suitability boost (+10)
   if (
-    input.campaignGoal === "silhouette" &&
-    archetype.silhouetteSuitability === "high"
+    derived.secondarySuitabilityField &&
+    derived.secondarySuitabilityField !== derived.primarySuitabilityField &&
+    archetype[derived.secondarySuitabilityField] === "high"
   ) {
     contextRaw += 10;
-    contextReasons.push("high silhouette strength");
-  }
-  if (
-    input.campaignGoal === "detail_focus" &&
-    archetype.detailSuitability === "high"
-  ) {
-    contextRaw += 10;
-    contextReasons.push("high detail suitability");
-  }
-  if (
-    input.campaignGoal === "movement" &&
-    archetype.movementSuitability === "high"
-  ) {
-    contextRaw += 10;
-    contextReasons.push("high movement suitability");
-  }
-  if (
-    (input.campaignGoal === "mood" || input.campaignGoal === "styling_story") &&
-    archetype.editorialStrength === "high"
-  ) {
-    contextRaw += 10;
-    contextReasons.push("high editorial strength");
-  }
-  if (
-    input.campaignGoal === "premium_branding" &&
-    archetype.logoVisibilitySuitability === "high"
-  ) {
-    contextRaw += 10;
-    contextReasons.push("branding-safe archetype");
+    contextReasons.push(`high ${derived.secondarySuitabilityField}`);
   }
 
   // Framing family match (+10)
@@ -228,7 +215,7 @@ export function scoreArchetype(
   const movementLevels = { static: 0, subtle: 1, moderate: 2, active: 3 };
   const archetypeMovement = archetype.movementSuitability === "high" ? 3
     : archetype.movementSuitability === "medium" ? 2
-    : archetype.shotCategory === "motion" ? 3 : 0;
+    : archetype.movementSuitability === "low" ? 1 : 0;
   if (archetypeMovement > movementLevels[blueprint.preferredMovementLevel]) {
     contextRaw -= 20;
     contextReasons.push("exceeds preferred movement level");
@@ -278,7 +265,7 @@ export function scoreArchetype(
   if (blueprint.family === "bags" && archetype.shotCategory === "detail") {
     const isConstructionOrHardware = archetype.id.includes("hardware_detail") || archetype.id.includes("construction_detail");
     const isBrandingDetail = archetype.id.includes("logo_focus");
-    if (input.logoVisibilityPriority !== "high") {
+    if (effectiveLogo !== "high") {
       if (isConstructionOrHardware) {
         contextRaw += 15;
         contextReasons.push("construction/hardware detail preferred for bags");
@@ -298,7 +285,7 @@ export function scoreArchetype(
     reliabilityReasons.push("high reliability");
   } else if (
     archetype.higgsfieldReliability === "low" &&
-    input.creativityLevel === "safe"
+    effectiveCreativity === "safe"
   ) {
     reliabilityRaw -= 15;
     reliabilityReasons.push("low reliability penalised (safe creativity)");
@@ -350,12 +337,17 @@ export function computeCoverage(
         archetypes.length
     );
 
-  // Build evidence coverage: 100 if any selected archetype covers it, omitted otherwise
+  // Build graduated evidence coverage: more archetypes covering the same
+  // evidence from different angles = deeper coverage (base 60, +20 per archetype, max 100)
   const evidenceCoverage: Partial<Record<EvidenceType, number>> = {};
   for (const archetype of archetypes) {
     for (const ev of archetype.evidenceCapabilities) {
-      evidenceCoverage[ev] = 100;
+      evidenceCoverage[ev] = (evidenceCoverage[ev] || 0) + 1;
     }
+  }
+  for (const ev of Object.keys(evidenceCoverage) as EvidenceType[]) {
+    const count = evidenceCoverage[ev]!;
+    evidenceCoverage[ev] = Math.min(100, 60 + count * 20);
   }
 
   return {

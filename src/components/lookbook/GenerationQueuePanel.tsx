@@ -23,6 +23,7 @@ import { computeSetReadiness } from "@/lib/lookbook/setReadiness";
 import { formatFinalExport } from "@/lib/lookbook/exportShotPlan";
 import { toPersistedGeneratedImages } from "@/lib/lookbook/projectStore";
 import GenerationShotCard from "./GenerationShotCard";
+import PlanContinuityPanel from "./PlanContinuityPanel";
 import ContinuityReviewPanel from "./ContinuityReviewPanel";
 import SetSummary from "./SetSummary";
 import ReadinessBar from "./shared/ReadinessBar";
@@ -69,6 +70,7 @@ interface GenerationQueuePanelProps {
   tracker: TrackerState | null;
   generatedImages: Record<number, GeneratedImageAsset>;
   hasProductRef?: boolean;
+  hasModelRef?: boolean;
   onStatusChange: (
     position: number,
     status: GenerationStatus,
@@ -339,6 +341,7 @@ export default function GenerationQueuePanel({
   tracker,
   generatedImages,
   hasProductRef,
+  hasModelRef,
   onStatusChange,
   onContinuityChange,
   onSkinPolishChange,
@@ -347,7 +350,7 @@ export default function GenerationQueuePanel({
   onFinalMarkChange,
   projectName,
 }: GenerationQueuePanelProps) {
-  const packages = useMemo(() => compileAllPackages(plan, hasProductRef), [plan, hasProductRef]);
+  const packages = useMemo(() => compileAllPackages(plan, hasProductRef, hasModelRef), [plan, hasProductRef, hasModelRef]);
 
   const anchors = packages.filter((p) => p.generationPhase === "anchor");
   const details = packages.filter(
@@ -373,8 +376,8 @@ export default function GenerationQueuePanel({
   const readiness = useMemo(() => {
     if (!tracker) return null;
     const persisted = toPersistedGeneratedImages(generatedImages);
-    return computeSetReadiness(tracker, persisted);
-  }, [tracker, generatedImages]);
+    return computeSetReadiness(tracker, persisted, plan.shots.length);
+  }, [tracker, generatedImages, plan.shots.length]);
 
   // V4.3: Final summary export text
   const finalExportText = useMemo(() => {
@@ -495,7 +498,10 @@ export default function GenerationQueuePanel({
         onFinalMarkChange={onFinalMarkChange}
       />
 
-      {/* Continuity review (appears after 2+ shots accepted) */}
+      {/* Automated plan continuity check */}
+      <PlanContinuityPanel shots={plan.shots} dna={plan.dna} />
+
+      {/* Manual continuity review (appears after 2+ shots accepted) */}
       {showContinuityReview && continuityLock && (
         <ContinuityReviewPanel
           continuity={continuityLock}

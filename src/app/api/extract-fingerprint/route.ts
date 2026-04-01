@@ -5,6 +5,7 @@ import {
   buildExtractionPrompt,
   normaliseExtractedFingerprint,
 } from "@/lib/lookbook/fingerprintSchema";
+import { parseModelJSON } from "@/lib/lookbook/parseModelJSON";
 import type { ProductFamily } from "@/lib/lookbook/types";
 
 const VALID_FAMILIES = new Set<ProductFamily>([
@@ -12,6 +13,13 @@ const VALID_FAMILIES = new Set<ProductFamily>([
   "watches",
   "belts",
   "jewelry",
+  "eyewear",
+  "apparel",
+  "footwear",
+  "headwear",
+  "scarves",
+  "small_accessories",
+  "full_look",
 ]);
 
 export async function POST(req: NextRequest) {
@@ -80,9 +88,7 @@ export async function POST(req: NextRequest) {
     // Parse model response as JSON
     let rawJson: Record<string, unknown>;
     try {
-      // Strip any markdown fencing the model might add despite instructions
-      const cleaned = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-      rawJson = JSON.parse(cleaned);
+      rawJson = parseModelJSON(text) as Record<string, unknown>;
     } catch {
       return NextResponse.json(
         {

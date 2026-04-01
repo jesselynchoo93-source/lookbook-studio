@@ -1,5 +1,6 @@
 "use client";
 
+import { SHOT_CATEGORY_LABELS } from "@/lib/lookbook/types";
 import type { RecommendedShot } from "@/lib/lookbook/types";
 
 interface GenerationOrderPanelProps {
@@ -49,10 +50,10 @@ export default function GenerationOrderPanel({
                     #{shot.position}
                   </span>
                   <span className="text-sm text-[--text-primary]">
-                    {shot.archetype.title}
+                    {shot.resolvedTitle ?? shot.archetype.title}
                   </span>
-                  <span className="text-xs text-[--text-tertiary] ml-auto capitalize">
-                    {shot.archetype.shotCategory.replace("_", " ")}
+                  <span className="text-xs text-[--text-tertiary] ml-auto">
+                    {SHOT_CATEGORY_LABELS[shot.archetype.shotCategory]}
                   </span>
                 </div>
               );
@@ -79,10 +80,10 @@ export default function GenerationOrderPanel({
                       #{shot.position}
                     </span>
                     <span className="text-sm text-[--text-primary]">
-                      {shot.archetype.title}
+                      {shot.resolvedTitle ?? shot.archetype.title}
                     </span>
-                    <span className="text-xs text-[--text-tertiary] ml-auto capitalize">
-                      {shot.archetype.shotCategory.replace("_", " ")}
+                    <span className="text-xs text-[--text-tertiary] ml-auto">
+                      {SHOT_CATEGORY_LABELS[shot.archetype.shotCategory]}
                     </span>
                   </div>
                 );

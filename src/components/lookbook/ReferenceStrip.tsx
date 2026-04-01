@@ -1,7 +1,21 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ReferenceAsset, ReferenceType } from "@/lib/lookbook/types";
+
+function RefImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const ext = alt.split(".").pop()?.toUpperCase() || "IMG";
+  useEffect(() => { setFailed(false); }, [src]);
+  if (failed || !src) {
+    return (
+      <div className={`flex items-center justify-center bg-[--surface-inset] text-[8px] text-[--text-tertiary] ${className || "w-full h-full"}`}>
+        {ext}
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} className={className || "w-full h-full object-cover"} onError={() => setFailed(true)} />;
+}
 
 interface ReferenceStripProps {
   model: ReferenceAsset[];
@@ -31,11 +45,7 @@ function ThumbnailGroup({
                 : "border-[--surface-card]"
             }`}
           >
-            <img
-              src={asset.previewUrl}
-              alt={asset.fileName}
-              className="w-full h-full object-cover"
-            />
+            <RefImage src={asset.previewUrl} alt={asset.fileName} className="w-full h-full object-cover" />
           </div>
         ))}
         {assets.length > 3 && (
@@ -94,11 +104,7 @@ function ExpandedGroup({
                   : "border-[--border-default]"
               }`}
             >
-              <img
-                src={asset.previewUrl}
-                alt={asset.fileName}
-                className="w-full h-full object-cover"
-              />
+              <RefImage src={asset.previewUrl} alt={asset.fileName} className="w-full h-full object-cover" />
             </div>
             <button
               onClick={() => onRemove(asset.id)}
@@ -128,7 +134,7 @@ function ExpandedGroup({
         <input
           ref={inputRef}
           type="file"
-          accept=".jpg,.jpeg,.png,.webp,.heic,.heif"
+          accept=".jpg,.jpeg,.png,.webp"
           multiple
           onChange={handleChange}
           className="hidden"

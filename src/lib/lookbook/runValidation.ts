@@ -227,9 +227,9 @@ const TEST_CASES: TestCase[] = [
       specificItem: "shoulder bag",
       genderPresentation: "womenswear",
       targetStyle: "commercial",
-      campaignGoal: "product_clarity",
-      logoVisibilityPriority: "medium",
-      creativityLevel: "safe",
+      primaryObjective: "sell_clearly",
+      brandVisibility: "medium",
+      poseDirection: "safe",
       shotCount: 6,
     },
     caseAssertions: (result) => {
@@ -248,9 +248,9 @@ const TEST_CASES: TestCase[] = [
       specificItem: "tote",
       genderPresentation: "womenswear",
       targetStyle: "commercial",
-      campaignGoal: "product_clarity",
-      logoVisibilityPriority: "medium",
-      creativityLevel: "safe",
+      primaryObjective: "sell_clearly",
+      brandVisibility: "medium",
+      poseDirection: "safe",
       shotCount: 6,
     },
     caseAssertions: (result) => {
@@ -268,9 +268,10 @@ const TEST_CASES: TestCase[] = [
       specificItem: "earrings",
       genderPresentation: "womenswear",
       targetStyle: "editorial",
-      campaignGoal: "mood",
-      logoVisibilityPriority: "low",
-      creativityLevel: "balanced",
+      primaryObjective: "editorial_story",
+      secondaryEmphasis: "mood",
+      brandVisibility: "low",
+      poseDirection: "balanced",
       shotCount: 6,
     },
     caseAssertions: (result) => {
@@ -291,9 +292,9 @@ const TEST_CASES: TestCase[] = [
       specificItem: "sunglasses",
       genderPresentation: "womenswear",
       targetStyle: "commercial",
-      campaignGoal: "product_clarity",
-      logoVisibilityPriority: "medium",
-      creativityLevel: "safe",
+      primaryObjective: "sell_clearly",
+      brandVisibility: "medium",
+      poseDirection: "safe",
       shotCount: 6,
     },
     caseAssertions: (result) => {
@@ -315,9 +316,10 @@ const TEST_CASES: TestCase[] = [
       specificItem: "suit jacket",
       genderPresentation: "menswear",
       targetStyle: "tailoring",
-      campaignGoal: "premium_branding",
-      logoVisibilityPriority: "high",
-      creativityLevel: "safe",
+      primaryObjective: "sell_clearly",
+      secondaryEmphasis: "branding",
+      brandVisibility: "high",
+      poseDirection: "safe",
       shotCount: 6,
     },
     caseAssertions: (result) => {
@@ -335,9 +337,10 @@ const TEST_CASES: TestCase[] = [
       specificItem: "sneakers",
       genderPresentation: "unisex",
       targetStyle: "street",
-      campaignGoal: "styling_story",
-      logoVisibilityPriority: "medium",
-      creativityLevel: "balanced",
+      primaryObjective: "editorial_story",
+      secondaryEmphasis: "styling",
+      brandVisibility: "medium",
+      poseDirection: "balanced",
       shotCount: 6,
     },
     caseAssertions: (result) => {
@@ -360,9 +363,9 @@ const TEST_CASES: TestCase[] = [
       specificItem: "sport watch",
       genderPresentation: "menswear",
       targetStyle: "commercial",
-      campaignGoal: "detail_focus",
-      logoVisibilityPriority: "low",
-      creativityLevel: "safe",
+      primaryObjective: "craftsmanship",
+      brandVisibility: "low",
+      poseDirection: "safe",
       shotCount: 6,
     },
     caseAssertions: (result) => {
@@ -396,9 +399,10 @@ const TEST_CASES: TestCase[] = [
       specificItem: "evening ensemble",
       genderPresentation: "womenswear",
       targetStyle: "editorial",
-      campaignGoal: "mood",
-      logoVisibilityPriority: "low",
-      creativityLevel: "directional",
+      primaryObjective: "editorial_story",
+      secondaryEmphasis: "mood",
+      brandVisibility: "low",
+      poseDirection: "directional",
       shotCount: 6,
     },
     caseAssertions: (result) => {
@@ -418,9 +422,10 @@ const TEST_CASES: TestCase[] = [
       specificItem: "silk scarf",
       genderPresentation: "womenswear",
       targetStyle: "editorial",
-      campaignGoal: "styling_story",
-      logoVisibilityPriority: "low",
-      creativityLevel: "balanced",
+      primaryObjective: "editorial_story",
+      secondaryEmphasis: "styling",
+      brandVisibility: "low",
+      poseDirection: "balanced",
       shotCount: 6,
     },
     caseAssertions: (result) => {
@@ -496,8 +501,8 @@ function printCaseResult(cr: CaseResult) {
   console.log(`  ${status}  ${cr.name}`);
   console.log(
     `  Input: ${input.productFamily} > ${input.specificItem || "(no item)"} | ` +
-    `${input.targetStyle} | ${input.campaignGoal} | logo=${input.logoVisibilityPriority} | ` +
-    `creativity=${input.creativityLevel} | ${input.shotCount} shots`
+    `${input.targetStyle} | ${input.primaryObjective} | branding=${input.brandVisibility} | ` +
+    `pose=${input.poseDirection} | ${input.shotCount} shots`
   );
   console.log(sep());
 

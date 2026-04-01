@@ -10,10 +10,10 @@ import type {
 import {
   PRODUCT_FAMILY_LABELS,
   STYLE_LABELS,
-  GOAL_LABELS,
   GENDER_LABELS,
-  LOGO_LABELS,
-  CREATIVITY_LABELS,
+  PRIMARY_OBJECTIVE_LABELS,
+  BRAND_VISIBILITY_LABELS,
+  POSE_DIRECTION_LABELS,
 } from "./types";
 import type { ProductFamily } from "./types";
 import { NEGATIVE_DEFAULTS } from "./realismRules";
@@ -78,12 +78,12 @@ export function formatExportText(
   );
   lines.push(`Gender: ${GENDER_LABELS[dna.genderPresentation]}`);
   lines.push(`Style: ${STYLE_LABELS[dna.targetStyle]}`);
-  lines.push(`Goal: ${GOAL_LABELS[dna.campaignGoal]}`);
-  lines.push(`Logo priority: ${LOGO_LABELS[dna.logoVisibilityPriority]}`);
-  lines.push(`Creativity: ${CREATIVITY_LABELS[dna.creativityLevel]}`);
+  lines.push(`Goal: ${PRIMARY_OBJECTIVE_LABELS[dna.primaryObjective]}`);
+  lines.push(`Logo priority: ${BRAND_VISIBILITY_LABELS[dna.brandVisibility]}`);
+  lines.push(`Creativity: ${POSE_DIRECTION_LABELS[dna.poseDirection]}`);
   lines.push("");
-  lines.push(`Environment: ${dna.environmentFamily}`);
-  lines.push(`Lighting: ${dna.lightingFamily}`);
+  lines.push(`World: ${dna.worldSummary}`);
+  lines.push(`Lighting: ${dna.lightingSummary}`);
   lines.push(`Lens family: ${dna.lensFamily}`);
   lines.push(`Framing family: ${dna.framingFamily}`);
   lines.push(`Motion allowance: ${dna.motionAllowance}`);
@@ -156,13 +156,6 @@ export function formatExportText(
     lines.push(`POSE: ${shot.poseDelta}`);
     lines.push(`BRANDING: ${shot.brandingSafety}`);
     lines.push("");
-
-    // V2: Shot-specific realism guardrail (replaces global boilerplate per shot)
-    if (shot.realismGuardrail) {
-      lines.push(`REALISM GUARDRAIL:`);
-      lines.push(`  ${shot.realismGuardrail}`);
-      lines.push("");
-    }
 
     // V2: Shot-specific negative cues only (global cues are in DNA section)
     if (shot.negativeCues && shot.negativeCues !== "(see global negative cues)") {
@@ -296,7 +289,7 @@ export function formatFinalExport(
     : PRODUCT_FAMILY_LABELS[input.productFamily];
   lines.push(`Product: ${productLabel}`);
   lines.push(`Style: ${STYLE_LABELS[input.targetStyle]}`);
-  lines.push(`Goal: ${GOAL_LABELS[input.campaignGoal]}`);
+  lines.push(`Goal: ${PRIMARY_OBJECTIVE_LABELS[input.primaryObjective]}`);
   lines.push(`Selected shots: ${selectedShots.length} of ${shots.length}`);
   lines.push(`Status: ${READINESS_LABELS[readiness.tier] || readiness.tier}`);
   if (leadPosition !== null) {

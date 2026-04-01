@@ -8,6 +8,7 @@ import type {
 } from "@/lib/lookbook/types";
 import type { WorkflowMode } from "../ModeNavigator";
 import ShootDNACard from "../ShootDNACard";
+import PlanContinuityPanel from "../PlanContinuityPanel";
 import CoverageSummaryComponent from "../CoverageSummary";
 import GenerationOrderPanel from "../GenerationOrderPanel";
 import ShotGrid from "../ShotGrid";
@@ -79,6 +80,9 @@ export default function PlanMode({
 
       {/* Master Shoot DNA (compact: campaign direction visible, rows behind toggle) */}
       <ShootDNACard dna={result.dna} compact />
+
+      {/* Automated plan continuity check */}
+      <PlanContinuityPanel shots={result.shots} dna={result.dna} />
 
       {/* Shot Grid (compact: title + category + what-it-sells only) */}
       <ShotGrid

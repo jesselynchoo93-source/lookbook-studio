@@ -17,6 +17,13 @@ import type {
   WatchFingerprint,
   BeltFingerprint,
   JewelryFingerprint,
+  EyewearFingerprint,
+  ApparelFingerprint,
+  FootwearFingerprint,
+  HeadwearFingerprint,
+  ScarfFingerprint,
+  SmallAccessoryFingerprint,
+  FullLookFingerprint,
 } from "@/lib/lookbook/types";
 import type { ExtractorStatus } from "@/lib/lookbook/useVisionExtractor";
 
@@ -129,12 +136,131 @@ function getJewelrySummary(fp: JewelryFingerprint): EditorialSummary {
   return { form, materialFinish: matFinish };
 }
 
+function getEyewearSummary(fp: EyewearFingerprint): EditorialSummary {
+  const form: string[] = [];
+  form.push(`${fp.frameShape} ${fp.eyewearType}, ${fp.frameMaterial} frame`);
+  form.push(`${fp.lensType} lens, ${fp.bridgeType} bridge`);
+  if (fp.templeStyle) form.push(`${fp.templeStyle} temples`);
+  if (fp.constructionStyle) form.push(fp.constructionStyle);
+
+  const matFinish: string[] = [];
+  matFinish.push(`${fp.materialFinish} ${fp.materialColour}`);
+  if (fp.lensColour) matFinish.push(`${fp.lensColour} lens`);
+  matFinish.push(fp.hardwareFinish);
+  if (fp.logoScale !== "none" && fp.logoPlacement) {
+    matFinish.push(`${fp.logoStyle} ${fp.logoScale}, ${fp.logoPlacement}`);
+  }
+  return { form, materialFinish: matFinish };
+}
+
+function getApparelSummary(fp: ApparelFingerprint): EditorialSummary {
+  const form: string[] = [];
+  form.push(`${fp.fitType} ${fp.apparelType}, ${fp.neckline} neckline`);
+  form.push(`${fp.sleeveLength} sleeve, ${fp.hemLength} hem`);
+  if (fp.closureType) form.push(`${fp.closureType} closure`);
+  if (fp.constructionStyle) form.push(fp.constructionStyle);
+
+  const matFinish: string[] = [];
+  matFinish.push(`${fp.materialFinish} ${fp.materialColour}`);
+  matFinish.push(fp.hardwareFinish);
+  if (fp.logoScale !== "none" && fp.logoPlacement) {
+    matFinish.push(`${fp.logoStyle} ${fp.logoScale}, ${fp.logoPlacement}`);
+  }
+  return { form, materialFinish: matFinish };
+}
+
+function getFootwearSummary(fp: FootwearFingerprint): EditorialSummary {
+  const form: string[] = [];
+  form.push(`${fp.toeShape} ${fp.footwearType}, ${fp.heelHeight} heel`);
+  form.push(`${fp.closureType}, ${fp.ankleHeight} height`);
+  if (fp.soleType) form.push(`${fp.soleType} sole`);
+  if (fp.constructionStyle) form.push(fp.constructionStyle);
+
+  const matFinish: string[] = [];
+  matFinish.push(`${fp.materialFinish} ${fp.materialColour}`);
+  matFinish.push(fp.hardwareFinish);
+  if (fp.logoScale !== "none" && fp.logoPlacement) {
+    matFinish.push(`${fp.logoStyle} ${fp.logoScale}, ${fp.logoPlacement}`);
+  }
+  return { form, materialFinish: matFinish };
+}
+
+function getHeadwearSummary(fp: HeadwearFingerprint): EditorialSummary {
+  const form: string[] = [];
+  form.push(`${fp.crownShape} ${fp.headwearType}`);
+  if (fp.brimStyle) form.push(`${fp.brimStyle} brim`);
+  if (fp.closureType) form.push(fp.closureType);
+  if (fp.constructionStyle) form.push(fp.constructionStyle);
+
+  const matFinish: string[] = [];
+  matFinish.push(`${fp.materialFinish} ${fp.materialColour}`);
+  matFinish.push(fp.hardwareFinish);
+  if (fp.logoScale !== "none" && fp.logoPlacement) {
+    matFinish.push(`${fp.logoStyle} ${fp.logoScale}, ${fp.logoPlacement}`);
+  }
+  return { form, materialFinish: matFinish };
+}
+
+function getScarfSummary(fp: ScarfFingerprint): EditorialSummary {
+  const form: string[] = [];
+  form.push(`${fp.dimensions} ${fp.scarfType}, ${fp.fabricWeight}`);
+  if (fp.patternType) form.push(`${fp.patternType} pattern`);
+  if (fp.edgeFinish) form.push(`${fp.edgeFinish} edge`);
+  if (fp.constructionStyle) form.push(fp.constructionStyle);
+
+  const matFinish: string[] = [];
+  matFinish.push(`${fp.materialFinish} ${fp.materialColour}`);
+  matFinish.push(fp.hardwareFinish);
+  if (fp.logoScale !== "none" && fp.logoPlacement) {
+    matFinish.push(`${fp.logoStyle} ${fp.logoScale}, ${fp.logoPlacement}`);
+  }
+  return { form, materialFinish: matFinish };
+}
+
+function getSmallAccessorySummary(fp: SmallAccessoryFingerprint): EditorialSummary {
+  const form: string[] = [];
+  form.push(`${fp.accessoryType}, ${fp.openingType} opening`);
+  if (fp.cardSlots) form.push(`${fp.cardSlots} card slots`);
+  if (fp.compartmentCount) form.push(`${fp.compartmentCount} compartments`);
+  if (fp.constructionStyle) form.push(fp.constructionStyle);
+
+  const matFinish: string[] = [];
+  matFinish.push(`${fp.materialFinish} ${fp.materialColour}`);
+  matFinish.push(fp.hardwareFinish);
+  if (fp.logoScale !== "none" && fp.logoPlacement) {
+    matFinish.push(`${fp.logoStyle} ${fp.logoScale}, ${fp.logoPlacement}`);
+  }
+  return { form, materialFinish: matFinish };
+}
+
+function getFullLookSummary(fp: FullLookFingerprint): EditorialSummary {
+  const form: string[] = [];
+  form.push(`${fp.styleDirection} look, ${fp.primaryPiece} hero`);
+  form.push(`${fp.layeringCount} layer${fp.layeringCount > 1 ? "s" : ""}, ${fp.colourPalette} palette`);
+  if (fp.constructionStyle) form.push(fp.constructionStyle);
+
+  const matFinish: string[] = [];
+  matFinish.push(`${fp.materialFinish} ${fp.materialColour}`);
+  matFinish.push(fp.hardwareFinish);
+  if (fp.logoScale !== "none" && fp.logoPlacement) {
+    matFinish.push(`${fp.logoStyle} ${fp.logoScale}, ${fp.logoPlacement}`);
+  }
+  return { form, materialFinish: matFinish };
+}
+
 function getEditorialSummary(fp: ProductFingerprint): EditorialSummary {
   switch (fp.family) {
     case "bags": return getBagSummary(fp);
     case "watches": return getWatchSummary(fp);
     case "belts": return getBeltSummary(fp);
     case "jewelry": return getJewelrySummary(fp);
+    case "eyewear": return getEyewearSummary(fp);
+    case "apparel": return getApparelSummary(fp);
+    case "footwear": return getFootwearSummary(fp);
+    case "headwear": return getHeadwearSummary(fp);
+    case "scarves": return getScarfSummary(fp);
+    case "small_accessories": return getSmallAccessorySummary(fp);
+    case "full_look": return getFullLookSummary(fp);
   }
 }
 

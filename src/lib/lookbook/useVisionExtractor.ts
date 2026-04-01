@@ -16,7 +16,7 @@ import type {
   FingerprintMeta,
   FingerprintSource,
 } from "./types";
-import { db } from "./projectStore";
+import { db, hashBlob } from "./projectStore";
 import type { NormalisedExtractionResult } from "./fingerprintSchema";
 
 // ── Types ──
@@ -58,21 +58,19 @@ async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(binary);
 }
 
-async function hashBlob(blob: Blob): Promise<string> {
-  const buf = await blob.arrayBuffer();
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  const arr = new Uint8Array(hash);
-  return Array.from(arr)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 /** Families that have extraction schemas. */
 const EXTRACTABLE_FAMILIES = new Set<ProductFamily>([
   "bags",
   "watches",
   "belts",
   "jewelry",
+  "eyewear",
+  "apparel",
+  "footwear",
+  "headwear",
+  "scarves",
+  "small_accessories",
+  "full_look",
 ]);
 
 // ── Hook ──
@@ -231,10 +229,11 @@ export function useVisionExtractor({
 
         // Already extracted for this exact image?
         if (currentMeta?.signature === signature) {
-          // If user edited, protect their edits
-          if (currentMeta.source === "edited") return;
-          // If already auto-extracted, no need to re-run
-          if (currentMeta.source === "auto") return;
+          // If user edited, protect their edits (unless family changed)
+          const familyChanged = currentFingerprint && currentFingerprint.family !== family;
+          if (currentMeta.source === "edited" && !familyChanged) return;
+          // If already auto-extracted AND same family, no need to re-run
+          if (currentMeta.source === "auto" && !familyChanged) return;
         }
 
         // Trigger extraction
@@ -247,7 +246,7 @@ export function useVisionExtractor({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [family, productReferences, currentMeta, getPrimaryRef, runExtraction]);
+  }, [family, productReferences, currentMeta, currentFingerprint, getPrimaryRef, runExtraction]);
 
   /**
    * Manual re-run: forces a fresh extraction with Opus (high quality).

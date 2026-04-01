@@ -10,6 +10,7 @@ import type {
   EvidenceType,
 } from "./types";
 import { PRODUCT_FAMILY_LABELS } from "./types";
+import { resolveArchetypeTitle, resolveArchetypeRole } from "./shotBlueprints";
 import {
   composeEvidenceSells,
   FAMILY_FALLBACK_SELLS,
@@ -97,96 +98,6 @@ const FAMILY_VOCABULARY: Record<ProductFamily, Record<string, string>> = {
     editorial_mood: "total look and styled intention",
   },
 };
-
-// ── V2 Shot-Specific Realism Guardrails ──
-
-function buildRealismGuardrail(archetype: ShotArchetype, input: LookbookInput): string {
-  const id = archetype.id;
-  const family = input.productFamily;
-
-  // Shot-specific guardrails: what to watch for in THIS shot only
-  if (id === "hero_full_body_seller") {
-    if (family === "bags") return "Check strap attachment points, bag-to-hip proportion, hardware not merging with clothing.";
-    if (family === "footwear") return "Check shoe-to-ground contact, lacing symmetry, sole not floating.";
-    if (family === "apparel") return "Check shoulder seam alignment, hem consistency, button spacing.";
-    return "Check product-to-body proportion, natural weight distribution.";
-  }
-
-  if (id === "watch_wrist_hero") return "Check case-to-wrist proportion, strap sitting flush against skin, crown at 3 o'clock.";
-  if (id === "watch_dial_closeup") return "Check index alignment, hand positions realistic, crystal reflection natural. Small dial text may be illegible.";
-  if (id === "watch_strap_detail") return "Check bracelet link alignment, clasp hinge accuracy, strap-to-lug junction clean.";
-  if (id === "accessory_hand_interaction" && family === "watches") return "Check finger count, wrist anatomy, watch face legibility at this angle.";
-  if (id === "accessory_hand_interaction") return "Check finger count, natural finger curvature, small object not floating above skin.";
-
-  if (id === "eyewear_portrait_halfbody") return "Check frame symmetry across the bridge, lens tint consistency, temple arm alignment.";
-  if (id === "eyewear_temple_detail") return "Check hinge pin rendering, logo legibility on temple arm, lens-to-frame junction.";
-  if (id === "portrait_hero_clean" && family === "eyewear") return "Check frame sitting naturally on the nose bridge, both lenses same tint, no frame warping.";
-
-  if (id === "bag_carry_profile") return "Check strap attachment where it meets the bag, bag not clipping through clothing, consistent leather texture.";
-  if (id === "bag_hardware_detail") return "Check buckle/clasp rendering, metal colour consistency, stitching regularity near hardware.";
-  if (id === "bag_construction_detail") return "Check interior lining texture, pocket edge finishing, zipper teeth alignment.";
-
-  if (id === "footwear_ground_focus") return "Check shoe-to-ground shadow contact, sole tread pattern clarity, lacing eyelet rendering.";
-  if (id === "footwear_material_detail") return "Check stitching regularity, sole-to-upper seam, leather grain consistency.";
-  if (id === "controlled_half_stride") {
-    if (family === "footwear") return "Check both shoes rendered correctly, natural stride length, sole flex believable.";
-    return "Check mid-stride weight distribution, fabric movement consistent with direction.";
-  }
-
-  if (id === "ear_detail_crop") return "Check earring attachment to earlobe, metal colour match if pair, no earring floating.";
-  if (id === "three_quarter_ear_reveal") return "Check earring drop against jawline, both sides consistent if pair visible.";
-  if (id === "pair_symmetry_validation") return "Check left-right earring size match, identical drop length, no asymmetric distortion.";
-  if (id === "jewelry_neckline_focus") return "Check chain drape following gravity, pendant resting on skin, clasp hidden at back.";
-
-  if (id === "belt_waist_hero") return "Check buckle shape accuracy, prong alignment, leather-to-buckle junction clean, belt loop spacing even.";
-  if (id === "buckle_detail_closeup") return "Check prong alignment, tongue slot accuracy, logo stamping clarity, metal colour consistency. Leather-to-buckle junction must be clean.";
-  if (id === "belt_leather_texture") return "Check grain consistency, stitching regularity, edge paint smoothness, hole punching uniformity.";
-  if (id === "belt_waist_styling_crop") return "Check belt sitting naturally at the waist (not floating), fabric interaction at the belt line, belt width consistent.";
-
-  // Headwear-specific guardrails
-  if (id === "headwear_portrait_hero") return "Check hat sitting naturally on the head (not floating), brim shape consistent, crown not collapsing. Hair-to-hat transition must look real.";
-  if (id === "headwear_side_profile") return "Check brim depth and curvature from the side, crown shape consistent, ear-to-hat gap natural. No hat clipping through hair.";
-  if (id === "headwear_texture_detail") return "Check weave or knit pattern consistency, band stitching regularity, any logo or badge rendering accuracy.";
-
-  // Scarf-specific guardrails
-  if (id === "scarf_drape_portrait") return "Check drape following gravity naturally, fabric edges not floating, knot or wrap staying in place. Print registration should be consistent across folds.";
-  if (id === "scarf_texture_closeup") return "Check weave pattern regularity, fringe rendering (if present), edge hemming detail. Fabric weight should be visually consistent.";
-
-  // Small accessories guardrails
-  if (id === "accessory_in_hand_hero") return "Check finger count and curvature, product not floating above palm, natural grip pressure visible.";
-  if (id === "accessory_flatlay_detail") return "Check surface shadow contact, product not hovering above the surface, consistent lighting angle. Avoid AI over-smoothing on metal or leather.";
-  if (id === "accessory_texture_macro") return "Check material grain at macro range, no AI smoothing artefacts, edge sharpness consistent.";
-  if (id === "accessory_lifestyle_styled") return "Check product-to-environment lighting match, natural placement on surface or body, no compositing seams.";
-
-  if (id === "detail_crop_logo_focus") return "Check text legibility, no mirrored or scrambled characters, logo proportions accurate.";
-
-  // Family-level fallbacks (more specific than category-level)
-  if (family === "headwear") {
-    if (archetype.shotCategory === "editorial") return "Check hat-to-environment lighting match, hat not floating, brim shadow natural.";
-    return "Check hat sitting naturally, crown shape consistent, no hair clipping through hat.";
-  }
-  if (family === "scarves") {
-    if (archetype.shotCategory === "editorial") return "Check drape following gravity, fabric-to-environment lighting match, print registration consistent.";
-    return "Check drape weight and gravity, fabric edges natural, pattern consistency across folds.";
-  }
-  if (family === "small_accessories") {
-    return "Check product scale against hand or surface, material rendering accuracy, no floating objects.";
-  }
-  if (family === "belts") {
-    return "Check buckle rendering accuracy, leather grain consistency, belt not floating above waist.";
-  }
-  if (family === "watches") {
-    return "Check dial legibility, case-to-wrist proportion, strap sitting flush, crown position accurate.";
-  }
-
-  // Category-level fallbacks
-  if (archetype.shotCategory === "detail") return "Check material texture rendering at close range, clean edges, no AI smoothing artefacts.";
-  if (archetype.shotCategory === "motion") return "Check natural motion blur direction, no frozen mid-air limbs, clothing movement consistent.";
-  if (archetype.shotCategory === "editorial") return "Check environment-to-subject lighting match, no compositing seams, grounded shadows.";
-  if (archetype.shotCategory === "silhouette") return "Check clean edge separation from background, no phantom limbs, unbroken silhouette line.";
-
-  return "Check product rendering accuracy, natural skin texture, grounded anatomy.";
-}
 
 // ── V2 Delta Brief Builder ──
 
@@ -298,16 +209,16 @@ function buildBadges(
 ): string[] {
   const badges: string[] = [];
 
-  if (input.creativityLevel === "safe" && archetype.creativityBand.includes("safe")) {
+  if (input.poseDirection === "safe" && archetype.creativityBand.includes("safe")) {
     badges.push("Safe");
   }
-  if (input.creativityLevel === "balanced" && archetype.creativityBand.includes("balanced")) {
+  if (input.poseDirection === "balanced" && archetype.creativityBand.includes("balanced")) {
     badges.push("Balanced");
   }
-  if (input.creativityLevel === "directional" && archetype.creativityBand.includes("directional")) {
+  if (input.poseDirection === "directional" && archetype.creativityBand.includes("directional")) {
     badges.push("Directional");
   }
-  if (archetype.logoVisibilitySuitability === "high" && input.logoVisibilityPriority !== "low") {
+  if (archetype.logoVisibilitySuitability === "high" && input.brandVisibility !== "low") {
     badges.push("Logo-safe");
   }
   if (archetype.detailSuitability === "high") {
@@ -608,24 +519,7 @@ export function runBriefQualityPass(shots: RecommendedShot[]): BriefQualityIssue
     if (!correctedThisPass) break;
   }
 
-  // Cross-shot realism guardrail uniqueness (all guardrails should be shot-specific, not identical)
-  const guardrails = shots
-    .filter(s => s.realismGuardrail)
-    .map(s => ({ position: s.position, text: s.realismGuardrail!.toLowerCase() }));
-  const guardrailCounts = new Map<string, number[]>();
-  for (const { position, text } of guardrails) {
-    const positions = guardrailCounts.get(text) || [];
-    positions.push(position);
-    guardrailCounts.set(text, positions);
-  }
-  for (const [, positions] of guardrailCounts) {
-    if (positions.length >= 3) {
-      issues.push({
-        shotPosition: positions[positions.length - 1],
-        issue: `Same realism guardrail used for ${positions.length} shots (${positions.join(", ")}). Should be shot-specific.`,
-      });
-    }
-  }
+
 
   return issues;
 }
@@ -655,12 +549,12 @@ export function deduplicateSellsText(shots: RecommendedShot[], input: LookbookIn
         shot.whatItSells = `${item[0].toUpperCase() + item.slice(1)} ${cat}: ${phrase}.`;
       } else {
         // No matched evidence: use archetype role as differentiator
-        shot.whatItSells = `${shot.archetype.role} ${vocab.editorial_mood}.`;
+        shot.whatItSells = `${shot.resolvedRole ?? shot.archetype.role} ${vocab.editorial_mood}.`;
       }
 
       // If the rewrite STILL matches, append archetype name as last resort
       if (shot.whatItSells.toLowerCase() === key) {
-        shot.whatItSells = `${shot.whatItSells} (${shot.archetype.title.toLowerCase()})`;
+        shot.whatItSells = `${shot.whatItSells} (${(shot.resolvedTitle ?? shot.archetype.title).toLowerCase()})`;
       }
     } else {
       seen.set(key, shot.position);
@@ -694,7 +588,7 @@ export function buildRecommendedShot(
     whatItSells: deriveWhatItSells(archetype, input, blueprint),
     framingDelta: deriveFramingDelta(archetype, dna),
     poseDelta: derivePoseDelta(archetype),
-    productEmphasis: archetype.role,
+    productEmphasis: resolveArchetypeRole(archetype, input.specificItem),
     brandingSafety:
       archetype.logoVisibilitySuitability === "high"
         ? "Logo-safe: branding fully visible."
@@ -708,8 +602,9 @@ export function buildRecommendedShot(
     deltaBrief: buildDeltaBrief(archetype, dna, input, blueprint, priority === 1),
     negativeCues: buildNegativeCues(archetype, input, blueprint),
     evidenceProvided,
-    realismGuardrail: buildRealismGuardrail(archetype, input),
     whyGenerateNow: deriveWhyGenerateNow(archetype, priority, input, allShots || []),
+    resolvedTitle: resolveArchetypeTitle(archetype, input.specificItem),
+    resolvedRole: resolveArchetypeRole(archetype, input.specificItem),
   };
 }
 

@@ -16,24 +16,31 @@ import type {
   WatchFingerprint,
   BeltFingerprint,
   JewelryFingerprint,
+  EyewearFingerprint,
+  ApparelFingerprint,
+  FootwearFingerprint,
+  HeadwearFingerprint,
+  ScarfFingerprint,
+  SmallAccessoryFingerprint,
+  FullLookFingerprint,
 } from "./types";
 
 // ── Layer 2: Product Truth ──
-// Invariant physical properties that must be consistent across all shots.
+// Invariant physical properties that must be consistent as in the reference.
 
 export interface ProductTruthSpec {
   /** Prose description of invariant physical properties. */
   truthLock: string;
-  /** Key visual invariants to check (for guardrail layer). */
+  /** Key visual invariants to check. */
   invariants: string[];
 }
 
 export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
   jewelry: {
     truthLock:
-      "Metal colour and finish must be identical across all shots. Stone count, cut shape, and setting style " +
+      "Metal colour and finish must be identical as in the reference. Stone count, cut shape, and setting style " +
       "are fixed. If earrings, both pieces must match in size, drop length, and metal tone. Chain thickness " +
-      "and link pattern do not change between shots.",
+      "and link pattern do not change from the reference.",
     invariants: [
       "metal colour consistency",
       "stone count and shape",
@@ -45,7 +52,7 @@ export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
   bags: {
     truthLock:
       "Bag body shape, proportion, and silhouette are fixed. Hardware colour (gold, silver, gunmetal) is " +
-      "consistent across all shots. Strap attachment points, buckle style, and closure mechanism do not change. " +
+      "consistent as in the reference. Strap attachment points, buckle style, and closure mechanism do not change. " +
       "Interior lining colour and pocket layout remain the same when visible.",
     invariants: [
       "body shape and proportion",
@@ -71,7 +78,7 @@ export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
   eyewear: {
     truthLock:
       "Frame shape, bridge width, and temple arm length are fixed. Lens tint and coating are identical " +
-      "in both lenses across all shots. Hinge style and any logo placement on the temple are consistent. " +
+      "in both lenses as in the reference. Hinge style and any logo placement on the temple are consistent. " +
       "Nose pad style does not change.",
     invariants: [
       "frame shape and width",
@@ -85,7 +92,7 @@ export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
     truthLock:
       "Buckle shape, prong count, and metal finish are fixed. Leather width, colour, and edge paint are " +
       "consistent. Hole spacing and keeper loop position do not change. Any embossed pattern or stitching " +
-      "detail is identical across shots.",
+      "detail is identical as in the reference.",
     invariants: [
       "buckle shape and metal finish",
       "leather width and colour",
@@ -98,7 +105,7 @@ export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
     truthLock:
       "Shoe silhouette, sole profile, and upper construction are fixed. Lacing system (eyelets, lace colour, " +
       "lace pattern) is consistent. Sole colour and tread pattern do not change. Any branding on the tongue " +
-      "or heel tab is identical across shots.",
+      "or heel tab is identical as in the reference.",
     invariants: [
       "shoe silhouette",
       "sole profile and colour",
@@ -111,7 +118,7 @@ export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
     truthLock:
       "Garment colour, fabric texture, and pattern are fixed. Button count, spacing, and colour are " +
       "consistent. Collar shape, cuff style, and hem length do not change. Any embroidery, applique, " +
-      "or print is identical across shots.",
+      "or print is identical as in the reference.",
     invariants: [
       "fabric colour and pattern",
       "button count and spacing",
@@ -124,7 +131,7 @@ export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
     truthLock:
       "Crown shape, brim width, and material are fixed. Any band, badge, or logo placement is consistent. " +
       "Interior sweatband colour does not change when visible. Stiffness and structure level are the same " +
-      "across all shots.",
+      "as in the reference.",
     invariants: [
       "crown shape and height",
       "brim width and curvature",
@@ -137,7 +144,7 @@ export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
     truthLock:
       "Fabric weight, weave pattern, and print are fixed. Fringe length and density (if present) are " +
       "consistent. Edge hemming style does not change. Colour saturation and print registration are " +
-      "identical across shots.",
+      "identical as in the reference.",
     invariants: [
       "weave pattern",
       "print registration",
@@ -149,7 +156,7 @@ export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
   small_accessories: {
     truthLock:
       "Product dimensions, material finish, and hardware are fixed. Clasp or closure mechanism type is " +
-      "consistent. Any embossing, logo, or surface pattern is identical across shots. Edge finishing " +
+      "consistent. Any embossing, logo, or surface pattern is identical as in the reference. Edge finishing " +
       "and stitching detail do not change.",
     invariants: [
       "product dimensions",
@@ -163,7 +170,7 @@ export const FAMILY_PRODUCT_TRUTH: Record<ProductFamily, ProductTruthSpec> = {
     truthLock:
       "Each garment and accessory in the ensemble maintains its own product truth. Layering order is " +
       "consistent. Colour palette and styling choices (tucked, untucked, buttoned, open) are fixed " +
-      "across all shots unless the brief specifies a styling change.",
+      "as in the reference unless the brief specifies a styling change.",
     invariants: [
       "layering order",
       "colour palette",
@@ -246,47 +253,47 @@ export const FAMILY_SCALE_RULES: Record<ProductFamily, ScaleRuleSpec> = {
 
 export const FAMILY_DRIFT_NEGATIVES: Record<ProductFamily, string> = {
   jewelry:
-    "mismatched metal colours between shots, floating earring not attached to ear, " +
+    "mismatched metal colours from the reference, floating earring not attached to ear, " +
     "stone count changing between angles, chain links merging into solid band, " +
     "clasp appearing on wrong side",
   bags:
-    "hardware colour shifting between shots, strap attachment points moving, " +
+    "hardware colour shifting from the reference, strap attachment points moving, " +
     "bag body shape morphing between angles, interior colour changing, " +
     "zipper teeth merging into smooth surface",
   watches:
     "dial indices shifting position, crown migrating from 3 o'clock, " +
     "case shape changing between angles, strap material switching, " +
-    "hands pointing to different times across shots",
+    "hands pointing to different times as in the reference",
   eyewear:
     "lens tint mismatch between left and right, frame shape warping between angles, " +
     "temple arms different lengths, hinge disappearing in profile view, " +
     "nose pads changing style",
   belts:
-    "buckle shape changing between shots, leather width inconsistent, " +
+    "buckle shape changing from the reference, leather width inconsistent, " +
     "hole spacing shifting, edge paint colour drifting, " +
     "prong count changing",
   footwear:
-    "sole profile changing between shots, lacing pattern inconsistent, " +
+    "sole profile changing from the reference, lacing pattern inconsistent, " +
     "shoe silhouette morphing, heel height shifting, " +
     "upper material colour drifting between angles",
   apparel:
     "button count changing, collar shape morphing, pattern scale shifting, " +
-    "hem length inconsistent between shots, fabric colour drifting, " +
+    "hem length inconsistent from the reference, fabric colour drifting, " +
     "pocket placement moving",
   headwear:
-    "crown shape collapsing or inflating between shots, brim width changing, " +
+    "crown shape collapsing or inflating from the reference, brim width changing, " +
     "badge or logo placement shifting, material texture switching, " +
     "structural stiffness inconsistent",
   scarves:
-    "print pattern scale shifting between shots, fringe length changing, " +
+    "print pattern scale shifting from the reference, fringe length changing, " +
     "fabric weight appearing inconsistent, colour saturation drifting, " +
     "edge hemming style switching",
   small_accessories:
-    "product dimensions changing between shots, hardware colour drifting, " +
+    "product dimensions changing from the reference, hardware colour drifting, " +
     "clasp mechanism type switching, edge finishing inconsistent, " +
     "logo placement shifting",
   full_look:
-    "layering order changing between shots, colour palette drifting, " +
+    "layering order changing from the reference, colour palette drifting, " +
     "styling choices (tucked/untucked) switching unintentionally, " +
     "accessory placement moving, fabric overlap points inconsistent",
 };
@@ -323,7 +330,7 @@ const ITEM_TRUTH_OVERRIDES: ItemTruthOverride[] = [
     items: ["shoulder bag", "crossbody bag", "sling bag"],
     family: "bags",
     additionalTruth: "Strap drop length is fixed. Cross-body positioning (left or right hip) is consistent.",
-    additionalDriftNegatives: "strap routing switching sides between shots, strap drop length changing",
+    additionalDriftNegatives: "strap routing switching sides from the reference, strap drop length changing",
   },
   {
     items: ["tote", "tote bag", "shopper bag"],
@@ -338,7 +345,7 @@ const ITEM_TRUTH_OVERRIDES: ItemTruthOverride[] = [
   {
     items: ["sport watch", "dive watch", "digital watch"],
     family: "watches",
-    additionalTruth: "Bezel markings and digital display elements are consistent across shots.",
+    additionalTruth: "Bezel markings and digital display elements are consistent as in the reference.",
     additionalDriftNegatives: "bezel graduation marks shifting, digital display content changing",
   },
 ];
@@ -374,7 +381,7 @@ function buildFingerprintTruth(fp: ProductFingerprint): string {
       const bag = fp as BagFingerprint;
       parts.push(
         `${bag.silhouetteShape} ${bag.silhouettePrimary} silhouette is fixed.`,
-        `${bag.handleCount} ${bag.handleType} handle(s)${bag.handleAttachment ? ` with ${bag.handleAttachment} attachment` : ""}, consistent across all shots.`,
+        `${bag.handleCount} ${bag.handleType} handle(s)${bag.handleAttachment ? ` with ${bag.handleAttachment} attachment` : ""}, consistent as in the reference.`,
         `Closure: ${bag.closureType}. Construction: ${bag.constructionStyle}.`,
       );
       if (bag.strapPresent && bag.strapType) {
@@ -387,7 +394,7 @@ function buildFingerprintTruth(fp: ProductFingerprint): string {
       parts.push(
         `${w.caseShape} ${w.caseSize} case is fixed.`,
         `Dial: ${w.dialColour} ${w.dialType}. Bezel: ${w.bezelType}.`,
-        `Strap: ${w.strapColour} ${w.strapType}, consistent across all shots.`,
+        `Strap: ${w.strapColour} ${w.strapType}, consistent as in the reference.`,
         `Crown at ${w.crownPosition}.`,
       );
       if (w.complicationCount > 0) {
@@ -400,7 +407,7 @@ function buildFingerprintTruth(fp: ProductFingerprint): string {
       parts.push(
         `${b.beltWidth} width belt is fixed.`,
         `Buckle: ${b.buckleShape} ${b.buckleType}. Tip: ${b.tipStyle}.`,
-        `Construction: ${b.constructionStyle}, consistent across all shots.`,
+        `Construction: ${b.constructionStyle}, consistent as in the reference.`,
       );
       break;
     }
@@ -415,12 +422,77 @@ function buildFingerprintTruth(fp: ProductFingerprint): string {
       if (j.dropLength) parts.push(`Drop: ${j.dropLength}.`);
       break;
     }
+    case "eyewear": {
+      const e = fp as EyewearFingerprint;
+      parts.push(
+        `${e.frameShape} ${e.frameMaterial} frame is fixed.`,
+        `Lens: ${e.lensColour} ${e.lensType}. Bridge: ${e.bridgeType}.`,
+        `Temples: ${e.templeStyle}, consistent as in the reference.`,
+        `Construction: ${e.constructionStyle}.`,
+      );
+      break;
+    }
+    case "apparel": {
+      const a = fp as ApparelFingerprint;
+      parts.push(
+        `${a.fitType} fit ${a.apparelType} is fixed.`,
+        `Neckline: ${a.neckline}. Sleeve: ${a.sleeveLength}. Hem: ${a.hemLength}.`,
+        `Closure: ${a.closureType}. Construction: ${a.constructionStyle}.`,
+      );
+      break;
+    }
+    case "footwear": {
+      const f = fp as FootwearFingerprint;
+      parts.push(
+        `${f.footwearType} with ${f.toeShape} toe is fixed.`,
+        `Sole: ${f.soleType}. Heel: ${f.heelHeight}. Ankle: ${f.ankleHeight}.`,
+        `Closure: ${f.closureType}. Construction: ${f.constructionStyle}.`,
+      );
+      break;
+    }
+    case "headwear": {
+      const h = fp as HeadwearFingerprint;
+      parts.push(
+        `${h.crownShape} crown ${h.headwearType} is fixed.`,
+        `Brim: ${h.brimStyle}. Closure: ${h.closureType}.`,
+        `Construction: ${h.constructionStyle}, consistent as in the reference.`,
+      );
+      break;
+    }
+    case "scarves": {
+      const s = fp as ScarfFingerprint;
+      parts.push(
+        `${s.dimensions} ${s.scarfType} is fixed.`,
+        `Fabric: ${s.fabricWeight} weight. Pattern: ${s.patternType}.`,
+        `Edge: ${s.edgeFinish}. Construction: ${s.constructionStyle}.`,
+      );
+      break;
+    }
+    case "small_accessories": {
+      const sa = fp as SmallAccessoryFingerprint;
+      parts.push(
+        `${sa.accessoryType}, ${sa.openingType} opening is fixed.`,
+        `Construction: ${sa.constructionStyle}, consistent as in the reference.`,
+      );
+      if (sa.cardSlots) parts.push(`${sa.cardSlots} card slot(s), layout does not change.`);
+      if (sa.compartmentCount) parts.push(`${sa.compartmentCount} compartment(s).`);
+      break;
+    }
+    case "full_look": {
+      const fl = fp as FullLookFingerprint;
+      parts.push(
+        `${fl.styleDirection} full look with ${fl.primaryPiece} as hero piece.`,
+        `${fl.layeringCount} visible layer(s). Palette: ${fl.colourPalette}.`,
+        `Construction: ${fl.constructionStyle}, layering order does not change.`,
+      );
+      break;
+    }
   }
 
   // Common attributes
   parts.push(
     `Material: ${fp.materialFinish} ${fp.materialColour}.`,
-    `Hardware: ${fp.hardwareFinish} finish, consistent across all shots.`,
+    `Hardware: ${fp.hardwareFinish} finish, consistent as in the reference.`,
   );
   if (fp.logoScale !== "none" && fp.logoPlacement) {
     parts.push(`Logo: ${fp.logoStyle} ${fp.logoScale} at ${fp.logoPlacement}, does not move.`);
@@ -468,9 +540,4 @@ export function resolveDriftNegatives(input: LookbookInput): string {
     return `${family}, ${override.additionalDriftNegatives}`;
   }
   return family;
-}
-
-/** Get the product truth invariants list (for guardrail checks). */
-export function getProductTruthInvariants(family: ProductFamily): string[] {
-  return FAMILY_PRODUCT_TRUTH[family].invariants;
 }

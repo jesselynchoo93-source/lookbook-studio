@@ -66,10 +66,10 @@ export default function ReferenceDrawer({
               Campaign Direction
             </span>
             <p className="text-xs text-[--text-secondary]">
-              {result.dna.targetStyle} &middot; {result.dna.campaignGoal.replace(/_/g, " ")}
+              {result.dna.targetStyle} &middot; {result.dna.primaryObjective.replace(/_/g, " ")}
             </p>
             <p className="text-xs text-[--text-tertiary]">
-              {result.dna.creativityLevel} creativity &middot; Logo: {result.dna.logoVisibilityPriority}
+              {result.dna.poseDirection} pose &middot; Branding: {result.dna.brandVisibility}
             </p>
           </div>
 

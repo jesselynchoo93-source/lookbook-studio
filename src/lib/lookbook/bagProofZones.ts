@@ -1,15 +1,14 @@
 /**
- * F8: Bag Proof Zones — shot classification + proof zone resolution + physics constraints.
+ * F8: Bag Proof Zones — shot classification + physics constraints.
  *
  * Classifies each bag shot into one of 6 classes (5 proof, 1 editorial) and
- * resolves the appropriate proof targets, physical behavior constraints, and
- * detail focus for that class.
+ * resolves the appropriate physical behavior constraints and detail focus
+ * for that class.
  */
 import type {
   RecommendedShot,
   BagFingerprint,
   BagShotClass,
-  BagProofZone,
   PhysicalBehaviorConstraint,
 } from "./types";
 
@@ -62,43 +61,6 @@ export function classifyBagShot(shot: RecommendedShot): BagShotClass {
 
   // Editorial / motion / seated / walking
   return "editorial_desire";
-}
-
-// ── Proof Zone Resolution ──
-
-/**
- * Resolve proof targets for a detail or macro shot based on the
- * shot class and the actual fingerprint. Returns ordered by priority.
- */
-export function resolveProofTargets(
-  shotClass: BagShotClass,
-  fp: BagFingerprint,
-): BagProofZone[] {
-  switch (shotClass) {
-    case "proof_macro_construction": {
-      const zones: BagProofZone[] = ["panel_seam", "edge_finishing", "leather_surface"];
-      return zones;
-    }
-
-    case "proof_macro_attachment_or_brand_zone": {
-      const zones: BagProofZone[] = ["handle_attachment"];
-      if (fp.logoScale !== "none" && fp.logoPlacement) zones.push("logo_zone");
-      zones.push("hardware_finish");
-      return zones;
-    }
-
-    case "proof_open_top_or_capacity":
-      return ["opening_geometry", "interior", "leather_surface"];
-
-    case "proof_hero":
-      return ["silhouette", "handle_attachment", "hardware_finish"];
-
-    case "proof_profile":
-      return ["silhouette", "hardware_finish", "leather_surface"];
-
-    case "editorial_desire":
-      return ["silhouette"]; // editorial still proves shape
-  }
 }
 
 /**
@@ -157,8 +119,8 @@ export function getBagPhysicsConstraints(
   const base: PhysicalBehaviorConstraint[] = [
     {
       zone: "overall",
-      behavior: "Same exact object across all shots, consistent panel proportions",
-      antiPattern: "no morphing, no shape simplification between shots",
+      behavior: "Consistent panel proportions, match the reference product exactly",
+      antiPattern: "no morphing, no shape simplification, no redesigning features",
     },
   ];
 

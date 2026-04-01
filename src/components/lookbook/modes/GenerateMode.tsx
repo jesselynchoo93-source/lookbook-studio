@@ -15,7 +15,7 @@ import type {
   ReferenceType,
 } from "@/lib/lookbook/types";
 import type { WorkflowMode } from "../ModeNavigator";
-import { compileAllPackages } from "@/lib/lookbook/generationPrompt";
+import { compileAllPackages, formatProviderQueueForClipboard } from "@/lib/lookbook/generationPrompt";
 import QueueRail from "../QueueRail";
 import CurrentShotWorkspace from "../CurrentShotWorkspace";
 import ReferenceDrawer from "../ReferenceDrawer";
@@ -88,7 +88,8 @@ export default function GenerateMode({
   onSetPrimary,
 }: GenerateModeProps) {
   const hasProductRef = references.product.length > 0;
-  const packages = useMemo(() => compileAllPackages(plan, hasProductRef), [plan, hasProductRef]);
+  const hasModelRef = references.model.length > 0;
+  const packages = useMemo(() => compileAllPackages(plan, hasProductRef, hasModelRef), [plan, hasProductRef, hasModelRef]);
 
   const [activeShot, setActiveShot] = useState<number>(() =>
     selectDefaultActiveShot(tracker, plan.generationOrder),
@@ -103,6 +104,15 @@ export default function GenerateMode({
     onModeChange("finalise");
   }, [onModeChange]);
 
+  const [copyLabel, setCopyLabel] = useState("Copy All Prompts");
+  const handleCopyAll = useCallback(() => {
+    const text = formatProviderQueueForClipboard(packages, plan.input);
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyLabel("Copied!");
+      setTimeout(() => setCopyLabel("Copy All Prompts"), 2000);
+    });
+  }, [packages, plan.input]);
+
   if (!activePkg) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -113,8 +123,19 @@ export default function GenerateMode({
 
   return (
     <div className="space-y-4">
-      {/* Progress bar */}
-      <ProgressBar tracker={tracker} packages={packages} />
+      {/* Progress bar + copy all */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <ProgressBar tracker={tracker} packages={packages} />
+        </div>
+        <button
+          type="button"
+          onClick={handleCopyAll}
+          className="shrink-0 text-xs border border-[--border-default] text-[--text-secondary] font-medium px-3 py-1.5 rounded-md hover:text-[--text-primary] hover:border-[--text-tertiary] transition-colors"
+        >
+          {copyLabel}
+        </button>
+      </div>
 
       {/* 3-zone layout */}
       <div className="flex gap-6 items-start">

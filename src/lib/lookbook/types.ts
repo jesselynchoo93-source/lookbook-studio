@@ -40,6 +40,73 @@ export type CampaignGoal =
 export type LogoVisibilityPriority = "high" | "medium" | "low";
 export type CreativityLevel = "safe" | "balanced" | "directional";
 
+// ── User-Facing Control Types (new hierarchy) ──
+
+export type PrimaryObjective =
+  | "sell_clearly"
+  | "shape_and_fit"
+  | "craftsmanship"
+  | "editorial_story";
+
+export type SecondaryEmphasis =
+  | "branding"
+  | "movement"
+  | "mood"
+  | "styling"
+  | "detail";
+
+/** Risk budget for archetype eligibility and motion allowance */
+export type PoseDirection = "safe" | "balanced" | "directional";
+
+// ── Taste Translation ──
+
+export type ProductSensibility =
+  | "fluid_sensual"
+  | "structured_tailored"
+  | "soft_casual"
+  | "technical_sport"
+  | "ornamental_decorative"
+  | "minimal_refined";
+
+export type WorldTone =
+  | "soft"
+  | "sharp"
+  | "intimate"
+  | "monumental"
+  | "airy"
+  | "urban_raw";
+
+export type LightAttitude = "skin_friendly" | "sculptural" | "neutral" | "graphic";
+/** Controls how archetype-specific lighting overrides blend with DNA-level lighting.
+ * strict: ignore archetype lighting, use DNA/attitude defaults only.
+ * guided: extract direction hint from archetype, compose with DNA quality/temperature.
+ * free: archetype lighting replaces everything (legacy behavior). */
+export type LightingConsistencyMode = "strict" | "guided" | "free";
+export type EmotionalRegister = "sensual" | "confident" | "quiet" | "sharp";
+export type SurfaceTone = "tactile" | "polished" | "hard" | "soft";
+
+export interface TasteBridge {
+  worldTone: WorldTone;
+  lightAttitude: LightAttitude;
+  emotionalRegister: EmotionalRegister;
+  surfaceTone: SurfaceTone;
+}
+
+/** Policy strength for secondary objects in the set */
+export type SecondaryObjectPolicy = "forbid" | "allow_supporting_only" | "allow_full_styling";
+
+/** Editorial rhythm beat: abstract emotional role for each slot in an editorial set */
+export type EditorialBeat =
+  | "establish"   // anchor: set the world and character
+  | "build"       // contrast1: introduce visual tension
+  | "pivot"       // contrast2: change energy or angle
+  | "breathe"     // release: visual rest, intimacy
+  | "resolve"     // movement: emotional resolution through motion
+  | "reveal";     // detail_close: reveal product truth
+
+/** How much logo/label evidence should appear in the set */
+export type BrandVisibility = "low" | "medium" | "high";
+
 export type SuitabilityRating = "high" | "medium" | "low";
 export type DifficultyLevel = "easy" | "moderate" | "hard";
 export type RiskLevel = "low" | "medium" | "high";
@@ -50,6 +117,16 @@ export type ShotCategory =
   | "motion"
   | "editorial"
   | "product_focus";
+
+/** Canonical display labels for shot categories. Use everywhere a category is shown to the user. */
+export const SHOT_CATEGORY_LABELS: Record<ShotCategory, string> = {
+  hero: "Hero",
+  silhouette: "Silhouette",
+  detail: "Detail",
+  motion: "Motion",
+  editorial: "Editorial",
+  product_focus: "Product Focus",
+};
 
 // ── Evidence & Capability Model ──
 
@@ -199,6 +276,8 @@ export interface PlanDiagnostics {
     score: number;       // 0-100, higher = more varied
     flags: string[];     // human-readable warnings
   };
+  /** Visual rhythm slot-fill log: which slots were filled, relaxed, or failed */
+  slotFillLog?: SlotFillEntry[];
 }
 
 // ── Label Maps ──
@@ -257,6 +336,35 @@ export const CREATIVITY_LABELS: Record<CreativityLevel, string> = {
   directional: "Directional",
 };
 
+// ── New Control Label Maps ──
+
+export const PRIMARY_OBJECTIVE_LABELS: Record<PrimaryObjective, string> = {
+  sell_clearly: "Sell the product clearly",
+  shape_and_fit: "Emphasise shape and fit",
+  craftsmanship: "Highlight craftsmanship and detail",
+  editorial_story: "Tell a brand/editorial story",
+};
+
+export const SECONDARY_EMPHASIS_LABELS: Record<SecondaryEmphasis, string> = {
+  branding: "Branding visibility",
+  movement: "Movement",
+  mood: "Mood",
+  styling: "Styling",
+  detail: "Detail",
+};
+
+export const POSE_DIRECTION_LABELS: Record<PoseDirection, string> = {
+  safe: "Conservative",
+  balanced: "Balanced",
+  directional: "Expressive",
+};
+
+export const BRAND_VISIBILITY_LABELS: Record<BrandVisibility, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+
 // ── Core Inputs ──
 
 export interface LookbookInput {
@@ -264,41 +372,29 @@ export interface LookbookInput {
   specificItem?: string;
   genderPresentation: GenderPresentation;
   targetStyle: TargetStyle;
-  campaignGoal: CampaignGoal;
-  logoVisibilityPriority: LogoVisibilityPriority;
-  creativityLevel: CreativityLevel;
+  /** What the set should achieve (strongest driver) */
+  primaryObjective: PrimaryObjective;
+  /** Optional additional bias (single-select, can be omitted) */
+  secondaryEmphasis?: SecondaryEmphasis;
+  /** How much logo/label evidence should appear */
+  brandVisibility: BrandVisibility;
+  /** Risk budget for archetype eligibility and motion */
+  poseDirection: PoseDirection;
   shotCount: number;
   notes?: string;
   /** F7: Reference-grounded product fingerprint. */
   productFingerprint?: ProductFingerprint;
-  /** F7: Concrete visual continuity tokens. */
-  continuityWorld?: ContinuityWorldTokens;
+  /** World lock mode: "auto" uses references, named families force override. */
+  worldLockMode?: WorldLockMode;
+  /** Raw Gemini extraction from styling reference (environment-only). */
+  extractedWorld?: ExtractedWorldTokens;
 }
 
 // ── Settings Driver ──
 
 export type SettingsDriver =
-  | "preset"          // User selected a creative direction preset
-  | "ai_recommended"  // AI recommendation auto-applied (no preset selected)
-  | "custom"          // User manually edited goal/logo/creativity from scratch
-  | "modified_preset"; // User started from a preset then manually changed settings
-
-// ── Starter Presets ──
-
-export interface PresetExplanation {
-  shotMix: string;
-  brandingPriority: string;
-  creativityPosture: string;
-  balance: string;
-}
-
-export interface StarterPreset {
-  id: string;
-  label: string;
-  description: string;
-  defaults: Partial<LookbookInput>;
-  explanation: PresetExplanation;
-}
+  | "ai_recommended"  // AI recommendation auto-applied (default)
+  | "custom";         // User manually edited goal/logo/creativity
 
 // ── Master Shoot DNA ──
 
@@ -308,11 +404,13 @@ export interface MasterShootDNA {
   specificItem?: string;
   genderPresentation: GenderPresentation;
   targetStyle: TargetStyle;
-  campaignGoal: CampaignGoal;
-  logoVisibilityPriority: LogoVisibilityPriority;
-  creativityLevel: CreativityLevel;
-  environmentFamily: string;
-  lightingFamily: string;
+  primaryObjective: PrimaryObjective;
+  secondaryEmphasis?: SecondaryEmphasis;
+  brandVisibility: BrandVisibility;
+  poseDirection: PoseDirection;
+  worldProfile: WorldProfile;
+  worldSummary: string;
+  lightingSummary: string;
   lensFamily: string;
   framingFamily: string;
   realismProfile: string;
@@ -321,6 +419,10 @@ export interface MasterShootDNA {
   finishFamily: string;
   generationPriorityNotes: string;
   brandGuidelines?: string;
+  sensibility: ProductSensibility;
+  tasteBridge: TasteBridge;
+  secondaryObjectPolicy: SecondaryObjectPolicy;
+  lightingConsistency: LightingConsistencyMode;
 }
 
 // ── Shot Archetype ──
@@ -370,6 +472,12 @@ export interface ShotArchetype {
   secondaryDisplayZones: DisplayZone[];
   showsProductInMotion: boolean;
   showsFullProduct: boolean;
+  /** When set, this archetype is only eligible for these families. Replaces hardcoded semantic gates. */
+  exclusiveTo?: ProductFamily[];
+  /** Item-specific title overrides. Key is a normalized subtype (e.g. "dress", "skirt"). */
+  titleOverrides?: Record<string, string>;
+  /** Item-specific role overrides. Key is a normalized subtype (e.g. "dress", "skirt"). */
+  roleOverrides?: Record<string, string>;
 }
 
 // ── 3-Layer Blueprint System ──
@@ -477,6 +585,38 @@ export type ShotRole = "hero" | "proof" | "contrast" | "release" | "editorial_fi
 
 export type ProductOnlyPreference = "strong" | "medium" | "low" | "none";
 
+// ── Visual Rhythm System ──
+
+export type RhythmSlot = "anchor" | "contrast1" | "contrast2" | "release" | "movement" | "detail_close";
+
+export interface RhythmSlotSpec {
+  slot: RhythmSlot;
+  /** Descriptive label for diagnostics (e.g. "Back/Profile Contrast") */
+  label: string;
+  /** What this slot achieves compositionally */
+  description: string;
+  /** Allowed angles for this slot (empty/undefined = any) */
+  requiredAngle?: AngleBucket[];
+  /** Allowed poses for this slot (empty/undefined = any) */
+  requiredPose?: PoseBucket[];
+  /** Allowed framing buckets for this slot (empty/undefined = any) */
+  requiredFraming?: string[];
+  /** Shot categories that naturally fit this slot */
+  preferredCategories: ShotCategory[];
+  /** Must this slot be filled, or is it a preferred beat? */
+  required: boolean;
+  /** Editorial rhythm beat (only set when objective is editorial_story) */
+  editorialBeat?: EditorialBeat;
+}
+
+export interface SlotFillEntry {
+  slot: RhythmSlot;
+  label: string;
+  status: "filled" | "relaxed" | "failed" | "skipped_optional" | "backfilled";
+  archetypeId?: string;
+  relaxReason?: string;
+}
+
 export interface SetRhythm {
   /** Recommended role sequence for the 6 shots (presentation order, not generation) */
   idealSequence: ShotRole[];
@@ -484,6 +624,8 @@ export interface SetRhythm {
   requiredRoles: ShotRole[];
   /** Product-only preference level for this family */
   productOnlyPreference: ProductOnlyPreference;
+  /** Visual rhythm slot definitions for composition-driven selection */
+  rhythmSlots?: RhythmSlotSpec[];
 }
 
 export interface ScoredArchetype {
@@ -496,6 +638,8 @@ export interface ScoredArchetype {
   distanceBucket: DistanceBucket;
   /** F5a: pose bucket derived from poseFamily + primaryDisplayZones */
   poseBucket: PoseBucket;
+  /** Visual rhythm slot this shot fills (assigned during selection) */
+  rhythmSlot?: RhythmSlot;
 }
 
 export interface RecommendedShot {
@@ -514,12 +658,18 @@ export interface RecommendedShot {
   deltaBrief: string;
   negativeCues: string;
   evidenceProvided: EvidenceType[];
-  /** V2: shot-specific realism guardrail (replaces global boilerplate) */
-  realismGuardrail: string;
   /** V2: why this shot should be generated at this priority (first 3 only) */
   whyGenerateNow?: string;
   /** V2.1: one-line explanation of why this shot was selected for the set */
   whySelected?: string;
+  /** Visual rhythm slot this shot fills */
+  rhythmSlot?: RhythmSlot;
+  /** Item-resolved title (e.g. "Seated Drape Line" instead of "Seated Full Trouser Line" for dresses) */
+  resolvedTitle?: string;
+  /** Item-resolved role description */
+  resolvedRole?: string;
+  /** Editorial beat assigned to this shot (only for editorial sets) */
+  editorialBeat?: EditorialBeat;
 }
 
 export interface CoverageSummary {
@@ -650,14 +800,22 @@ export interface ReferenceAsset {
   previewUrl: string;
   /** Whether this is the primary reference in its group (model or product) */
   isPrimary: boolean;
-  /** Whether this reference is a source-of-truth asset (product) vs inspiration (styling) */
+  /**
+   * Whether this reference is a source-of-truth asset (product) vs inspiration (styling).
+   * @deprecated Set but never read by any engine file. Primary selection flows
+   * through isPrimary -> vision extraction -> ProductFingerprint instead.
+   */
   isSourceOfTruth: boolean;
   addedAt: string;
 }
 
+// ── Engine Selection ──
+
+export type StudioEngine = "editorial" | "commerce";
+
 // ── V4.1: Persistence Types ──
 
-export const PROJECT_SCHEMA_VERSION = 2;
+export const PROJECT_SCHEMA_VERSION = 4;
 
 /** Derived project status, always recomputed on save (cached convenience). */
 export type ProjectStatus =
@@ -674,6 +832,11 @@ export interface PersistedReferenceAsset {
   mimeType: string;
   sizeBytes: number;
   isPrimary: boolean;
+  /**
+   * Whether this reference is a source-of-truth asset (product) vs inspiration (styling).
+   * @deprecated Set but never read by any engine file. Primary selection flows
+   * through isPrimary -> vision extraction -> ProductFingerprint instead.
+   */
   isSourceOfTruth: boolean;
   addedAt: string;
 }
@@ -694,6 +857,11 @@ export interface PersistedGeneratedImage {
   mimeType: string;
   sizeBytes: number;
   addedAt: string;
+  /** Commerce run isolation: family + run + reference identity */
+  familyId?: string;
+  runId?: string;
+  referenceImageId?: string;
+  configHash?: string;
 }
 
 /** Session-only version with preview URL restored from blob. */
@@ -703,10 +871,19 @@ export interface GeneratedImageAsset extends PersistedGeneratedImage {
 
 /** Blob record for generated images, stored in its own table. */
 export interface GeneratedBlobRecord {
-  /** Deterministic key: `${projectId}_shot_${shotPosition}` */
+  /** Deterministic key: `${projectId}_${familyId}_${runId}_shot_${shotPosition}` (commerce) or `${projectId}_shot_${shotPosition}` (editorial) */
   id: string;
   projectId: string;
   blob: Blob;
+}
+
+// ── Commerce Run Isolation ──
+
+/** Commerce run metadata persisted alongside the project for resume validation. */
+export interface CommerceRunMeta {
+  runId: string;
+  familyId: string;
+  configHash: string;
 }
 
 /** Top-level project record stored in IndexedDB. */
@@ -720,6 +897,9 @@ export interface ProjectRecord {
   updatedAt: string;
   /** Cached convenience, always recomputed on save. */
   status: ProjectStatus;
+
+  /** V4: Studio engine. "editorial" (default) or "commerce" (reference-locked). */
+  engine: StudioEngine;
 
   // Core data
   input: LookbookInput;
@@ -740,6 +920,15 @@ export interface ProjectRecord {
 
   // V4.3: Vision extraction metadata
   fingerprintMeta?: FingerprintMeta;
+
+  // V5: Commerce run isolation metadata
+  commerceRunMeta?: CommerceRunMeta;
+
+  // V5.1: Commerce generation plan (persisted for resume)
+  commercePlan?: import("@/lib/commerce/referenceLibrary.types").CommerceGenerationPlan;
+
+  // V5.1: Selected template family ID (persisted for setup resume)
+  selectedFamilyId?: string;
 }
 
 /** Generation-ready prompt package for a single shot. */
@@ -759,7 +948,6 @@ export interface GenerationPromptPackage {
   shotBrief: string;
   generatorPrompt: string;
   negativePrompt: string;
-  guardrailChecklist: string[];
 
   // Continuity locks (from DNA, immutable per set)
   continuity: ContinuityLock;
@@ -773,9 +961,6 @@ export interface GenerationPromptPackage {
   status: GenerationStatus;
   retryReason?: RetryReason;
   retryCount: number;
-
-  // Enhancor handoff
-  enhancorNotes: string[];
 
   // F4: Structured prompt layers (for UI display and debugging)
   promptLayers?: {
@@ -877,11 +1062,89 @@ export interface JewelryFingerprint extends ProductFingerprintBase {
   constructionStyle: string;
 }
 
+export interface EyewearFingerprint extends ProductFingerprintBase {
+  family: "eyewear";
+  eyewearType: string; // sunglasses, optical, reading
+  frameShape: string; // aviator, wayfarer, cat-eye, round, rectangular, oversized
+  frameMaterial: string; // acetate, metal, titanium, mixed
+  lensType: string; // tinted, gradient, mirrored, clear, polarised
+  lensColour: string;
+  templeStyle: string; // straight, curved, wire
+  bridgeType: string; // keyhole, saddle, adjustable-nose-pad
+  constructionStyle: string;
+}
+
+export interface ApparelFingerprint extends ProductFingerprintBase {
+  family: "apparel";
+  apparelType: string; // jacket, coat, dress, shirt, trousers, skirt, blazer
+  fitType: string; // slim, regular, oversized, tailored, relaxed
+  neckline: string; // crew, v-neck, collar, lapel, mock, turtleneck
+  sleeveLength: string; // sleeveless, short, three-quarter, long
+  hemLength: string; // cropped, hip, knee, midi, maxi, floor
+  closureType: string; // button, zip, snap, pull-on, wrap, toggle
+  constructionStyle: string;
+}
+
+export interface FootwearFingerprint extends ProductFingerprintBase {
+  family: "footwear";
+  footwearType: string; // sneaker, boot, loafer, heel, sandal, flat, oxford, mule
+  heelHeight: string; // flat, low, mid, high, platform
+  toeShape: string; // round, pointed, square, almond, open
+  soleType: string; // rubber, leather, platform, espadrille, wedge
+  closureType: string; // lace-up, slip-on, buckle, zip, strap, velcro
+  ankleHeight: string; // low, ankle, mid-calf, knee, over-knee
+  constructionStyle: string;
+}
+
+export interface HeadwearFingerprint extends ProductFingerprintBase {
+  family: "headwear";
+  headwearType: string; // cap, beanie, fedora, bucket, beret, visor, wide-brim
+  crownShape: string; // structured, unstructured, flat-top, round
+  brimStyle: string; // flat, curved, wide, narrow, none
+  closureType: string; // adjustable-strap, snapback, fitted, elastic, none
+  constructionStyle: string;
+}
+
+export interface ScarfFingerprint extends ProductFingerprintBase {
+  family: "scarves";
+  scarfType: string; // scarf, shawl, bandana, wrap, stole, necktie
+  dimensions: string; // square, rectangular, long-narrow, oversized
+  fabricWeight: string; // sheer, lightweight, medium, heavy
+  patternType: string; // solid, printed, woven, jacquard, embroidered
+  edgeFinish: string; // fringed, hemmed, raw, rolled, tasselled
+  constructionStyle: string;
+}
+
+export interface SmallAccessoryFingerprint extends ProductFingerprintBase {
+  family: "small_accessories";
+  accessoryType: string; // wallet, card-holder, key-ring, phone-case, pouch, coin-purse
+  openingType: string; // fold, zip, snap, slip
+  cardSlots?: number;
+  compartmentCount?: number;
+  constructionStyle: string;
+}
+
+export interface FullLookFingerprint extends ProductFingerprintBase {
+  family: "full_look";
+  primaryPiece: string; // the hero garment or accessory
+  layeringCount: number; // number of visible layers
+  colourPalette: string; // dominant colour scheme
+  styleDirection: string; // casual, formal, streetwear, editorial, athleisure
+  constructionStyle: string;
+}
+
 export type ProductFingerprint =
   | BagFingerprint
   | WatchFingerprint
   | BeltFingerprint
-  | JewelryFingerprint;
+  | JewelryFingerprint
+  | EyewearFingerprint
+  | ApparelFingerprint
+  | FootwearFingerprint
+  | HeadwearFingerprint
+  | ScarfFingerprint
+  | SmallAccessoryFingerprint
+  | FullLookFingerprint;
 
 // ── F7: Fingerprint Extraction Metadata ──
 
@@ -904,20 +1167,111 @@ export interface FingerprintMeta {
 
 // ── F7: Continuity World Tokens ──
 
-/** Concrete visual tokens for provider continuity. */
+/**
+ * @deprecated Replaced by WorldProfile + ExtractedWorldTokens.
+ * Kept temporarily for migration compatibility.
+ */
 export interface ContinuityWorldTokens {
   backdrop: string;
   lighting: string;
   tonalTemperature: string;
   styling: string;
-  modelTokens: string;
 }
 
-/** Named world preset. */
+/**
+ * @deprecated Replaced by WORLD_FAMILY_DEFAULTS in worldProfiles.ts.
+ */
 export interface WorldPreset {
   id: string;
   label: string;
   tokens: ContinuityWorldTokens;
+}
+
+// ── World System ──
+
+export type WorldFamily =
+  | "studio_minimal"
+  | "architectural_interior"
+  | "architectural_exterior"
+  | "furnished_interior"
+  | "urban_exterior"
+  | "natural_exterior";
+
+export type LightingCharacter =
+  | "soft_even"
+  | "soft_directional"
+  | "directional_daylight"
+  | "window_light"
+  | "overcast_outdoor"
+  | "hard_directional";
+
+export type TonalTemperature = "cool" | "neutral" | "warm";
+
+export type PropDensity = "none" | "minimal" | "sparse";
+
+export type WorldInteractionLevel =
+  | "none"
+  | "lean_only"
+  | "sit_or_lean"
+  | "full_light_interaction";
+
+export type WorldLockMode =
+  | "auto"
+  | "studio_minimal"
+  | "architectural_interior"
+  | "architectural_exterior"
+  | "furnished_interior"
+  | "urban_exterior"
+  | "natural_exterior";
+
+export type WorldQuietness = "silent" | "quiet" | "present";
+
+/** Resolved set-level world. Derived in buildMasterShootDNA(), never stored on LookbookInput. */
+export interface WorldProfile {
+  family: WorldFamily;
+
+  // Set-level locks (constant across all shots)
+  tonalTemperature: TonalTemperature;
+  lightingCharacter: LightingCharacter;
+  lightingDescription: string;
+  propDensity: PropDensity;
+  interactionLevel: WorldInteractionLevel;
+  continuityPriority: "strict" | "balanced" | "flexible";
+  quietness: WorldQuietness;
+
+  // Shot-variable base values (anchors for micro-variation)
+  backdrop: string;
+  groundPlane: string;
+  furnitureElements: string[];
+  architecturalElements: string[];
+  naturalElements: string[];
+  allowedMicroVariations: string[];
+
+  // Provenance
+  source: "manual_lock" | "gemini_tokens" | "normalized_gemini" | "preset_fallback";
+  sourceNotes?: string[];
+}
+
+/** Raw Gemini extraction (environment-only, no styling). */
+export interface ExtractedWorldTokens {
+  backdrop?: string;
+  groundPlane?: string;
+  lighting?: string;
+  tonalTemperature?: string;
+  architecturalElements?: string[];
+  furnitureElements?: string[];
+  naturalElements?: string[];
+  environmentMood?: string;
+  suggestedFamily?: WorldFamily;
+}
+
+/** Per-shot world slice for prompt compilation. */
+export interface ShotWorldSlice {
+  backdropClause: string;
+  groundClause: string;
+  lightingClause: string;
+  interactionClause?: string;
+  variationClause?: string;
 }
 
 // ── F8: Bag Shot Classification & Proof Zones ──

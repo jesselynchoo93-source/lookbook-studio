@@ -1,20 +1,22 @@
 "use client";
 
 import type {
-  CampaignGoal,
+  PrimaryObjective,
+  SecondaryEmphasis,
   TargetStyle,
   GenderPresentation,
-  LogoVisibilityPriority,
-  CreativityLevel,
+  BrandVisibility,
+  PoseDirection,
   ProductFamily,
   SettingsDriver,
 } from "@/lib/lookbook/types";
 import {
-  GOAL_LABELS,
+  PRIMARY_OBJECTIVE_LABELS,
+  SECONDARY_EMPHASIS_LABELS,
   STYLE_LABELS,
   GENDER_LABELS,
-  LOGO_LABELS,
-  CREATIVITY_LABELS,
+  BRAND_VISIBILITY_LABELS,
+  POSE_DIRECTION_LABELS,
 } from "@/lib/lookbook/types";
 import type { RecommendedSettings, SettingsWarning } from "@/lib/lookbook/recommendSettings";
 import { getRecommendedSettings, getSettingsWarnings } from "@/lib/lookbook/recommendSettings";
@@ -22,23 +24,20 @@ import { useMemo } from "react";
 
 // ── Dropdown option descriptions ──
 
-const GOAL_DESCRIPTIONS: Record<CampaignGoal, string> = {
-  product_clarity: "Best for clean selling images",
-  premium_branding: "Best when brand visibility matters",
-  silhouette: "Best for shape and outline emphasis",
-  movement: "Best for dynamic product behaviour",
-  mood: "Best for atmospheric brand storytelling",
-  detail_focus: "Best for craftsmanship and close-up shots",
-  styling_story: "Best for mood, identity, and lookbook feel",
+const OBJECTIVE_DESCRIPTIONS: Record<PrimaryObjective, string> = {
+  sell_clearly: "Best for clean selling images with fit and product visibility",
+  shape_and_fit: "Best for shape, outline, and silhouette emphasis",
+  craftsmanship: "Best for close-up detail and construction quality",
+  editorial_story: "Best for brand storytelling and styled editorial sets",
 };
 
-const LOGO_DESCRIPTIONS: Record<LogoVisibilityPriority, string> = {
+const BRAND_VISIBILITY_DESCRIPTIONS: Record<BrandVisibility, string> = {
   low: "Branding can stay subtle or partially hidden",
   medium: "Branding should appear naturally when visible",
   high: "Branding should remain clearly readable in multiple shots",
 };
 
-const CREATIVITY_DESCRIPTIONS: Record<CreativityLevel, string> = {
+const POSE_DIRECTION_DESCRIPTIONS: Record<PoseDirection, string> = {
   safe: "Cleaner, more reliable commercial poses",
   balanced: "Mix of commercial and editorial",
   directional: "More fashion-forward, higher risk",
@@ -47,14 +46,9 @@ const CREATIVITY_DESCRIPTIONS: Record<CreativityLevel, string> = {
 // ── Driver badge labels and styles ──
 
 const DRIVER_BADGE: Record<SettingsDriver, { label: string; hint: string; className: string }> = {
-  preset: {
-    label: "Creative Direction",
-    hint: "Settings locked to your chosen preset",
-    className: "bg-[--status-info-bg] text-[--status-info-text]",
-  },
   ai_recommended: {
     label: "AI Recommended",
-    hint: "Auto-tuned for your product and style",
+    hint: "Auto-tuned for your product",
     className: "bg-[--status-success-bg] text-[--status-success-text]",
   },
   custom: {
@@ -62,33 +56,29 @@ const DRIVER_BADGE: Record<SettingsDriver, { label: string; hint: string; classN
     hint: "You set these manually",
     className: "bg-[--status-warning-bg] text-[--status-warning-text]",
   },
-  modified_preset: {
-    label: "Modified Preset",
-    hint: "Started from a preset, then adjusted",
-    className: "bg-purple-50 text-purple-700",
-  },
 };
 
 // ── Props ──
 
 interface CampaignGoalSelectorProps {
-  goal: CampaignGoal;
+  objective: PrimaryObjective;
+  emphasis?: SecondaryEmphasis;
   style: TargetStyle;
   gender: GenderPresentation;
-  logo: LogoVisibilityPriority;
-  creativity: CreativityLevel;
+  brandVisibility: BrandVisibility;
+  poseDirection: PoseDirection;
   productFamily: ProductFamily;
   specificItem?: string;
   settingsDriver: SettingsDriver;
-  selectedPresetId?: string;
   pendingRecommendation: RecommendedSettings | null;
-  onGoalChange: (v: CampaignGoal) => void;
+  onObjectiveChange: (v: PrimaryObjective) => void;
+  onEmphasisChange: (v: SecondaryEmphasis | undefined) => void;
   onStyleChange: (v: TargetStyle) => void;
   onGenderChange: (v: GenderPresentation) => void;
-  onLogoChange: (v: LogoVisibilityPriority) => void;
-  onCreativityChange: (v: CreativityLevel) => void;
+  onBrandVisibilityChange: (v: BrandVisibility) => void;
+  onPoseDirectionChange: (v: PoseDirection) => void;
   onApplyRecommendation: (rec: RecommendedSettings) => void;
-  onKeepPreset: () => void;
+  onDismissRecommendation: () => void;
 }
 
 // ── Generic Select Field with descriptions ──
@@ -134,13 +124,56 @@ function SelectField<T extends string>({
   );
 }
 
+// ── Pill selector for Secondary Emphasis ──
+
+function EmphasisPills({
+  value,
+  onChange,
+}: {
+  value?: SecondaryEmphasis;
+  onChange: (v: SecondaryEmphasis | undefined) => void;
+}) {
+  const options = Object.keys(SECONDARY_EMPHASIS_LABELS) as SecondaryEmphasis[];
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-[--text-primary] mb-1">
+        Additional emphasis
+        <span className="text-xs text-[--text-tertiary] font-normal ml-2">Optional</span>
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => {
+          const isActive = value === opt;
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onChange(isActive ? undefined : opt)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                isActive
+                  ? "bg-[--text-primary] text-[--text-inverted] border-[--text-primary]"
+                  : "bg-[--surface-card] text-[--text-secondary] border-[--border-default] hover:text-[--text-primary] hover:border-[--text-tertiary]"
+              }`}
+            >
+              {SECONDARY_EMPHASIS_LABELS[opt]}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1 text-xs text-[--text-tertiary]">
+        Adds a secondary goal to tilt the set. Click again to deselect.
+      </p>
+    </div>
+  );
+}
+
 // ── Options arrays ──
 
-const goalOptions = Object.keys(GOAL_LABELS) as CampaignGoal[];
+const objectiveOptions = Object.keys(PRIMARY_OBJECTIVE_LABELS) as PrimaryObjective[];
 const styleOptions = Object.keys(STYLE_LABELS) as TargetStyle[];
 const genderOptions = Object.keys(GENDER_LABELS) as GenderPresentation[];
-const logoOptions = Object.keys(LOGO_LABELS) as LogoVisibilityPriority[];
-const creativityOptions = Object.keys(CREATIVITY_LABELS) as CreativityLevel[];
+const brandVisibilityOptions = Object.keys(BRAND_VISIBILITY_LABELS) as BrandVisibility[];
+const poseDirectionOptions = Object.keys(POSE_DIRECTION_LABELS) as PoseDirection[];
 
 // ── Active Recommendation Card (currently applied) ──
 
@@ -163,10 +196,15 @@ function ActiveRecommendationCard({
         </span>
       </div>
 
-      <div className="flex gap-4 text-xs text-[--text-secondary] mb-2">
-        <span>Goal: <span className="text-[--text-primary]">{GOAL_LABELS[recommendation.campaignGoal]}</span></span>
-        <span>Branding: <span className="text-[--text-primary]">{LOGO_LABELS[recommendation.logoVisibilityPriority]}</span></span>
-        <span>Creativity: <span className="text-[--text-primary]">{CREATIVITY_LABELS[recommendation.creativityLevel]}</span></span>
+      <div className="flex flex-wrap gap-4 text-xs text-[--text-secondary] mb-2">
+        <span>Gender: <span className="text-[--text-primary]">{GENDER_LABELS[recommendation.genderPresentation]}</span></span>
+        <span>Style: <span className="text-[--text-primary]">{STYLE_LABELS[recommendation.targetStyle]}</span></span>
+        <span>Objective: <span className="text-[--text-primary]">{PRIMARY_OBJECTIVE_LABELS[recommendation.primaryObjective]}</span></span>
+        {recommendation.secondaryEmphasis && (
+          <span>Emphasis: <span className="text-[--text-primary]">{SECONDARY_EMPHASIS_LABELS[recommendation.secondaryEmphasis]}</span></span>
+        )}
+        <span>Branding: <span className="text-[--text-primary]">{BRAND_VISIBILITY_LABELS[recommendation.brandVisibility]}</span></span>
+        <span>Pose: <span className="text-[--text-primary]">{POSE_DIRECTION_LABELS[recommendation.poseDirection]}</span></span>
       </div>
 
       <p className="text-xs text-[--text-secondary] leading-relaxed">
@@ -198,10 +236,15 @@ function PendingRecommendationCard({
         </p>
       </div>
 
-      <div className="flex gap-4 text-xs text-[--text-secondary] mb-2">
-        <span>Goal: <span className="text-[--text-primary]">{GOAL_LABELS[recommendation.campaignGoal]}</span></span>
-        <span>Branding: <span className="text-[--text-primary]">{LOGO_LABELS[recommendation.logoVisibilityPriority]}</span></span>
-        <span>Creativity: <span className="text-[--text-primary]">{CREATIVITY_LABELS[recommendation.creativityLevel]}</span></span>
+      <div className="flex flex-wrap gap-4 text-xs text-[--text-secondary] mb-2">
+        <span>Gender: <span className="text-[--text-primary]">{GENDER_LABELS[recommendation.genderPresentation]}</span></span>
+        <span>Style: <span className="text-[--text-primary]">{STYLE_LABELS[recommendation.targetStyle]}</span></span>
+        <span>Objective: <span className="text-[--text-primary]">{PRIMARY_OBJECTIVE_LABELS[recommendation.primaryObjective]}</span></span>
+        {recommendation.secondaryEmphasis && (
+          <span>Emphasis: <span className="text-[--text-primary]">{SECONDARY_EMPHASIS_LABELS[recommendation.secondaryEmphasis]}</span></span>
+        )}
+        <span>Branding: <span className="text-[--text-primary]">{BRAND_VISIBILITY_LABELS[recommendation.brandVisibility]}</span></span>
+        <span>Pose: <span className="text-[--text-primary]">{POSE_DIRECTION_LABELS[recommendation.poseDirection]}</span></span>
       </div>
 
       <p className="text-xs text-[--text-secondary] leading-relaxed mb-3">
@@ -271,44 +314,48 @@ function WarningList({ warnings }: { warnings: SettingsWarning[] }) {
 // ── Main Component ──
 
 export default function CampaignGoalSelector({
-  goal,
+  objective,
+  emphasis,
   style,
   gender,
-  logo,
-  creativity,
+  brandVisibility,
+  poseDirection,
   productFamily,
   specificItem,
   settingsDriver,
-  selectedPresetId,
   pendingRecommendation,
-  onGoalChange,
+  onObjectiveChange,
+  onEmphasisChange,
   onStyleChange,
   onGenderChange,
-  onLogoChange,
-  onCreativityChange,
+  onBrandVisibilityChange,
+  onPoseDirectionChange,
   onApplyRecommendation,
-  onKeepPreset,
+  onDismissRecommendation,
 }: CampaignGoalSelectorProps) {
   const recommendation = useMemo(
-    () => getRecommendedSettings({ productFamily, specificItem, genderPresentation: gender, targetStyle: style }),
-    [productFamily, specificItem, gender, style],
+    () => getRecommendedSettings({ productFamily, specificItem }),
+    [productFamily, specificItem],
   );
 
   const warnings = useMemo(
-    () => getSettingsWarnings(goal, logo, creativity, productFamily),
-    [goal, logo, creativity, productFamily],
+    () => getSettingsWarnings(objective, brandVisibility, poseDirection, productFamily, emphasis),
+    [objective, brandVisibility, poseDirection, productFamily, emphasis],
   );
 
   const isRecommendationActive =
     settingsDriver === "ai_recommended" &&
-    goal === recommendation.campaignGoal &&
-    logo === recommendation.logoVisibilityPriority &&
-    creativity === recommendation.creativityLevel;
+    gender === recommendation.genderPresentation &&
+    style === recommendation.targetStyle &&
+    objective === recommendation.primaryObjective &&
+    brandVisibility === recommendation.brandVisibility &&
+    poseDirection === recommendation.poseDirection &&
+    emphasis === recommendation.secondaryEmphasis;
 
   const showPendingCard = pendingRecommendation !== null;
   const showActiveCard = isRecommendationActive && !showPendingCard;
   const showPassiveHint = !showPendingCard && !showActiveCard &&
-    (settingsDriver === "custom" || settingsDriver === "modified_preset");
+    settingsDriver === "custom";
 
   const badge = DRIVER_BADGE[settingsDriver];
 
@@ -336,7 +383,7 @@ export default function CampaignGoalSelector({
         />
         <SelectField
           label="Target Style"
-          helperText="The visual style of your lookbook."
+          helperText="The visual world: environment, lighting, lens, finish."
           value={style}
           options={styleOptions}
           labels={STYLE_LABELS}
@@ -349,7 +396,7 @@ export default function CampaignGoalSelector({
         <PendingRecommendationCard
           recommendation={pendingRecommendation!}
           onApply={() => onApplyRecommendation(pendingRecommendation!)}
-          onKeep={onKeepPreset}
+          onKeep={onDismissRecommendation}
         />
       )}
 
@@ -364,37 +411,40 @@ export default function CampaignGoalSelector({
         />
       )}
 
-      {/* Goal / Logo / Creativity fields */}
+      {/* Primary Objective */}
+      <SelectField
+        label="What should this set achieve?"
+        helperText="The strongest driver of shot selection, evidence priorities, and set composition."
+        value={objective}
+        options={objectiveOptions}
+        labels={PRIMARY_OBJECTIVE_LABELS}
+        descriptions={OBJECTIVE_DESCRIPTIONS}
+        onChange={onObjectiveChange}
+      />
+
+      {/* Secondary Emphasis: hidden from UI, handled by AI recommendation system */}
+
+      {/* Brand Visibility + Pose Direction */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SelectField
-          label="What do you want this set to do?"
-          helperText="Choose what the shoot should prioritise most: selling the product clearly, highlighting branding, focusing on detail, or creating a stronger mood."
-          value={goal}
-          options={goalOptions}
-          labels={GOAL_LABELS}
-          descriptions={GOAL_DESCRIPTIONS}
-          onChange={onGoalChange}
+          label="Brand visibility"
+          helperText="How much logo and label evidence should appear. This controls readability, not the overall feel."
+          value={brandVisibility}
+          options={brandVisibilityOptions}
+          labels={BRAND_VISIBILITY_LABELS}
+          descriptions={BRAND_VISIBILITY_DESCRIPTIONS}
+          onChange={onBrandVisibilityChange}
         />
         <SelectField
-          label="How important is visible branding?"
-          helperText="Pick high only if logos or brand marks need to stay consistently readable across multiple shots."
-          value={logo}
-          options={logoOptions}
-          labels={LOGO_LABELS}
-          descriptions={LOGO_DESCRIPTIONS}
-          onChange={onLogoChange}
+          label="Pose direction"
+          helperText="Safe = reliable commercial. Balanced = mix. Directional = fashion-forward with more risk."
+          value={poseDirection}
+          options={poseDirectionOptions}
+          labels={POSE_DIRECTION_LABELS}
+          descriptions={POSE_DIRECTION_DESCRIPTIONS}
+          onChange={onPoseDirectionChange}
         />
       </div>
-
-      <SelectField
-        label="How experimental should the poses be?"
-        helperText="Safe = cleaner commercial poses. Balanced = mix of clean and editorial. Directional = stronger fashion energy with more risk."
-        value={creativity}
-        options={creativityOptions}
-        labels={CREATIVITY_LABELS}
-        descriptions={CREATIVITY_DESCRIPTIONS}
-        onChange={onCreativityChange}
-      />
 
       {/* Warnings for risky combinations */}
       <WarningList warnings={warnings} />

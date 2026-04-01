@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { parseModelJSON } from "@/lib/lookbook/parseModelJSON";
 
 /**
  * Styling reference analyser.
- * Uses Gemini 2.5 Flash to extract mood, lighting, and brand direction
- * from a styling reference image. Auto-derives Continuity World settings
- * and brand guidelines.
+ * Uses Gemini 2.5 Flash to extract environment tokens (ExtractedWorldTokens)
+ * and brand guidelines from a styling reference image.
  *
  * Cost: ~$0.0002-0.0005 per call.
  */
@@ -38,29 +38,29 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `You are a fashion photography art director analysing a styling reference image.
 
-Extract the visual mood and brand direction from this image.
+Extract the ENVIRONMENT and brand direction from this image. Focus on the physical setting, not the model's outfit or styling.
 
 Return a JSON object with these exact fields:
 
-worldPreset: one of "neutral_studio", "warm_editorial", "cool_modern", "natural_light", or null.
-- "neutral_studio" = clean grey/white backdrop, even lighting, no mood bias
-- "warm_editorial" = warm tones, directional light, fashion editorial feel
-- "cool_modern" = dark/cool tones, hard light, architectural/contemporary
-- "natural_light" = daylight, organic textures, relaxed and approachable
-- null = if the image doesn't clearly match any preset
-
-worldTokens: object with these string fields:
-- backdrop: brief description of background/setting
-- lighting: brief description of lighting setup and quality
-- tonalTemperature: one of "warm", "cool", "neutral", "warm neutral", "cool neutral", "warm daylight"
-- styling: brief wardrobe/styling direction
+extractedWorld: object describing the physical environment:
+- backdrop: brief description of background/setting (e.g. "weathered masonry wall", "clean white studio")
+- groundPlane: brief description of ground surface (e.g. "paved courtyard", "polished concrete floor")
+- lighting: brief description of lighting quality (e.g. "soft directional daylight", "overcast outdoor", "window light from left")
+- tonalTemperature: one of "warm", "cool", "neutral"
+- architecturalElements: array of 0-3 notable architectural features (e.g. ["courtyard wall", "stone steps"])
+- furnitureElements: array of 0-3 furniture items visible (e.g. ["wooden bench", "metal chair"])
+- naturalElements: array of 0-3 natural features (e.g. ["palm trees", "sandy ground"])
+- environmentMood: one short phrase describing the feel (e.g. "industrial urban", "warm Mediterranean")
+- suggestedFamily: one of "studio_minimal", "architectural_interior", "architectural_exterior", "furnished_interior", "urban_exterior", "natural_exterior"
 
 brandGuidelines: 2-4 concise sentences describing the visual brand rules. Focus on colour palette, aesthetic, mood, composition. Write as instructions, e.g. "Maintain warm earth tones. Keep backgrounds clean."
 
 confidence: one of "high", "medium", "low"
 
+IMPORTANT: extractedWorld is environment-only. Do NOT include outfit, wardrobe, styling, or grooming information in extractedWorld. Those belong in brandGuidelines if relevant.
+
 Example response:
-{"worldPreset":"warm_editorial","worldTokens":{"backdrop":"warm concrete wall","lighting":"directional key light, soft warm","tonalTemperature":"warm","styling":"earth tones, tailored"},"brandGuidelines":"Maintain warm earth tones throughout. Keep backgrounds clean and textured. Favour directional lighting with soft shadows.","confidence":"high"}
+{"extractedWorld":{"backdrop":"warm concrete wall","groundPlane":"matte grey floor","lighting":"directional key light, soft warm","tonalTemperature":"warm","architecturalElements":["textured wall plane"],"furnitureElements":[],"naturalElements":[],"environmentMood":"warm editorial","suggestedFamily":"architectural_interior"},"brandGuidelines":"Maintain warm earth tones throughout. Keep backgrounds clean and textured. Favour directional lighting with soft shadows.","confidence":"high"}
 
 Respond with ONLY valid JSON. No markdown, no comments, no extra text.`;
 
@@ -89,18 +89,10 @@ Respond with ONLY valid JSON. No markdown, no comments, no extra text.`;
       },
     });
 
-    // Strip markdown fencing, trailing commas, and any text before/after JSON
-    let cleaned = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-    // Extract JSON object if surrounded by other text
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) cleaned = jsonMatch[0];
-    // Remove trailing commas before } or ]
-    cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
-    const result = JSON.parse(cleaned);
+    const result = parseModelJSON(text) as Record<string, unknown>;
 
     return NextResponse.json({
-      worldPreset: result.worldPreset || null,
-      worldTokens: result.worldTokens || null,
+      extractedWorld: result.extractedWorld || null,
       brandGuidelines: result.brandGuidelines || "",
       confidence: result.confidence || "medium",
     });

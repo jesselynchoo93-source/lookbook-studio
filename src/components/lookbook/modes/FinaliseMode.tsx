@@ -58,8 +58,8 @@ export default function FinaliseMode({
   const readiness = useMemo(() => {
     if (!tracker) return null;
     const persisted = toPersistedGeneratedImages(generatedImages);
-    return computeSetReadiness(tracker, persisted);
-  }, [tracker, generatedImages]);
+    return computeSetReadiness(tracker, persisted, plan.shots.length);
+  }, [tracker, generatedImages, plan.shots.length]);
 
   // Final export text
   const finalExportText = useMemo(() => {

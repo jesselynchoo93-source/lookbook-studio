@@ -57,6 +57,7 @@ export function getLeadShot(tracker: TrackerState): number | null {
 export function computeSetReadiness(
   tracker: TrackerState,
   generatedImages: Record<number, PersistedGeneratedImage>,
+  expectedShotCount?: number,
 ): SetReadinessResult {
   const selectedPositions = getSelectedShots(tracker);
   const leadShot = getLeadShot(tracker);
@@ -101,6 +102,13 @@ export function computeSetReadiness(
     if (shot?.continuity === "concern" && shot.continuityConcerns.length > 0) {
       reasons.push(`Shot ${pos} has unresolved continuity concerns`);
     }
+  }
+
+  // Incomplete set: fewer shots selected than planned
+  if (expectedShotCount && selectedPositions.length < expectedShotCount) {
+    reasons.push(
+      `Only ${selectedPositions.length} of ${expectedShotCount} shots selected`,
+    );
   }
 
   // Inconsistent polish: some selected shots have skinPolish "done" while others don't

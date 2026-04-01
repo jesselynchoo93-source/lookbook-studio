@@ -4,28 +4,31 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type {
   LookbookInput,
   ProductFamily,
-  CampaignGoal,
+  PrimaryObjective,
+  SecondaryEmphasis,
   TargetStyle,
   GenderPresentation,
-  LogoVisibilityPriority,
-  CreativityLevel,
+  BrandVisibility,
+  PoseDirection,
   SettingsDriver,
   ProductFingerprint,
-  ContinuityWorldTokens,
+  ExtractedWorldTokens,
+  WorldLockMode,
 } from "@/lib/lookbook/types";
 import type { RecommendedSettings } from "@/lib/lookbook/recommendSettings";
 import { getRecommendedSettings } from "@/lib/lookbook/recommendSettings";
-import { STARTER_PRESETS } from "@/lib/lookbook/starterPresets";
-import StarterPresetPicker from "./StarterPresetPicker";
+import { inferWorldFamily, inferFamilyFromContext } from "@/lib/lookbook/worldProfiles";
 import ProductSelector from "./ProductSelector";
 import CampaignGoalSelector from "./CampaignGoalSelector";
 import ProductFingerprintForm from "./ProductFingerprintForm";
-import ContinuityWorldPicker from "./ContinuityWorldPicker";
+import WorldLockSelector from "./WorldLockSelector";
 
 /** Classification result from the lightweight product classifier. */
 export interface ClassifiedProduct {
   family: ProductFamily;
   specificItem: string;
+  genderPresentation?: GenderPresentation;
+  targetStyle?: TargetStyle;
 }
 
 interface CampaignFormProps {
@@ -40,23 +43,27 @@ interface CampaignFormProps {
   hasProductRefs?: boolean;
   /** Auto-fill family and item from image classification. Updates form when changed. */
   classifiedProduct?: ClassifiedProduct;
-  /** Auto-fill Continuity World from styling analysis. */
-  autoWorld?: ContinuityWorldTokens;
+  /** Extracted world tokens from styling reference analysis. */
+  extractedWorld?: ExtractedWorldTokens;
   /** Auto-fill notes (brand guidelines) from styling analysis. */
   brandGuidelines?: string;
 }
 
-const DEFAULT_INPUT: LookbookInput = {
-  productFamily: "apparel",
-  specificItem: "",
-  genderPresentation: "menswear",
-  targetStyle: "commercial",
-  campaignGoal: "product_clarity",
-  logoVisibilityPriority: "medium",
-  creativityLevel: "balanced",
-  shotCount: 6,
-  notes: "",
-};
+const DEFAULT_INPUT: LookbookInput = (() => {
+  const rec = getRecommendedSettings({ productFamily: "apparel", specificItem: "" });
+  return {
+    productFamily: "apparel" as ProductFamily,
+    specificItem: "",
+    genderPresentation: rec.genderPresentation,
+    targetStyle: rec.targetStyle,
+    primaryObjective: rec.primaryObjective,
+    secondaryEmphasis: rec.secondaryEmphasis,
+    brandVisibility: rec.brandVisibility,
+    poseDirection: rec.poseDirection,
+    shotCount: 6,
+    notes: "",
+  };
+})();
 
 export default function CampaignForm({
   onSubmit,
@@ -65,7 +72,7 @@ export default function CampaignForm({
   onInputChange,
   hasProductRefs,
   classifiedProduct,
-  autoWorld,
+  extractedWorld,
   brandGuidelines,
 }: CampaignFormProps) {
   const [input, setInput] = useState<LookbookInput>(initialInput ?? DEFAULT_INPUT);
@@ -83,18 +90,20 @@ export default function CampaignForm({
       ...prev,
       productFamily: classifiedProduct.family,
       specificItem: classifiedProduct.specificItem,
+      ...(classifiedProduct.genderPresentation && { genderPresentation: classifiedProduct.genderPresentation }),
+      ...(classifiedProduct.targetStyle && { targetStyle: classifiedProduct.targetStyle }),
       productFingerprint: undefined, // reset fingerprint when family changes
     }));
   }, [classifiedProduct]);
 
-  // ── Auto-fill Continuity World from styling analysis ──
-  const prevAutoWorldRef = useRef<ContinuityWorldTokens | undefined>(undefined);
+  // ── Auto-fill extractedWorld from styling analysis ──
+  const prevExtractedWorldRef = useRef<ExtractedWorldTokens | undefined>(undefined);
   useEffect(() => {
-    if (!autoWorld) return;
-    if (prevAutoWorldRef.current === autoWorld) return;
-    prevAutoWorldRef.current = autoWorld;
-    setInput(prev => ({ ...prev, continuityWorld: autoWorld }));
-  }, [autoWorld]);
+    if (!extractedWorld) return;
+    if (prevExtractedWorldRef.current === extractedWorld) return;
+    prevExtractedWorldRef.current = extractedWorld;
+    setInput(prev => ({ ...prev, extractedWorld }));
+  }, [extractedWorld]);
 
   // ── Auto-fill notes (brand guidelines) from styling analysis ──
   const prevBrandGuidelinesRef = useRef<string | undefined>(undefined);
@@ -105,58 +114,63 @@ export default function CampaignForm({
     setInput(prev => ({ ...prev, notes: brandGuidelines }));
   }, [brandGuidelines]);
 
-  // ── Settings driver: tracks what is currently controlling goal/logo/creativity ──
+  // ── Settings driver: tracks what is currently controlling all campaign settings ──
   const [settingsDriver, setSettingsDriver] = useState<SettingsDriver>(() => {
     if (!initialInput) return "ai_recommended";
     const rec = getRecommendedSettings({
       productFamily: initialInput.productFamily,
       specificItem: initialInput.specificItem,
-      genderPresentation: initialInput.genderPresentation,
-      targetStyle: initialInput.targetStyle,
     });
     if (
-      initialInput.campaignGoal === rec.campaignGoal &&
-      initialInput.logoVisibilityPriority === rec.logoVisibilityPriority &&
-      initialInput.creativityLevel === rec.creativityLevel
+      initialInput.primaryObjective === rec.primaryObjective &&
+      initialInput.brandVisibility === rec.brandVisibility &&
+      initialInput.poseDirection === rec.poseDirection &&
+      initialInput.secondaryEmphasis === rec.secondaryEmphasis &&
+      initialInput.genderPresentation === rec.genderPresentation &&
+      initialInput.targetStyle === rec.targetStyle
     ) {
       return "ai_recommended";
     }
     return "custom";
   });
-  const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
 
   const [pendingRecommendation, setPendingRecommendation] = useState<RecommendedSettings | null>(null);
 
   const prevContextRef = useRef({
     productFamily: input.productFamily,
     specificItem: input.specificItem,
-    targetStyle: input.targetStyle,
-    genderPresentation: input.genderPresentation,
   });
 
-  // ── Auto-apply or suggest recommendation when context changes ──
+  // ── Auto-apply or suggest recommendation when product context changes ──
   useEffect(() => {
     const prev = prevContextRef.current;
     const contextChanged =
       prev.productFamily !== input.productFamily ||
-      prev.specificItem !== input.specificItem ||
-      prev.targetStyle !== input.targetStyle ||
-      prev.genderPresentation !== input.genderPresentation;
+      prev.specificItem !== input.specificItem;
 
     if (contextChanged) {
-      const rec = getRecommendedSettings({
-        productFamily: input.productFamily,
-        specificItem: input.specificItem,
-        genderPresentation: input.genderPresentation,
-        targetStyle: input.targetStyle,
-      });
+      // When auto mode, don't pass current gender/style so the engine derives fresh ones
+      const rec = settingsDriver === "ai_recommended"
+        ? getRecommendedSettings({
+            productFamily: input.productFamily,
+            specificItem: input.specificItem,
+          })
+        : getRecommendedSettings({
+            productFamily: input.productFamily,
+            specificItem: input.specificItem,
+            genderPresentation: input.genderPresentation,
+            targetStyle: input.targetStyle,
+          });
 
       if (settingsDriver === "ai_recommended") {
         setInput(prev => ({
           ...prev,
-          campaignGoal: rec.campaignGoal,
-          logoVisibilityPriority: rec.logoVisibilityPriority,
-          creativityLevel: rec.creativityLevel,
+          genderPresentation: rec.genderPresentation,
+          targetStyle: rec.targetStyle,
+          primaryObjective: rec.primaryObjective,
+          secondaryEmphasis: rec.secondaryEmphasis,
+          brandVisibility: rec.brandVisibility,
+          poseDirection: rec.poseDirection,
         }));
         setPendingRecommendation(null);
       } else {
@@ -167,77 +181,48 @@ export default function CampaignForm({
     prevContextRef.current = {
       productFamily: input.productFamily,
       specificItem: input.specificItem,
-      targetStyle: input.targetStyle,
-      genderPresentation: input.genderPresentation,
     };
-  }, [input.productFamily, input.specificItem, input.targetStyle, input.genderPresentation, settingsDriver]);
-
-  // ── Preset selection ──
-  const handlePresetSelect = useCallback((defaults: Partial<LookbookInput>) => {
-    setInput(prev => ({ ...prev, ...defaults }));
-    setSettingsDriver("preset");
-    setPendingRecommendation(null);
-    const match = STARTER_PRESETS.find(
-      (p) => JSON.stringify(p.defaults) === JSON.stringify(defaults)
-    );
-    setSelectedPresetId(match?.id);
-  }, []);
-
-  const handleClearPreset = useCallback(() => {
-    setSelectedPresetId(undefined);
-    setSettingsDriver("ai_recommended");
-    const rec = getRecommendedSettings({
-      productFamily: input.productFamily,
-      specificItem: input.specificItem,
-      genderPresentation: input.genderPresentation,
-      targetStyle: input.targetStyle,
-    });
-    setInput(prev => ({
-      ...prev,
-      campaignGoal: rec.campaignGoal,
-      logoVisibilityPriority: rec.logoVisibilityPriority,
-      creativityLevel: rec.creativityLevel,
-    }));
-    setPendingRecommendation(null);
-  }, [input.productFamily, input.specificItem, input.genderPresentation, input.targetStyle]);
+  }, [input.productFamily, input.specificItem, input.genderPresentation, input.targetStyle, settingsDriver]);
 
   const handleApplyRecommendation = useCallback((rec: RecommendedSettings) => {
     setInput(prev => ({
       ...prev,
-      campaignGoal: rec.campaignGoal,
-      logoVisibilityPriority: rec.logoVisibilityPriority,
-      creativityLevel: rec.creativityLevel,
+      genderPresentation: rec.genderPresentation,
+      targetStyle: rec.targetStyle,
+      primaryObjective: rec.primaryObjective,
+      secondaryEmphasis: rec.secondaryEmphasis,
+      brandVisibility: rec.brandVisibility,
+      poseDirection: rec.poseDirection,
     }));
     setSettingsDriver("ai_recommended");
-    setSelectedPresetId(undefined);
     setPendingRecommendation(null);
   }, []);
 
-  const handleKeepPreset = useCallback(() => {
+  const handleDismissRecommendation = useCallback(() => {
     setPendingRecommendation(null);
   }, []);
 
-  const handleGoalChange = useCallback((v: CampaignGoal) => {
-    setInput(prev => ({ ...prev, campaignGoal: v }));
-    setSettingsDriver(prev =>
-      prev === "preset" || prev === "modified_preset" ? "modified_preset" : "custom"
-    );
+  const handleObjectiveChange = useCallback((v: PrimaryObjective) => {
+    setInput(prev => ({ ...prev, primaryObjective: v }));
+    setSettingsDriver("custom");
     setPendingRecommendation(null);
   }, []);
 
-  const handleLogoChange = useCallback((v: LogoVisibilityPriority) => {
-    setInput(prev => ({ ...prev, logoVisibilityPriority: v }));
-    setSettingsDriver(prev =>
-      prev === "preset" || prev === "modified_preset" ? "modified_preset" : "custom"
-    );
+  const handleEmphasisChange = useCallback((v: SecondaryEmphasis | undefined) => {
+    setInput(prev => ({ ...prev, secondaryEmphasis: v }));
+    setSettingsDriver("custom");
     setPendingRecommendation(null);
   }, []);
 
-  const handleCreativityChange = useCallback((v: CreativityLevel) => {
-    setInput(prev => ({ ...prev, creativityLevel: v }));
-    setSettingsDriver(prev =>
-      prev === "preset" || prev === "modified_preset" ? "modified_preset" : "custom"
-    );
+  const handleBrandVisibilityChange = useCallback((v: BrandVisibility) => {
+    setInput(prev => ({ ...prev, brandVisibility: v }));
+    setSettingsDriver("custom");
+    setPendingRecommendation(null);
+  }, []);
+
+  const handlePoseDirectionChange = useCallback((v: PoseDirection) => {
+    setInput(prev => ({ ...prev, poseDirection: v }));
+    setSettingsDriver("custom");
     setPendingRecommendation(null);
   }, []);
 
@@ -245,8 +230,8 @@ export default function CampaignForm({
     setInput(prev => ({ ...prev, productFingerprint: fp }));
   }, []);
 
-  const handleWorldChange = useCallback((world: ContinuityWorldTokens | undefined) => {
-    setInput(prev => ({ ...prev, continuityWorld: world }));
+  const handleWorldLockChange = useCallback((mode: WorldLockMode) => {
+    setInput(prev => ({ ...prev, worldLockMode: mode }));
   }, []);
 
   const handleFamilyChange = useCallback((f: ProductFamily) => {
@@ -259,10 +244,14 @@ export default function CampaignForm({
 
   const handleStyleChange = useCallback((v: TargetStyle) => {
     setInput(prev => ({ ...prev, targetStyle: v }));
+    setSettingsDriver("custom");
+    setPendingRecommendation(null);
   }, []);
 
   const handleGenderChange = useCallback((v: GenderPresentation) => {
     setInput(prev => ({ ...prev, genderPresentation: v }));
+    setSettingsDriver("custom");
+    setPendingRecommendation(null);
   }, []);
 
   // Notify parent of input changes (family, item, fingerprint)
@@ -275,34 +264,8 @@ export default function CampaignForm({
     onSubmit(input);
   };
 
-  const activePreset = selectedPresetId
-    ? STARTER_PRESETS.find(p => p.id === selectedPresetId)
-    : undefined;
-
   return (
     <form onSubmit={handleSubmit} id={formId} className="space-y-8">
-      {/* Creative Direction Presets */}
-      <StarterPresetPicker
-        onSelect={handlePresetSelect}
-        onClear={handleClearPreset}
-        selectedId={selectedPresetId}
-        activePreset={activePreset}
-      />
-
-      {/* Divider with relationship explainer */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-[--border-default]" />
-          <span className="text-xs text-[--text-tertiary] uppercase tracking-wider">
-            Campaign Details
-          </span>
-          <div className="flex-1 h-px bg-[--border-default]" />
-        </div>
-        <p className="text-xs text-[--text-tertiary] text-center">
-          Your creative direction stays active unless you choose to apply the AI recommendation.
-        </p>
-      </div>
-
       {/* Product Selection */}
       <ProductSelector
         family={input.productFamily}
@@ -313,23 +276,24 @@ export default function CampaignForm({
 
       {/* Campaign Goals + Recommendation */}
       <CampaignGoalSelector
-        goal={input.campaignGoal}
+        objective={input.primaryObjective}
+        emphasis={input.secondaryEmphasis}
         style={input.targetStyle}
         gender={input.genderPresentation}
-        logo={input.logoVisibilityPriority}
-        creativity={input.creativityLevel}
+        brandVisibility={input.brandVisibility}
+        poseDirection={input.poseDirection}
         productFamily={input.productFamily}
         specificItem={input.specificItem}
         settingsDriver={settingsDriver}
-        selectedPresetId={selectedPresetId}
         pendingRecommendation={pendingRecommendation}
-        onGoalChange={handleGoalChange}
+        onObjectiveChange={handleObjectiveChange}
+        onEmphasisChange={handleEmphasisChange}
         onStyleChange={handleStyleChange}
         onGenderChange={handleGenderChange}
-        onLogoChange={handleLogoChange}
-        onCreativityChange={handleCreativityChange}
+        onBrandVisibilityChange={handleBrandVisibilityChange}
+        onPoseDirectionChange={handlePoseDirectionChange}
         onApplyRecommendation={handleApplyRecommendation}
-        onKeepPreset={handleKeepPreset}
+        onDismissRecommendation={handleDismissRecommendation}
       />
 
       {/* F7: Product Fingerprint (only shown when no auto-extraction) */}
@@ -341,14 +305,13 @@ export default function CampaignForm({
         />
       )}
 
-      {/* F7: Continuity World (only shown when no auto-fill from styling) */}
-      {!autoWorld && (
-        <ContinuityWorldPicker
-          value={input.continuityWorld}
-          onChange={handleWorldChange}
-          hasProductRefs={hasProductRefs}
-        />
-      )}
+      {/* World Lock Selector (always visible) */}
+      <WorldLockSelector
+        value={input.worldLockMode ?? "auto"}
+        onChange={handleWorldLockChange}
+        detectedFamily={extractedWorld ? inferWorldFamily(extractedWorld).family : undefined}
+        contextFamily={inferFamilyFromContext(input)}
+      />
 
       {/* Submit (hidden when formId is set, allowing external submit button) */}
       {!formId && (

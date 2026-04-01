@@ -7,7 +7,6 @@
  *   Layer 3: Scale/Proportion Lock (per-set, per-family)
  *   Layer 4: Shot Delta (per-shot, slimmed to framing/angle/pose/product)
  *   Layer 5: Negative Prompt (3-tier: global + family drift + shot-specific)
- *   Layer 6: Guardrail/Review Checks (existing guardrails + product truth)
  *
  * Does NOT modify planner logic. Read-only consumer of LookbookPlanResult.
  */
@@ -19,8 +18,6 @@ import type {
   GenerationPromptPackage,
   GenerationPhase,
   ContinuityLock,
-  EvidenceType,
-  ProductFamily,
   ShotCategory,
   LookbookInput,
 } from "./types";
@@ -34,52 +31,12 @@ import {
   resolveProductTruth,
   resolveScaleLock,
   resolveDriftNegatives,
-  getProductTruthInvariants,
 } from "./productTruth";
 import {
   compileProviderPrompt,
   formatProviderForClipboard,
   formatProviderQueueForClipboard,
 } from "./providerCompiler";
-
-// ── Family-Aware Enhancor Vocabulary ──
-// Compact lookup for generating practical Enhancor notes per family.
-
-const ENHANCOR_FOCUS: Record<ProductFamily, { texture: string; finish: string; boundary: string }> = {
-  eyewear: { texture: "acetate and metal surface", finish: "lens coating and hinge hardware", boundary: "frame-to-skin contact at nose bridge and temples" },
-  bags: { texture: "leather grain and stitching", finish: "hardware (buckles, zippers, clasps)", boundary: "strap-to-shoulder and bag-to-body contact points" },
-  watches: { texture: "dial surface and strap material", finish: "case and crown metal finish", boundary: "strap-to-wrist contact and case-to-skin edge" },
-  jewelry: { texture: "metal surface and stone facets", finish: "clasp and setting precision", boundary: "piece-to-skin contact (ear, neck, wrist, finger)" },
-  footwear: { texture: "upper material and sole rubber", finish: "lacing, eyelets, and pull tabs", boundary: "shoe-to-foot contact and ankle line" },
-  apparel: { texture: "fabric weave and drape", finish: "buttons, zippers, and seam lines", boundary: "fabric-to-skin contact at cuffs, collar, and hem" },
-  headwear: { texture: "material surface (knit, woven, felt)", finish: "brim edge and band hardware", boundary: "hat-to-head contact and hair-to-hat transition" },
-  belts: { texture: "leather grain and edge paint", finish: "buckle metal and prong alignment", boundary: "belt-to-waist contact and loop spacing" },
-  scarves: { texture: "weave pattern and fringe detail", finish: "hem stitching and print registration", boundary: "fabric-to-skin drape line at neck and shoulders" },
-  small_accessories: { texture: "material surface and edge finishing", finish: "clasp, hinge, and hardware detail", boundary: "product-to-hand contact and grip points" },
-  full_look: { texture: "fabric interplay between layers", finish: "accessory hardware and trim", boundary: "layering contact points and overlap zones" },
-};
-
-// ── Evidence-to-Enhancor Mapping ──
-// What to check in Enhancor for specific evidence types.
-
-const EVIDENCE_ENHANCOR_HINTS: Partial<Record<EvidenceType, string>> = {
-  face_framing: "Verify skin texture around the face-to-product boundary",
-  face_scale: "Check product-to-face proportion looks natural at final resolution",
-  wrist_visibility: "Verify wrist anatomy and strap-to-skin contact",
-  ear_visibility: "Check earring-to-ear attachment looks weighted and real",
-  texture_detail: "Inspect material grain at full resolution for AI smoothing artefacts",
-  hardware_detail: "Verify metal finish looks physical, not rendered",
-  surface_reflection: "Check light play on reflective surfaces is natural, not CGI",
-  construction_quality: "Inspect stitching and edge lines for regularity",
-  closure_mechanism: "Verify clasp or buckle mechanism looks functional",
-  fabric_drape: "Check fabric weight follows gravity naturally",
-  movement_behavior: "Verify motion blur direction is consistent with pose",
-  logo_placement: "Confirm logo text is legible and not distorted",
-  carry_method: "Check strap tension and bag weight look real",
-  on_foot_presence: "Verify shoe-to-ground contact and lacing symmetry",
-  sole_profile: "Check sole tread detail at full resolution",
-  pair_symmetry: "Compare left and right items for consistent rendering",
-};
 
 // ── Phase Assignment ──
 
@@ -94,8 +51,8 @@ export function assignGenerationPhase(shot: RecommendedShot): GenerationPhase {
 
 function buildContinuityLock(dna: MasterShootDNA): ContinuityLock {
   return {
-    environment: dna.environmentFamily,
-    lighting: dna.lightingFamily,
+    environment: dna.worldSummary,
+    lighting: dna.lightingSummary,
     lensFamily: dna.lensFamily,
     framingFamily: dna.framingFamily,
     finish: dna.finishFamily,
@@ -114,8 +71,8 @@ function buildContinuityLockText(dna: MasterShootDNA): string {
 
   let text =
     `${style} fashion photograph, ${gender.toLowerCase()} model. ` +
-    `Environment: ${dna.environmentFamily}. ` +
-    `Lighting: ${dna.lightingFamily}. ` +
+    `Environment: ${dna.worldSummary}. ` +
+    `Lighting: ${dna.lightingSummary}. ` +
     `Lens family: ${dna.lensFamily}. ` +
     `Finish: ${dna.finishFamily}. ` +
     `${realism} ` +
@@ -228,6 +185,17 @@ function normalizeShotDelta(raw: string, item: string): string {
   return text;
 }
 
+// ── Shot Delta Builder (shared by prompt assembly and package layers) ──
+
+function buildNormalizedDelta(shot: RecommendedShot, item: string): string {
+  const framingSummary = shot.framingDelta.split(" at ")[0];
+  const deltaOpening = framingSummary
+    ? `This shot: ${framingSummary.toLowerCase()}, featuring ${item}.`
+    : `This shot: featuring ${item}.`;
+  const rawDelta = `${deltaOpening} ${shot.poseDelta} ${shot.deltaBrief}`;
+  return normalizeShotDelta(rawDelta, item);
+}
+
 // ── F4 Generator Prompt: 4-Layer Assembly ──
 
 export function formatGeneratorPrompt(
@@ -247,12 +215,7 @@ export function formatGeneratorPrompt(
   const layer3 = `Scale: ${locks.scaleLockText}`;
 
   // Layer 4: Shot Delta (per-shot, normalized)
-  const framingSummary = shot.framingDelta.split(" at ")[0];
-  const deltaOpening = framingSummary
-    ? `This shot: ${framingSummary.toLowerCase()}, featuring ${item}.`
-    : `This shot: featuring ${item}.`;
-  const rawDelta = `${deltaOpening} ${shot.deltaBrief}`;
-  const layer4 = normalizeShotDelta(rawDelta, item);
+  const layer4 = buildNormalizedDelta(shot, item);
 
   // Assemble: Layers 1-4 concatenated
   return `${layer1} ${layer2} ${layer3} ${layer4}`;
@@ -262,7 +225,6 @@ export function formatGeneratorPrompt(
 
 export function buildNegativePrompt(
   shot: RecommendedShot,
-  _dna: MasterShootDNA,
   locks: SetLocks,
 ): string {
   // Tier 1: Global defaults
@@ -283,99 +245,20 @@ export function buildNegativePrompt(
   return parts.join(", ");
 }
 
-// ── Guardrail Checklist (Layer 6) ──
-
-export function buildGuardrailChecklist(shot: RecommendedShot, family: ProductFamily): string[] {
-  const guardrail = shot.realismGuardrail;
-  const items: string[] = [];
-
-  if (guardrail) {
-    // Split on periods and commas that separate distinct checks
-    const sentences = guardrail
-      .split(/\.\s+/)
-      .map((s) => s.replace(/\.$/, "").trim())
-      .filter((s) => s.length > 0);
-
-    if (sentences.length >= 2) {
-      items.push(...sentences);
-    } else {
-      const parts = guardrail
-        .split(/,\s+/)
-        .map((s) => s.replace(/\.$/, "").trim())
-        .filter((s) => s.length > 0);
-      items.push(...parts);
-    }
-  }
-
-  // F4 Layer 6: Add product-truth consistency checks
-  const invariants = getProductTruthInvariants(family);
-  if (invariants.length > 0) {
-    items.push(`Cross-shot consistency: verify ${invariants.slice(0, 3).join(", ")}`);
-  }
-
-  return items;
-}
-
-// ── Enhancor Notes ──
-
-export function buildEnhancorNotes(shot: RecommendedShot, dna: MasterShootDNA): string[] {
-  const notes: string[] = [];
-  const family = dna.productFamily;
-  const focus = ENHANCOR_FOCUS[family];
-
-  // Evidence-specific notes (pick the most relevant, max 3)
-  let evidenceNoteCount = 0;
-  for (const ev of shot.evidenceProvided) {
-    if (evidenceNoteCount >= 3) break;
-    const hint = EVIDENCE_ENHANCOR_HINTS[ev];
-    if (hint) {
-      notes.push(hint);
-      evidenceNoteCount++;
-    }
-  }
-
-  // Family-specific texture and finish checks
-  if (focus) {
-    const cat = shot.archetype.shotCategory;
-    if (cat === "detail" || cat === "product_focus") {
-      notes.push(`Check ${focus.texture} at full resolution`);
-      notes.push(`Verify ${focus.finish} looks natural`);
-    } else if (cat === "hero") {
-      notes.push(`Verify ${focus.boundary}`);
-      notes.push(`Check ${focus.texture} is visible and natural`);
-    } else {
-      notes.push(`Verify ${focus.boundary}`);
-    }
-  }
-
-  // Deduplicate
-  const seen = new Set<string>();
-  return notes.filter((n) => {
-    if (seen.has(n)) return false;
-    seen.add(n);
-    return true;
-  });
-}
-
 // ── Compile Single Package ──
 
 export function compilePromptPackage(
   shot: RecommendedShot,
   dna: MasterShootDNA,
-  _plan: LookbookPlanResult,
   locks: SetLocks,
   input?: LookbookInput,
   hasProductRef?: boolean,
+  hasModelRef?: boolean,
 ): GenerationPromptPackage {
   const item = dna.specificItem || PRODUCT_FAMILY_LABELS[dna.productFamily].toLowerCase();
 
-  // Build Layer 4 delta text for the promptLayers field
-  const framingSummary = shot.framingDelta.split(" at ")[0];
-  const deltaOpening = framingSummary
-    ? `This shot: ${framingSummary.toLowerCase()}, featuring ${item}.`
-    : `This shot: featuring ${item}.`;
-  const rawDelta = `${deltaOpening} ${shot.deltaBrief}`;
-  const normalizedDelta = normalizeShotDelta(rawDelta, item);
+  // Build Layer 4 delta text (shared helper, computed once)
+  const normalizedDelta = buildNormalizedDelta(shot, item);
 
   // Build shot-specific negatives for the negativeLayers field
   const shotSpecific = shot.negativeCues;
@@ -386,7 +269,7 @@ export function compilePromptPackage(
   return {
     shotPosition: shot.position,
     archetypeId: shot.archetype.id,
-    archetypeTitle: shot.archetype.title,
+    archetypeTitle: shot.resolvedTitle ?? shot.archetype.title,
 
     generationPriority: shot.generationPriority,
     generationPhase: assignGenerationPhase(shot),
@@ -395,8 +278,7 @@ export function compilePromptPackage(
     shootDNA: buildShootDNASummary(dna),
     shotBrief: shot.deltaBrief,
     generatorPrompt: formatGeneratorPrompt(shot, dna, locks),
-    negativePrompt: buildNegativePrompt(shot, dna, locks),
-    guardrailChecklist: buildGuardrailChecklist(shot, dna.productFamily),
+    negativePrompt: buildNegativePrompt(shot, locks),
 
     continuity: buildContinuityLock(dna),
 
@@ -406,8 +288,6 @@ export function compilePromptPackage(
 
     status: "pending",
     retryCount: 0,
-
-    enhancorNotes: buildEnhancorNotes(shot, dna),
 
     // F4: Structured layers for UI display
     promptLayers: {
@@ -424,7 +304,7 @@ export function compilePromptPackage(
 
     // F7: Provider-facing prompt (compact, for Higgsfield)
     providerPrompt: input
-      ? compileProviderPrompt(shot, dna, input, hasProductRef ?? false)
+      ? compileProviderPrompt(shot, dna, input, hasProductRef ?? false, hasModelRef ?? false)
       : undefined,
   };
 }
@@ -434,17 +314,18 @@ export function compilePromptPackage(
 export function compileAllPackages(
   plan: LookbookPlanResult,
   hasProductRef?: boolean,
+  hasModelRef?: boolean,
 ): GenerationPromptPackage[] {
   // Build shared locks once for the entire set
   const locks = buildSetLocks(plan.dna, plan.input);
 
-  const ordered = plan.generationOrder.map((pos) => {
-    const shot = plan.shots.find((s) => s.position === pos);
-    return shot;
-  }).filter((s): s is RecommendedShot => s !== undefined);
+  const shotByPos = new Map(plan.shots.map((s) => [s.position, s]));
+  const ordered = plan.generationOrder
+    .map((pos) => shotByPos.get(pos))
+    .filter((s): s is RecommendedShot => s !== undefined);
 
   return ordered.map((shot) =>
-    compilePromptPackage(shot, plan.dna, plan, locks, plan.input, hasProductRef),
+    compilePromptPackage(shot, plan.dna, locks, plan.input, hasProductRef, hasModelRef),
   );
 }
 
@@ -473,18 +354,6 @@ export function formatForClipboard(pkg: GenerationPromptPackage): string {
 
   lines.push("NEGATIVE:");
   lines.push(pkg.negativePrompt);
-  lines.push("");
-
-  lines.push("GUARDRAIL CHECKLIST:");
-  for (const item of pkg.guardrailChecklist) {
-    lines.push(`  [ ] ${item}`);
-  }
-  lines.push("");
-
-  lines.push("ENHANCOR NOTES:");
-  for (const note of pkg.enhancorNotes) {
-    lines.push(`  - ${note}`);
-  }
 
   return lines.join("\n");
 }
@@ -519,17 +388,6 @@ function formatShotDeltaForClipboard(pkg: GenerationPromptPackage): string {
     lines.push("SHOT-SPECIFIC NEGATIVES:");
     lines.push(shotNeg);
     lines.push("");
-  }
-
-  lines.push("GUARDRAIL CHECKLIST:");
-  for (const item of pkg.guardrailChecklist) {
-    lines.push(`  [ ] ${item}`);
-  }
-  lines.push("");
-
-  lines.push("ENHANCOR NOTES:");
-  for (const note of pkg.enhancorNotes) {
-    lines.push(`  - ${note}`);
   }
 
   return lines.join("\n");

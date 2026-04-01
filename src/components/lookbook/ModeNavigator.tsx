@@ -1,5 +1,7 @@
 "use client";
 
+import type { StudioEngine } from "@/lib/lookbook/types";
+
 export type WorkflowMode = "setup" | "plan" | "generate" | "finalise";
 
 interface ModeNavigatorProps {
@@ -7,11 +9,18 @@ interface ModeNavigatorProps {
   onModeChange: (mode: WorkflowMode) => void;
   hasPlan: boolean;
   hasTracker: boolean;
+  engine?: StudioEngine;
 }
 
-const TABS: { id: WorkflowMode; label: string }[] = [
+const EDITORIAL_TABS: { id: WorkflowMode; label: string }[] = [
   { id: "setup", label: "Setup" },
   { id: "plan", label: "Plan" },
+  { id: "generate", label: "Generate" },
+  { id: "finalise", label: "Finalise" },
+];
+
+const COMMERCE_TABS: { id: WorkflowMode; label: string }[] = [
+  { id: "setup", label: "Setup" },
   { id: "generate", label: "Generate" },
   { id: "finalise", label: "Finalise" },
 ];
@@ -21,18 +30,24 @@ export default function ModeNavigator({
   onModeChange,
   hasPlan,
   hasTracker,
+  engine,
 }: ModeNavigatorProps) {
+  const tabs = engine === "commerce" ? COMMERCE_TABS : EDITORIAL_TABS;
+
   function isEnabled(tab: WorkflowMode): boolean {
     if (tab === "setup") return true;
     if (tab === "plan") return hasPlan;
-    if (tab === "generate") return hasPlan && hasTracker;
+    if (tab === "generate") {
+      // Commerce: needs a commerce plan. Editorial: needs plan + tracker.
+      return engine === "commerce" ? hasPlan : hasPlan && hasTracker;
+    }
     if (tab === "finalise") return hasPlan && hasTracker;
     return false;
   }
 
   return (
     <nav className="bg-[--surface-inset] p-1 rounded-xl flex mb-6">
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const enabled = isEnabled(tab.id);
         const active = mode === tab.id;
 

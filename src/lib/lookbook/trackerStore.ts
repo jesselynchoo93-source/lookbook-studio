@@ -39,10 +39,12 @@ export function buildPlanKey(input: LookbookInput): string {
     input.specificItem?.toLowerCase().trim() || "_",
     input.genderPresentation,
     input.targetStyle,
-    input.campaignGoal,
-    input.creativityLevel,
-    input.logoVisibilityPriority,
+    input.primaryObjective,
+    input.secondaryEmphasis || "none",
+    input.brandVisibility,
+    input.poseDirection,
     String(input.shotCount),
+    input.worldLockMode || "auto",
   ];
   const raw = parts.join("|");
 
@@ -107,6 +109,7 @@ export function createTracker(
   const now = new Date().toISOString();
   const shots: Record<number, ShotStatus> = {};
   for (const pos of shotPositions) {
+    if (pos < 1) continue; // positions are 1-based
     shots[pos] = {
       status: "pending",
       retryCount: 0,

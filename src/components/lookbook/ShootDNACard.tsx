@@ -5,11 +5,13 @@ import type { MasterShootDNA } from "@/lib/lookbook/types";
 import {
   PRODUCT_FAMILY_LABELS,
   STYLE_LABELS,
-  GOAL_LABELS,
+  PRIMARY_OBJECTIVE_LABELS,
+  SECONDARY_EMPHASIS_LABELS,
   GENDER_LABELS,
-  LOGO_LABELS,
-  CREATIVITY_LABELS,
+  BRAND_VISIBILITY_LABELS,
+  POSE_DIRECTION_LABELS,
 } from "@/lib/lookbook/types";
+import { WORLD_FAMILY_LABELS } from "@/lib/lookbook/worldProfiles";
 
 interface ShootDNACardProps {
   dna: MasterShootDNA;
@@ -86,16 +88,20 @@ function DNARows({ dna }: { dna: MasterShootDNA }) {
           />
           <DNARow label="Gender" value={GENDER_LABELS[dna.genderPresentation]} />
           <DNARow label="Style" value={STYLE_LABELS[dna.targetStyle]} />
-          <DNARow label="Goal" value={GOAL_LABELS[dna.campaignGoal]} />
-          <DNARow label="Logo Priority" value={LOGO_LABELS[dna.logoVisibilityPriority]} />
-          <DNARow label="Creativity" value={CREATIVITY_LABELS[dna.creativityLevel]} />
+          <DNARow label="Objective" value={PRIMARY_OBJECTIVE_LABELS[dna.primaryObjective]} />
+          {dna.secondaryEmphasis && (
+            <DNARow label="Emphasis" value={SECONDARY_EMPHASIS_LABELS[dna.secondaryEmphasis]} />
+          )}
+          <DNARow label="Brand Visibility" value={BRAND_VISIBILITY_LABELS[dna.brandVisibility]} />
+          <DNARow label="Pose Direction" value={POSE_DIRECTION_LABELS[dna.poseDirection]} />
         </div>
         <div>
           <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
             Visual Family
           </span>
-          <DNARow label="Environment" value={dna.environmentFamily} />
-          <DNARow label="Lighting" value={dna.lightingFamily} />
+          <DNARow label="World Family" value={WORLD_FAMILY_LABELS[dna.worldProfile.family]} />
+          <DNARow label="World" value={dna.worldSummary} />
+          <DNARow label="Lighting" value={dna.lightingSummary} />
           <DNARow label="Lens" value={dna.lensFamily} />
           <DNARow label="Framing" value={dna.framingFamily} />
           <DNARow label="Motion" value={dna.motionAllowance} />
@@ -116,6 +122,32 @@ function DNARows({ dna }: { dna: MasterShootDNA }) {
         </span>
         <p className="text-xs text-[--text-secondary] mt-1">
           {dna.brandingVisibilityRules}
+        </p>
+      </div>
+
+      {/* Taste Translation debug info */}
+      <div className="mt-4">
+        <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
+          Taste Translation
+        </span>
+        <DNARow label="Sensibility" value={dna.sensibility.replace(/_/g, " ")} />
+        <DNARow label="World Tone" value={dna.tasteBridge.worldTone.replace(/_/g, " ")} />
+        <DNARow label="Light Attitude" value={dna.tasteBridge.lightAttitude.replace(/_/g, " ")} />
+        <DNARow label="Emotional Register" value={dna.tasteBridge.emotionalRegister} />
+        <DNARow label="Surface Tone" value={dna.tasteBridge.surfaceTone} />
+        <DNARow label="Secondary Objects" value={dna.secondaryObjectPolicy.replace(/_/g, " ")} />
+      </div>
+
+      {/* World provenance debug info */}
+      <div className="mt-3">
+        <span className="text-xs font-medium text-[--text-secondary] uppercase tracking-wider">
+          World Debug
+        </span>
+        <p className="text-[10px] text-[--text-tertiary] mt-1">
+          Source: {dna.worldProfile.source} | Quietness: {dna.worldProfile.quietness}
+          {dna.worldProfile.sourceNotes && dna.worldProfile.sourceNotes.length > 0 && (
+            <> | {dna.worldProfile.sourceNotes.join("; ")}</>
+          )}
         </p>
       </div>
     </>

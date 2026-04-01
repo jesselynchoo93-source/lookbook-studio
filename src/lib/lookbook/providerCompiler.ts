@@ -25,15 +25,20 @@ import type {
   LookbookInput,
   ProductFingerprint,
   BagFingerprint,
-  ContinuityWorldTokens,
+  ShotWorldSlice,
   ProviderPromptOutput,
   ProviderPromptConfig,
   ProviderCompilationMode,
   ProviderPromptOutputV2,
   ProductFamily,
   BagShotClass,
+  SurfaceTone,
+  EmotionalRegister,
+  SecondaryObjectPolicy,
+  LightAttitude,
+  EditorialBeat,
 } from "./types";
-import { STYLE_LABELS } from "./types";
+import { STYLE_LABELS, PRODUCT_FAMILY_LABELS } from "./types";
 import { derivePoseBucket } from "./scoring";
 import {
   classifyBagShot,
@@ -45,13 +50,11 @@ import {
 import {
   normalizePositive,
   normalizeNegative,
-  compileCameraLock,
-  compileLightingLock,
-  compileMaterialRealism,
-  compileHumanRealismBlock,
-  EXPOSURE_CONTROL,
 } from "./realismNormalizer";
 import { runProviderCritic } from "./providerCritic";
+import { deriveShotWorldSlice } from "./worldProfiles";
+import { deriveApparelSubtype, APPAREL_SUBTYPE_LOCK } from "./apparelSubtypes";
+import { normalizeSubtypeKey, resolveArchetypeRole } from "./shotBlueprints";
 
 // ── Default Provider Config ──
 
@@ -62,62 +65,23 @@ export const HIGGSFIELD_CONFIG: ProviderPromptConfig = {
   renderLogoText: false,
 };
 
-// ── World Presets ──
-
-import type { WorldPreset } from "./types";
-
-export const WORLD_PRESETS: WorldPreset[] = [
-  {
-    id: "neutral_studio",
-    label: "Neutral Studio",
-    tokens: {
-      backdrop: "seamless grey backdrop, clean floor",
-      lighting: "even soft lighting, minimal shadows",
-      tonalTemperature: "neutral",
-      styling: "clean minimal, dark or neutral tones",
-      modelTokens: "",
-    },
-  },
-  {
-    id: "warm_editorial",
-    label: "Warm Editorial",
-    tokens: {
-      backdrop: "warm concrete wall, matte grey floor",
-      lighting: "key light camera-right, soft warm",
-      tonalTemperature: "warm neutral",
-      styling: "earth tones, tailored, textured fabrics",
-      modelTokens: "",
-    },
-  },
-  {
-    id: "cool_modern",
-    label: "Cool Modern",
-    tokens: {
-      backdrop: "dark slate wall, polished concrete",
-      lighting: "hard directional, cool 5500K",
-      tonalTemperature: "cool neutral",
-      styling: "monochrome, structured, minimal",
-      modelTokens: "",
-    },
-  },
-  {
-    id: "natural_light",
-    label: "Natural Light",
-    tokens: {
-      backdrop: "light plaster wall, wood floor",
-      lighting: "window camera-left, daylight",
-      tonalTemperature: "warm daylight",
-      styling: "relaxed, linen and cotton, organic palette",
-      modelTokens: "",
-    },
-  },
-];
-
 // ── Accessory-Led Families ──
 
 const ACCESSORY_FAMILIES: Set<ProductFamily> = new Set([
   "bags", "watches", "belts", "jewelry", "eyewear",
 ]);
+
+// ── Prompt Hygiene ──
+
+/** Fix blank template variables, double spaces, and malformed phrases in compiled prompts. */
+function sanitizePromptText(text: string): string {
+  return text
+    .replace(/\bon\s*,/g, "on the")    // "on ," -> "on the"
+    .replace(/\bof\s+on\b/g, "of")     // "of on" -> "of"
+    .replace(/\s{2,}/g, " ")           // collapse multiple spaces
+    .replace(/\.\s*\./g, ".")          // collapse double periods
+    .trim();
+}
 
 // ── Mode Detection ──
 
@@ -133,22 +97,321 @@ export function detectCompilationMode(
   return "on-body";
 }
 
-// ── F8: Reference Lock Preamble ──
-// Hard, concise instruction for Case A (model ref + product ref uploaded).
+// ── Shot-aware realism config helpers ──
 
-const REFERENCE_LOCK_PREAMBLE = [
-  "Use the uploaded model reference exactly for face, body, and identity.",
-  "Use the uploaded product reference exactly for product shape, panel layout, handle design, attachment points, logo placement, and material truth.",
-  "Do not redesign, simplify, reinterpret, or invent missing product features.",
-  "Same exact object across all 6 shots.",
-].join(" ");
+function getShotCameraHeight(shot: RecommendedShot): string | undefined {
+  return shot.archetype.defaultCameraHeight || undefined;
+}
 
-function compileReferenceLock(hasProductRef: boolean, hasModelRef?: boolean): string {
-  if (!hasProductRef) return "";
-  // Full lock when both refs present
-  if (hasModelRef !== false) return REFERENCE_LOCK_PREAMBLE;
-  // Product-only lock
-  return "Use the uploaded product reference exactly for product shape, construction, hardware, logo placement, and material truth. Do not redesign or invent features. Same exact object across all shots.";
+function getShotCameraLens(shot: RecommendedShot): string | undefined {
+  return shot.archetype.defaultLens || undefined;
+}
+
+function getShotCameraAperture(shot: RecommendedShot): string | undefined {
+  return shot.archetype.defaultAperture || undefined;
+}
+
+function getShotCameraDistance(shot: RecommendedShot): string | undefined {
+  return shot.archetype.defaultCameraDistance || undefined;
+}
+
+function getShotLighting(shot: RecommendedShot): string | undefined {
+  return shot.archetype.defaultLighting || undefined;
+}
+
+function isShotMotion(shot: RecommendedShot): boolean {
+  const arch = shot.archetype;
+  return arch.movementSuitability === "high" || arch.shotCategory === "motion";
+}
+
+function getShotGazeDirection(shot: RecommendedShot): string | undefined {
+  const head = shot.archetype.headDirection;
+  if (!head || head === "N/A" || head.toLowerCase().includes("not visible")) return undefined;
+  return head;
+}
+
+// ── F9: Identity Lock Tiers ──
+// Shot-class-specific identity strength. Anchor/hero gets strongest lock.
+
+type IdentityLockTier = "strong" | "medium" | "light" | "none";
+
+function deriveIdentityLockTier(shot: RecommendedShot, hasModelRef: boolean, input?: LookbookInput): IdentityLockTier {
+  // No model reference = no identity lock regardless of shot class
+  if (!hasModelRef) return "none";
+
+  const mode = detectCompilationMode(shot);
+  if (mode === "product-only") return "none";
+
+  // Detail shots: accessory families (bags, watches, jewelry, etc.) are product-only
+  // details that don't need a body. Apparel/footwear/scarves details (neckline, hem,
+  // collar) need the garment on a body to show drape and fit.
+  if (mode === "detail") {
+    if (input && ACCESSORY_FAMILIES.has(input.productFamily)) return "none";
+    return "light";
+  }
+
+  const cat = shot.archetype.shotCategory;
+  if (cat === "hero") return "strong";
+  if (cat === "product_focus" || cat === "silhouette") return "medium";
+  if (cat === "motion" || cat === "editorial") return "light";
+  return "medium";
+}
+
+// ── Hair Visibility Profile ──
+// Rule-based v1 implementation. When vision structural hints are available,
+// they should refine this. Current logic uses bodyDirection, title, display
+// zones, and pose bucket inference, which is approximate.
+
+interface HairVisibilityProfile {
+  visible: boolean;
+  frontal: boolean;            // true frontal (straight/front)
+  threeQuarterVisible: boolean; // 3/4 angle, weaker than true frontal
+  sideVisible: boolean;
+  backVisible: boolean;
+  occluded: boolean;           // hair hidden by headwear etc.
+}
+
+function isFaceVisible(shot: RecommendedShot): boolean {
+  const arch = shot.archetype;
+  const body = arch.bodyDirection?.toLowerCase() || "";
+  const zones = [...arch.primaryDisplayZones, ...arch.secondaryDisplayZones].map(z => z.toLowerCase());
+
+  if (body.includes("back")) return false;
+  if (zones.includes("face") || zones.includes("full_body") || zones.includes("upper_body")) return true;
+  if (body.includes("profile") || body.includes("side")) return true;
+  return false;
+}
+
+function deriveHairVisibility(shot: RecommendedShot): HairVisibilityProfile {
+  const arch = shot.archetype;
+  const body = arch.bodyDirection?.toLowerCase() || "";
+  const zones = [...arch.primaryDisplayZones, ...arch.secondaryDisplayZones].map(z => z.toLowerCase());
+  const title = (shot.resolvedTitle ?? arch.title).toLowerCase();
+
+  const isBack = body.includes("back") || title.includes("back");
+  const isTrueFrontal = body.includes("straight") || body.includes("front") || body.includes("square");
+  const isThreeQuarter = body.includes("3/4") || body.includes("three-quarter");
+  const isProfile = body.includes("profile") || body.includes("side");
+  const isDetailOrProductOnly =
+    arch.shotCategory === "detail" ||
+    derivePoseBucket(arch.poseFamily, arch.primaryDisplayZones) === "product_only";
+  const faceZone = zones.includes("face") || zones.includes("full_body") || zones.includes("upper_body");
+
+  return {
+    visible: !isDetailOrProductOnly && (isTrueFrontal || isThreeQuarter || isProfile || isBack || faceZone),
+    frontal: isTrueFrontal && faceZone,
+    threeQuarterVisible: isThreeQuarter && faceZone,
+    sideVisible: isProfile,
+    backVisible: isBack,
+    occluded: false, // Can be enhanced with headwear detection later
+  };
+}
+
+// ── Hair Lock (visibility-aware) ──
+
+function compileHairLock(tier: IdentityLockTier, profile: HairVisibilityProfile): string {
+  if (tier === "none" || !profile.visible) return "";
+
+  // Strong tier: true frontal gets the heaviest lock
+  if (tier === "strong" && profile.frontal) {
+    return (
+      "Hair: match reference exactly for colour, parting side, length, texture, and volume. " +
+      "Preserve wear state around ears and shoulders. " +
+      "Do not recolour, restyle, shorten, curl, straighten, or re-part."
+    );
+  }
+
+  // Strong tier: three-quarter gets strong but slightly lighter lock
+  if (tier === "strong" && profile.threeQuarterVisible) {
+    return "Hair: match reference colour, length, texture, and volume. Parting side consistent. Natural movement allowed.";
+  }
+
+  if (tier === "strong" && profile.sideVisible) {
+    return "Hair: match reference colour, length, and texture. Natural movement allowed.";
+  }
+
+  if (tier === "strong" && profile.backVisible) {
+    return "Hair: match reference colour, length, and overall silhouette from behind.";
+  }
+
+  if (tier === "medium") {
+    return "Hair: match reference colour, parting, and length. Natural movement allowed.";
+  }
+
+  // light
+  return "Hair: same colour and approximate length as reference.";
+}
+
+// ── Model Identity Lock (structured sub-blocks) ──
+
+function compileModelIdentityLock(
+  tier: IdentityLockTier,
+  hairProfile: HairVisibilityProfile,
+  shot: RecommendedShot,
+): string {
+  if (tier === "none") return "";
+
+  const blocks: string[] = [];
+  const faceVisible = isFaceVisible(shot);
+  const bodyVisible = detectCompilationMode(shot) === "on-body";
+
+  // Face sub-block (priority 1)
+  if (faceVisible) {
+    const faceLock: Record<Exclude<IdentityLockTier, "none">, string> = {
+      strong: "Face: match reference exactly for bone structure, skin tone, eye shape, nose bridge, and lip shape.",
+      medium: "Face: match reference for bone structure, skin tone, and proportions.",
+      light: "Face: same person as reference, natural expression allowed.",
+    };
+    blocks.push(faceLock[tier]);
+  }
+
+  // Hair sub-block (priority 2, visibility-aware)
+  const hairLock = compileHairLock(tier, hairProfile);
+  if (hairLock) blocks.push(hairLock);
+
+  // Body sub-block (priority 4, may be dropped under budget pressure)
+  if (bodyVisible) {
+    const bodyLock: Record<Exclude<IdentityLockTier, "none">, string> = {
+      strong: "Body: match reference build, skin tone, and proportions exactly.",
+      medium: "Body: match reference build and skin tone.",
+      light: "Body: same build as reference.",
+    };
+    blocks.push(bodyLock[tier]);
+  }
+
+  // Gaze is handled by the realism normalizer (compileHumanRealismBlock),
+  // not duplicated here in identity lock.
+
+  // Budget-priority enforcement: if identity lock is getting long,
+  // drop body sub-block. Face + hair always survive.
+  const MAX_IDENTITY_WORDS = 80;
+  let result = blocks.filter(Boolean).join(" ");
+  if (result.split(/\s+/).length > MAX_IDENTITY_WORDS && blocks.length > 2) {
+    // Drop body (lowest priority among remaining sub-blocks)
+    const bodyIdx = blocks.findIndex(b => b.startsWith("Body:"));
+    if (bodyIdx >= 0) blocks.splice(bodyIdx, 1);
+    result = blocks.filter(Boolean).join(" ");
+  }
+
+  return result;
+}
+
+// ── F9: Family-Native Product Reference Locks ──
+// Each family gets product-specific reference instruction derived from
+// FAMILY_PRODUCT_TRUTH invariants. Apparel uses subtype-specific locks.
+
+const FAMILY_REFERENCE_LOCK: Record<ProductFamily, string> = {
+  bags: "Use the uploaded product reference exactly for bag shape, panel layout, handle design, attachment points, logo placement, and material truth.",
+  watches: "Use the uploaded product reference exactly for case shape, dial layout, crown position, bezel markings, strap width, and material finish.",
+  jewelry: "Use the uploaded product reference exactly for metal colour, stone count, setting style, chain pattern, and clasp design.",
+  eyewear: "Use the uploaded product reference exactly for frame shape, bridge width, lens tint, temple style, and hinge design.",
+  belts: "Use the uploaded product reference exactly for buckle shape, prong count, leather width, edge paint, and stitching pattern.",
+  footwear: "Use the uploaded product reference exactly for shoe silhouette, sole profile, lacing system, upper construction, and heel tab.",
+  apparel: "Use the uploaded product reference exactly for silhouette, neckline/opening, sleeve/strap, closure, hem, and fabric behaviour.",
+  headwear: "Use the uploaded product reference exactly for crown shape, brim width, band placement, and material texture.",
+  scarves: "Use the uploaded product reference exactly for print pattern, fringe detail, fabric weight, and edge hemming.",
+  small_accessories: "Use the uploaded product reference exactly for product dimensions, material finish, hardware, and clasp mechanism.",
+  full_look: "Use the uploaded product reference exactly for each piece's shape, colour, and construction. Maintain layering order.",
+};
+
+function compileFamilyReferenceLock(input: LookbookInput): string {
+  if (input.productFamily === "apparel") {
+    const subtype = deriveApparelSubtype(input);
+    return APPAREL_SUBTYPE_LOCK[subtype];
+  }
+  return FAMILY_REFERENCE_LOCK[input.productFamily];
+}
+
+// ── Reference Lock (combines identity + product) ──
+
+function compileReferenceLock(
+  hasProductRef: boolean,
+  identityTier: IdentityLockTier,
+  hairProfile: HairVisibilityProfile,
+  shot: RecommendedShot,
+  input: LookbookInput,
+): string {
+  if (!hasProductRef && identityTier === "none") return "";
+
+  const blocks: string[] = [];
+
+  // Hero product identification sentence
+  const familyLabel = PRODUCT_FAMILY_LABELS[input.productFamily].toLowerCase();
+  if (input.specificItem) {
+    blocks.push(`The hero product is the ${input.specificItem}.`);
+  } else {
+    blocks.push(`The hero product is a ${familyLabel} piece.`);
+  }
+
+  // Model identity (tiered, sub-blocked, visibility-aware)
+  const identityLock = compileModelIdentityLock(identityTier, hairProfile, shot);
+  if (identityLock) blocks.push(identityLock);
+
+  // Product reference (family-native, apparel-subtype-aware)
+  if (hasProductRef) {
+    blocks.push(compileFamilyReferenceLock(input));
+    blocks.push("Do not redesign, simplify, or invent missing product features.");
+  }
+
+  return blocks.join(" ");
+}
+
+// ── Anchor Contradiction Scrubber ──
+// Runs BEFORE critic so critic evaluates the cleaned prompt.
+// TODO: Suppress contradictions at builder level rather than relying on regex cleanup.
+
+function scrubAnchorContradictions(
+  positive: string,
+  negative: string,
+  shot: RecommendedShot,
+): { positive: string; negative: string } {
+  const cat = shot.archetype.shotCategory;
+  if (cat !== "hero") return { positive, negative };
+
+  const body = shot.archetype.bodyDirection?.toLowerCase() || "";
+  const gaze = shot.archetype.headDirection?.toLowerCase() || "";
+  const isStatic = !isShotMotion(shot);
+  const isFrontal = body.includes("straight") || body.includes("front") || body.includes("square");
+
+  // 1. Gaze contradictions
+  if (isFrontal) {
+    negative = negative.replace(/,?\s*direct lens stare/g, "");
+  }
+  if (gaze && !gaze.includes("n/a")) {
+    negative = negative.replace(/,?\s*fixed AI stare/g, "");
+  }
+
+  // 2. Motion contradictions for static seller
+  if (isStatic) {
+    positive = positive.replace(/\bslight movement\b/gi, "");
+    positive = positive.replace(/\bgentle sway\b/gi, "");
+    positive = positive.replace(/\bmid-stride\b/gi, "");
+    positive = positive.replace(/\bwalking\b/gi, "standing");
+  }
+
+  // 3. Editorial energy contradictions for static frontal seller
+  if (isStatic && isFrontal) {
+    positive = positive.replace(/\bstrong twist\b/gi, "");
+    positive = positive.replace(/\bdramatic rotation\b/gi, "");
+    positive = positive.replace(/\bexpressive gesture\b/gi, "");
+  }
+
+  // 4. Framing contradictions (full-body should not have crop language)
+  const framing = shot.archetype.defaultFraming?.toLowerCase() || "";
+  if (framing.includes("full")) {
+    positive = positive.replace(/\btight crop\b/gi, "");
+    positive = positive.replace(/\bclose crop\b/gi, "");
+  }
+
+  // Clean up double spaces from removals
+  positive = positive.replace(/\s{2,}/g, " ").trim();
+  negative = negative
+    .replace(/\s{2,}/g, " ")
+    .replace(/^,\s*/, "")
+    .replace(/,\s*$/, "")
+    .trim();
+
+  return { positive, negative };
 }
 
 // ── Compact Product Lock ──
@@ -174,6 +437,18 @@ export function buildCompactProductLock(
   } else if (fp.family === "jewelry") {
     if (fp.jewelryType) parts.push(fp.jewelryType);
     if (fp.dropLength) parts.push(fp.dropLength);
+  } else if (fp.family === "eyewear") {
+    if (fp.eyewearType) parts.push(fp.eyewearType);
+    if (fp.frameShape && fp.frameMaterial) {
+      parts.push(`${fp.frameShape} ${fp.frameMaterial} frame`);
+    } else if (fp.frameShape) {
+      parts.push(`${fp.frameShape} frame`);
+    }
+    if (fp.lensType && fp.lensColour) {
+      parts.push(`${fp.lensType} ${fp.lensColour} lenses`);
+    } else if (fp.lensType) {
+      parts.push(`${fp.lensType} lenses`);
+    }
   }
 
   // Logo treatment
@@ -226,7 +501,7 @@ const BRANDING_NEGATIVES = "no readable text, no invented logo, no oversized wor
 
 // ── Core Negatives ──
 
-const CORE_NEGATIVES = "distorted anatomy, warped hands, plastic skin, CGI lighting, washed-out HDR";
+const CORE_NEGATIVES = "distorted anatomy, warped hands, plastic skin, CGI lighting, washed-out HDR, exaggerated bokeh, artificial background, over-bright exposure, flat contrast, lifted shadows";
 
 // ── Family Drift Negatives ──
 
@@ -256,7 +531,7 @@ function compileVisibilityCue(
 ): string {
   if (!ACCESSORY_FAMILIES.has(input.productFamily)) return "";
 
-  const title = shot.archetype.title.toLowerCase();
+  const title = (shot.resolvedTitle ?? shot.archetype.title).toLowerCase();
   const zones = shot.archetype.primaryDisplayZones?.join(" ").toLowerCase() || "";
   const item = input.specificItem?.toLowerCase() || "";
 
@@ -289,32 +564,46 @@ function compileVisibilityCue(
   return "Product fully visible.";
 }
 
-// ── Shot Directive ──
+// ── Shot Directive + Pose ──
 
-function compileShotDirective(shot: RecommendedShot): string {
+function compileShotDirective(shot: RecommendedShot, emotionalRegister?: EmotionalRegister, editorialBeat?: EditorialBeat): string {
   const arch = shot.archetype;
-  const parts: string[] = [];
+  const framingParts: string[] = [];
 
   const framing = arch.defaultFraming.split(",")[0].trim().toLowerCase();
-  parts.push(framing);
+  framingParts.push(framing);
 
   if (arch.defaultCameraHeight) {
-    parts.push(`camera ${arch.defaultCameraHeight.toLowerCase()}`);
+    framingParts.push(`camera ${arch.defaultCameraHeight.toLowerCase()}`);
   }
 
   const body = arch.bodyDirection?.toLowerCase() || "";
   const pose = arch.poseFamily?.toLowerCase() || "";
   if (body.includes("profile") || pose.includes("profile")) {
-    parts.push("profile angle");
+    framingParts.push("profile angle");
   } else if (body.includes("three-quarter") || body.includes("3/4")) {
-    parts.push("three-quarter angle");
+    framingParts.push("three-quarter angle");
   } else if (pose.includes("seated")) {
-    parts.push("angled down");
-  } else if (body.includes("straight") || body.includes("front")) {
-    parts.push("straight on");
+    framingParts.push("angled down");
+  } else if (body.includes("straight") || body.includes("front") || body.includes("square")) {
+    framingParts.push("straight on");
   }
 
-  return parts.join(", ") + ".";
+  // Use deltaBlueprint as pose direction: it's written in natural
+  // photographic language that image generators understand, rather than
+  // the decomposed clinical fields (poseFamily, handBehavior, etc.)
+  const framingStr = framingParts.join(", ") + ".";
+  const base = arch.deltaBlueprint ? `${framingStr} ${arch.deltaBlueprint}` : framingStr;
+
+  // Append taste-driven emotional modifier for on-body shots
+  // Beat-specific modifiers take priority when an editorial beat is present
+  if (emotionalRegister) {
+    if (editorialBeat) {
+      return `${base} ${BEAT_EMOTIONAL_MODIFIERS[editorialBeat][emotionalRegister]}`;
+    }
+    return `${base} ${EMOTIONAL_REGISTER_MODIFIER[emotionalRegister]}`;
+  }
+  return base;
 }
 
 // ── Product Interaction ──
@@ -383,38 +672,21 @@ function compileProductInteraction(
   return parts.join(", ");
 }
 
-// ── World Anchor ──
+// ── World Anchor (environment-only, no styling/brand/grooming) ──
 
-function compileWorldAnchor(world?: ContinuityWorldTokens): string {
-  if (!world) return "";
-  const parts: string[] = [];
-  if (world.backdrop) parts.push(world.backdrop);
-  if (world.lighting) parts.push(world.lighting);
-  if (world.tonalTemperature) parts.push(world.tonalTemperature);
+function compileWorldAnchor(slice: ShotWorldSlice): string {
+  const parts = [slice.backdropClause, slice.groundClause, slice.lightingClause].filter(Boolean);
+  if (slice.interactionClause) parts.push(slice.interactionClause);
+  if (!parts.length) return "";
   return parts.join(". ") + ".";
 }
 
 // ── Styling Lock (Case B: model-only, no product reference) ──
+// Sources from brandGuidelines, not from world tokens.
 
-function compileStylingLock(world?: ContinuityWorldTokens): string {
-  if (!world?.styling) return "";
-  return `Same outfit throughout: ${world.styling}. Same silhouette, same colour palette, same accessories, same styling mood across all six shots.`;
-}
-
-// ── Derive World Tokens from DNA ──
-
-export function deriveWorldTokensFromDNA(dna: MasterShootDNA): ContinuityWorldTokens {
-  const env = dna.environmentFamily.split(":")[0]?.trim() || "neutral studio";
-  const light = dna.lightingFamily.split(".")[0]?.trim() || "soft directional light";
-  const finish = dna.finishFamily.split(":")[0]?.trim() || "premium finish";
-
-  return {
-    backdrop: env.toLowerCase(),
-    lighting: light.toLowerCase(),
-    tonalTemperature: finish.toLowerCase().includes("warm") ? "warm neutral" : "neutral",
-    styling: "",
-    modelTokens: "",
-  };
+function compileStylingLock(brandGuidelines?: string): string {
+  if (!brandGuidelines) return "";
+  return `${brandGuidelines} Maintain this exact silhouette, colour palette, accessories, and styling mood.`;
 }
 
 // ── Compact Family Truth Fallback ──
@@ -425,28 +697,86 @@ export function getCompactFallbackLock(
 ): string {
   const itemLabel = item || family;
   const familyDefaults: Record<string, string> = {
-    bags: `${itemLabel}, consistent shape and hardware across all shots`,
-    watches: `${itemLabel}, consistent case shape and dial across all shots`,
-    belts: `${itemLabel}, consistent buckle and width across all shots`,
-    jewelry: `${itemLabel}, consistent metal and stone across all shots`,
-    eyewear: `${itemLabel}, consistent frame shape across all shots`,
-    apparel: `${itemLabel}, consistent fit and fabric across all shots`,
-    footwear: `${itemLabel}, consistent shape and sole across all shots`,
-    headwear: `${itemLabel}, consistent crown and brim across all shots`,
-    scarves: `${itemLabel}, consistent pattern and drape across all shots`,
-    small_accessories: `${itemLabel}, consistent form across all shots`,
+    bags: `${itemLabel}, match reference shape and hardware exactly`,
+    watches: `${itemLabel}, match reference case shape and dial exactly`,
+    belts: `${itemLabel}, match reference buckle and width exactly`,
+    jewelry: `${itemLabel}, match reference metal and stone exactly`,
+    eyewear: `${itemLabel}, match reference frame shape exactly`,
+    apparel: `${itemLabel}, match reference fit and fabric exactly`,
+    footwear: `${itemLabel}, match reference shape and sole exactly`,
+    headwear: `${itemLabel}, match reference crown and brim exactly`,
+    scarves: `${itemLabel}, match reference pattern and drape exactly`,
+    small_accessories: `${itemLabel}, match reference form exactly`,
   };
-  return familyDefaults[family] || `${itemLabel}, consistent across all shots`;
+  return familyDefaults[family] || `${itemLabel}, match reference exactly`;
 }
 
 // ── Style Tag ──
+
+const SURFACE_TONE_FINISH: Record<SurfaceTone, string> = {
+  tactile: "natural grain finish, visible texture",
+  polished: "premium matte finish",
+  hard: "sharp contrast finish, clean edges",
+  soft: "soft tonal finish, gentle transitions",
+};
 
 function compileStyleTag(dna: MasterShootDNA, mode: ProviderCompilationMode): string {
   const style = STYLE_LABELS[dna.targetStyle]?.toLowerCase() || "commercial";
   if (mode === "product-only") return `${style} product photograph, even diffused lighting.`;
   if (mode === "detail") return "Detail photograph, sharp focus.";
-  return `${style} fashion photograph, premium matte finish.`;
+  const finish = SURFACE_TONE_FINISH[dna.tasteBridge.surfaceTone] ?? "premium matte finish";
+  return `${style} fashion photograph, ${finish}.`;
 }
+
+// ── Emotional Register Modifier ──
+
+const EMOTIONAL_REGISTER_MODIFIER: Record<EmotionalRegister, string> = {
+  sensual: "Emphasise softness, intimacy, and fabric movement.",
+  confident: "Emphasise structure, precision, and clean posture.",
+  quiet: "Keep the mood understated and calm.",
+  sharp: "Emphasise edge, contrast, and visual tension.",
+};
+
+// Beat-specific emotional modifiers: when an editorial beat is present,
+// the modifier is shaped by both the beat's narrative role AND the emotional register.
+const BEAT_EMOTIONAL_MODIFIERS: Record<EditorialBeat, Record<EmotionalRegister, string>> = {
+  establish: {
+    sensual: "Open with presence, let the body and fabric announce the mood.",
+    confident: "Open with authority, clean stance, full product clarity.",
+    quiet: "Open with stillness, let the product speak first.",
+    sharp: "Open with impact, strong line, immediate visual claim.",
+  },
+  build: {
+    sensual: "Introduce tension through a new angle, fabric catching differently.",
+    confident: "Shift perspective to reveal structure from a contrasting angle.",
+    quiet: "Turn slowly, let a new line emerge without force.",
+    sharp: "Cut to profile or rear, reveal a harder edge.",
+  },
+  pivot: {
+    sensual: "Draw closer, let intimacy shift the framing.",
+    confident: "Reframe with precision, tighter crop showing control.",
+    quiet: "Soften the framing, allow a moment of reframing.",
+    sharp: "Snap to a new energy, tighter angle with visual friction.",
+  },
+  breathe: {
+    sensual: "Settle into rest, fabric pooling, body at ease.",
+    confident: "Pause with composure, seated or leaning with intention.",
+    quiet: "Let the stillness hold, body resting in the environment.",
+    sharp: "Controlled pause, tension in stillness rather than motion.",
+  },
+  resolve: {
+    sensual: "Move through the space, fabric responding to the body in motion.",
+    confident: "Stride with purpose, the product in dynamic clarity.",
+    quiet: "Drift gently, motion as resolution rather than energy.",
+    sharp: "Push through, motion as decisive release.",
+  },
+  reveal: {
+    sensual: "Close on texture, let the surface become intimate.",
+    confident: "Close on construction, proving quality and precision.",
+    quiet: "Close gently, detail as quiet evidence.",
+    sharp: "Close hard, the product under scrutiny.",
+  },
+};
 
 // ── Scale Hints ──
 
@@ -507,13 +837,16 @@ function compileBagProofHero(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean,
 ): string {
   const fp = input.productFingerprint as BagFingerprint | undefined;
-  const world = input.continuityWorld;
+  const worldSlice = deriveShotWorldSlice(dna.worldProfile, shot);
   const blocks: string[] = [];
 
   // Reference lock (highest priority for proof shots)
-  const refLock = compileReferenceLock(hasProductRef);
+  const identityTier = deriveIdentityLockTier(shot, hasModelRef, input);
+  const hairProfile = deriveHairVisibility(shot);
+  const refLock = compileReferenceLock(hasProductRef, identityTier, hairProfile, shot, input);
   if (refLock) blocks.push(refLock);
 
   // Style tag
@@ -537,7 +870,7 @@ function compileBagProofHero(
   blocks.push(compileScaleHint(input, "on-body"));
 
   // Shot directive (priority 4)
-  blocks.push(compileShotDirective(shot));
+  blocks.push(compileShotDirective(shot, dna.tasteBridge.emotionalRegister, shot.editorialBeat));
 
   // Visibility
   const visibility = compileVisibilityCue(shot, input);
@@ -548,14 +881,25 @@ function compileBagProofHero(
   if (interaction) blocks.push(interaction + ".");
 
   // World anchor
-  const worldAnchor = compileWorldAnchor(world);
+  const worldAnchor = compileWorldAnchor(worldSlice);
   if (worldAnchor) blocks.push(worldAnchor);
 
   // Realism normalization (last: camera, lighting, human, material)
+  // Hero shots use compressed realism to free prompt budget for identity lock
   blocks.push(normalizePositive({
     mode: "on-body",
     materialHint: fp ? `${fp.materialFinish} ${fp.materialColour}` : undefined,
     includeHumanRealism: true,
+    cameraHeight: getShotCameraHeight(shot),
+    cameraLens: getShotCameraLens(shot),
+    cameraAperture: getShotCameraAperture(shot),
+    cameraDistance: getShotCameraDistance(shot),
+    lightingDirection: getShotLighting(shot) || dna.worldProfile.lightingDescription || undefined,
+    lightAttitude: dna.tasteBridge.lightAttitude,
+    lightingConsistency: dna.lightingConsistency,
+    isMotionShot: isShotMotion(shot),
+    gazeDirection: getShotGazeDirection(shot),
+    compressionLevel: "compressed",
   }));
 
   return blocks.join(" ").replace(/\s+/g, " ").trim();
@@ -566,12 +910,15 @@ function compileBagProofProfile(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean,
 ): string {
   const fp = input.productFingerprint as BagFingerprint | undefined;
-  const world = input.continuityWorld;
+  const worldSlice = deriveShotWorldSlice(dna.worldProfile, shot);
   const blocks: string[] = [];
 
-  const refLock = compileReferenceLock(hasProductRef);
+  const identityTier = deriveIdentityLockTier(shot, hasModelRef, input);
+  const hairProfile = deriveHairVisibility(shot);
+  const refLock = compileReferenceLock(hasProductRef, identityTier, hairProfile, shot, input);
   if (refLock) blocks.push(refLock);
 
   blocks.push(compileStyleTag(dna, "on-body"));
@@ -586,19 +933,28 @@ function compileBagProofProfile(
   }
 
   blocks.push(compileScaleHint(input, "on-body"));
-  blocks.push(compileShotDirective(shot));
+  blocks.push(compileShotDirective(shot, dna.tasteBridge.emotionalRegister, shot.editorialBeat));
   blocks.push("Hardware side visible to camera. Bag side profile shows depth and panel structure.");
 
   const interaction = compileProductInteraction(shot, fp);
   if (interaction) blocks.push(interaction + ".");
 
-  const worldAnchor = compileWorldAnchor(world);
+  const worldAnchor = compileWorldAnchor(worldSlice);
   if (worldAnchor) blocks.push(worldAnchor);
 
   blocks.push(normalizePositive({
     mode: "on-body",
     materialHint: fp ? `${fp.materialFinish} ${fp.materialColour}` : undefined,
     includeHumanRealism: true,
+    cameraHeight: getShotCameraHeight(shot),
+    cameraLens: getShotCameraLens(shot),
+    cameraAperture: getShotCameraAperture(shot),
+    cameraDistance: getShotCameraDistance(shot),
+    lightingDirection: getShotLighting(shot) || dna.worldProfile.lightingDescription || undefined,
+    lightAttitude: dna.tasteBridge.lightAttitude,
+    lightingConsistency: dna.lightingConsistency,
+    isMotionShot: isShotMotion(shot),
+    gazeDirection: getShotGazeDirection(shot),
   }));
 
   return blocks.join(" ").replace(/\s+/g, " ").trim();
@@ -609,11 +965,14 @@ function compileBagProofMacroConstruction(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean,
 ): string {
   const fp = input.productFingerprint as BagFingerprint | undefined;
   const blocks: string[] = [];
 
-  const refLock = compileReferenceLock(hasProductRef);
+  const identityTier = deriveIdentityLockTier(shot, hasModelRef, input);
+  const hairProfile = deriveHairVisibility(shot);
+  const refLock = compileReferenceLock(hasProductRef, identityTier, hairProfile, shot, input);
   if (refLock) blocks.push(refLock);
 
   blocks.push(compileStyleTag(dna, "detail"));
@@ -630,11 +989,13 @@ function compileBagProofMacroConstruction(
 
   blocks.push(compileScaleHint(input, "detail"));
 
-  // Normalised camera + lighting for macro
+  // Normalised camera + lighting for macro (use detail mode defaults, not archetype on-body specs)
   blocks.push(normalizePositive({
     mode: "detail",
     materialHint: fp ? `${fp.materialFinish} ${fp.materialColour}` : undefined,
     includeHumanRealism: false,
+    lightAttitude: dna.tasteBridge.lightAttitude,
+    lightingConsistency: dna.lightingConsistency,
   }));
 
   return blocks.join(" ").replace(/\s+/g, " ").trim();
@@ -645,11 +1006,14 @@ function compileBagProofMacroAttachment(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean,
 ): string {
   const fp = input.productFingerprint as BagFingerprint | undefined;
   const blocks: string[] = [];
 
-  const refLock = compileReferenceLock(hasProductRef);
+  const identityTier = deriveIdentityLockTier(shot, hasModelRef, input);
+  const hairProfile = deriveHairVisibility(shot);
+  const refLock = compileReferenceLock(hasProductRef, identityTier, hairProfile, shot, input);
   if (refLock) blocks.push(refLock);
 
   blocks.push(compileStyleTag(dna, "detail"));
@@ -671,10 +1035,13 @@ function compileBagProofMacroAttachment(
 
   blocks.push(compileScaleHint(input, "detail"));
 
+  // Detail mode: use detail defaults, not archetype on-body specs
   blocks.push(normalizePositive({
     mode: "detail",
     materialHint: fp ? `${fp.materialFinish} ${fp.materialColour}` : undefined,
     includeHumanRealism: false,
+    lightAttitude: dna.tasteBridge.lightAttitude,
+    lightingConsistency: dna.lightingConsistency,
   }));
 
   return blocks.join(" ").replace(/\s+/g, " ").trim();
@@ -685,11 +1052,14 @@ function compileBagProofOpenTop(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean,
 ): string {
   const fp = input.productFingerprint as BagFingerprint | undefined;
   const blocks: string[] = [];
 
-  const refLock = compileReferenceLock(hasProductRef);
+  const identityTier = deriveIdentityLockTier(shot, hasModelRef, input);
+  const hairProfile = deriveHairVisibility(shot);
+  const refLock = compileReferenceLock(hasProductRef, identityTier, hairProfile, shot, input);
   if (refLock) blocks.push(refLock);
 
   blocks.push(compileStyleTag(dna, "product-only"));
@@ -707,17 +1077,20 @@ function compileBagProofOpenTop(
 
   blocks.push(compileScaleHint(input, "product-only"));
 
-  const world = input.continuityWorld;
-  if (world?.backdrop) {
-    blocks.push(world.backdrop + ".");
+  const worldSlice = deriveShotWorldSlice(dna.worldProfile, shot);
+  const worldAnchor = compileWorldAnchor(worldSlice);
+  if (worldAnchor) {
+    blocks.push(worldAnchor);
   } else {
     blocks.push("Clean white surface.");
   }
 
+  // Product-only mode: use product defaults, not archetype on-body specs
   blocks.push(normalizePositive({
     mode: "product-only",
     materialHint: fp ? `${fp.materialFinish} ${fp.materialColour}` : undefined,
     includeHumanRealism: false,
+    lightingConsistency: dna.lightingConsistency,
   }));
 
   return blocks.join(" ").replace(/\s+/g, " ").trim();
@@ -728,13 +1101,16 @@ function compileBagEditorialDesire(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean,
 ): string {
   const fp = input.productFingerprint as BagFingerprint | undefined;
-  const world = input.continuityWorld;
+  const worldSlice = deriveShotWorldSlice(dna.worldProfile, shot);
   const blocks: string[] = [];
 
   // Reference lock (still present but product accuracy is priority 1, not all-consuming)
-  const refLock = compileReferenceLock(hasProductRef);
+  const identityTier = deriveIdentityLockTier(shot, hasModelRef, input);
+  const hairProfile = deriveHairVisibility(shot);
+  const refLock = compileReferenceLock(hasProductRef, identityTier, hairProfile, shot, input);
   if (refLock) blocks.push(refLock);
 
   blocks.push(compileStyleTag(dna, "on-body"));
@@ -758,7 +1134,7 @@ function compileBagEditorialDesire(
   }
 
   // Shot directive (priority 3: believable fashion mood)
-  blocks.push(compileShotDirective(shot));
+  blocks.push(compileShotDirective(shot, dna.tasteBridge.emotionalRegister, shot.editorialBeat));
   blocks.push(compileScaleHint(input, "on-body"));
 
   // Visibility
@@ -766,12 +1142,12 @@ function compileBagEditorialDesire(
   if (visibility) blocks.push(visibility);
 
   // World anchor (priority 4: atmosphere)
-  const worldAnchor = compileWorldAnchor(world);
+  const worldAnchor = compileWorldAnchor(worldSlice);
   if (worldAnchor) blocks.push(worldAnchor);
 
   // Styling lock for Case B
   if (!hasProductRef) {
-    const stylingLock = compileStylingLock(world);
+    const stylingLock = compileStylingLock(dna.brandGuidelines);
     if (stylingLock) blocks.push(stylingLock);
   }
 
@@ -780,6 +1156,15 @@ function compileBagEditorialDesire(
     mode: "on-body",
     materialHint: fp ? `${fp.materialFinish} ${fp.materialColour}` : undefined,
     includeHumanRealism: true,
+    cameraHeight: getShotCameraHeight(shot),
+    cameraLens: getShotCameraLens(shot),
+    cameraAperture: getShotCameraAperture(shot),
+    cameraDistance: getShotCameraDistance(shot),
+    lightingDirection: getShotLighting(shot) || dna.worldProfile.lightingDescription || undefined,
+    lightAttitude: dna.tasteBridge.lightAttitude,
+    lightingConsistency: dna.lightingConsistency,
+    isMotionShot: isShotMotion(shot),
+    gazeDirection: getShotGazeDirection(shot),
   }));
 
   return blocks.join(" ").replace(/\s+/g, " ").trim();
@@ -793,14 +1178,17 @@ function compileGenericOnBody(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean,
 ): string {
   const fp = input.productFingerprint;
-  const world = input.continuityWorld;
+  const worldSlice = deriveShotWorldSlice(dna.worldProfile, shot);
   const isAccessory = ACCESSORY_FAMILIES.has(input.productFamily);
   const blocks: string[] = [];
 
   // Reference lock
-  const refLock = compileReferenceLock(hasProductRef);
+  const identityTier = deriveIdentityLockTier(shot, hasModelRef, input);
+  const hairProfile = deriveHairVisibility(shot);
+  const refLock = compileReferenceLock(hasProductRef, identityTier, hairProfile, shot, input);
   if (refLock) blocks.push(refLock);
 
   blocks.push(compileStyleTag(dna, "on-body"));
@@ -812,38 +1200,50 @@ function compileGenericOnBody(
       blocks.push(getCompactFallbackLock(input.productFamily, input.specificItem) + ".");
     }
     blocks.push(compileScaleHint(input, "on-body"));
-    blocks.push(compileShotDirective(shot));
+    blocks.push(compileShotDirective(shot, dna.tasteBridge.emotionalRegister, shot.editorialBeat));
     const visibility = compileVisibilityCue(shot, input);
     if (visibility) blocks.push(visibility);
     const interaction = compileProductInteraction(shot, fp);
     if (interaction) blocks.push(interaction + ".");
-    const worldAnchor = compileWorldAnchor(world);
+    const worldAnchor = compileWorldAnchor(worldSlice);
     if (worldAnchor) blocks.push(worldAnchor);
   } else {
-    blocks.push(compileShotDirective(shot));
+    blocks.push(compileShotDirective(shot, dna.tasteBridge.emotionalRegister, shot.editorialBeat));
     if (fp) {
       blocks.push(buildCompactProductLock(fp));
     } else if (!hasProductRef) {
-      const stylingLock = compileStylingLock(world);
+      const stylingLock = compileStylingLock(dna.brandGuidelines);
       if (stylingLock) blocks.push(stylingLock);
     } else {
       blocks.push(getCompactFallbackLock(input.productFamily, input.specificItem) + ".");
     }
     blocks.push(compileScaleHint(input, "on-body"));
-    const worldAnchor = compileWorldAnchor(world);
+    const worldAnchor = compileWorldAnchor(worldSlice);
     if (worldAnchor) blocks.push(worldAnchor);
   }
 
   if (!hasProductRef && isAccessory) {
-    const stylingLock = compileStylingLock(world);
+    const stylingLock = compileStylingLock(dna.brandGuidelines);
     if (stylingLock) blocks.push(stylingLock);
   }
 
   // F8: Realism normalization
+  // Hero shots use compressed realism to free prompt budget for identity lock
+  const isHero = shot.archetype.shotCategory === "hero";
   blocks.push(normalizePositive({
     mode: "on-body",
     materialHint: fp ? `${fp.materialFinish} ${fp.materialColour}` : undefined,
     includeHumanRealism: true,
+    cameraHeight: getShotCameraHeight(shot),
+    cameraLens: getShotCameraLens(shot),
+    cameraAperture: getShotCameraAperture(shot),
+    cameraDistance: getShotCameraDistance(shot),
+    lightingDirection: getShotLighting(shot) || dna.worldProfile.lightingDescription || undefined,
+    lightAttitude: dna.tasteBridge.lightAttitude,
+    lightingConsistency: dna.lightingConsistency,
+    isMotionShot: isShotMotion(shot),
+    gazeDirection: getShotGazeDirection(shot),
+    compressionLevel: isHero ? "compressed" : "full",
   }));
 
   return blocks.join(" ").replace(/\s+/g, " ").trim();
@@ -854,11 +1254,14 @@ function compileGenericProductOnly(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean,
 ): string {
   const fp = input.productFingerprint;
   const blocks: string[] = [];
 
-  const refLock = compileReferenceLock(hasProductRef);
+  const identityTier = deriveIdentityLockTier(shot, hasModelRef, input);
+  const hairProfile = deriveHairVisibility(shot);
+  const refLock = compileReferenceLock(hasProductRef, identityTier, hairProfile, shot, input);
   if (refLock) blocks.push(refLock);
 
   blocks.push(compileStyleTag(dna, "product-only"));
@@ -874,20 +1277,22 @@ function compileGenericProductOnly(
 
   blocks.push(compileScaleHint(input, "product-only"));
 
-  const world = input.continuityWorld;
-  if (world?.backdrop) {
-    blocks.push(world.backdrop + ".");
+  const worldSlice = deriveShotWorldSlice(dna.worldProfile, shot);
+  const worldAnchorStr = compileWorldAnchor(worldSlice);
+  if (worldAnchorStr) {
+    blocks.push(worldAnchorStr);
   } else {
     blocks.push("Clean white surface.");
   }
 
   blocks.push(compileShotDirective(shot));
 
-  // F8: Realism normalization
+  // Product-only mode: use product defaults, not archetype on-body specs
   blocks.push(normalizePositive({
     mode: "product-only",
     materialHint: fp ? `${fp.materialFinish} ${fp.materialColour}` : undefined,
     includeHumanRealism: false,
+    lightingConsistency: dna.lightingConsistency,
   }));
 
   return blocks.join(" ").replace(/\s+/g, " ").trim();
@@ -898,34 +1303,61 @@ function compileGenericDetail(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean,
 ): string {
   const fp = input.productFingerprint;
   const blocks: string[] = [];
 
-  const refLock = compileReferenceLock(hasProductRef);
+  const identityTier = deriveIdentityLockTier(shot, hasModelRef, input);
+  const hairProfile = deriveHairVisibility(shot);
+  const refLock = compileReferenceLock(hasProductRef, identityTier, hairProfile, shot, input);
   if (refLock) blocks.push(refLock);
 
   blocks.push(compileStyleTag(dna, "detail"));
 
   // Detail zone (generic fallback for non-bag families)
-  blocks.push(compileDetailZoneGeneric(shot, fp));
+  blocks.push(compileDetailZoneGeneric(shot, fp, input));
   blocks.push(compileScaleHint(input, "detail"));
 
-  // F8: Realism normalization
+  // Detail mode: use detail defaults, not archetype on-body specs
   blocks.push(normalizePositive({
     mode: "detail",
     materialHint: fp ? `${fp.materialFinish} ${fp.materialColour}` : undefined,
     includeHumanRealism: false,
+    lightAttitude: dna.tasteBridge.lightAttitude,
+    lightingConsistency: dna.lightingConsistency,
   }));
 
   return blocks.join(" ").replace(/\s+/g, " ").trim();
 }
 
+// ── Family-Keyed Detail Zones ──
+
+const FAMILY_DETAIL_ZONES: Partial<Record<ProductFamily, Record<string, string>>> = {
+  apparel: {
+    default: "construction detail and fabric texture",
+    dress: "neckline construction, strap detail, and fabric grain",
+    shirt: "collar stitching, button attachment, and cuff finish",
+    blazer: "lapel roll, buttonhole quality, and interior lining",
+    trousers: "waistband construction, pocket finish, and hem detail",
+    skirt: "waistband construction, pleat setting, and hem finish",
+    knitwear: "knit stitch pattern, yarn texture, and ribbing detail",
+    coat: "collar construction, button finish, and lining detail",
+    top: "neckline shape, strap or sleeve detail, and fabric finish",
+  },
+  bags: { default: "hardware and closure mechanism" },
+  watches: { default: "dial layout and case construction" },
+  jewelry: { default: "metal finish, stone setting, and clasp quality" },
+  eyewear: { default: "frame construction, hinge mechanism, and lens edge" },
+  footwear: { default: "sole construction, stitching quality, and upper detail" },
+  belts: { default: "buckle mechanism, leather edge, and stitching detail" },
+};
+
 // ── Generic Detail Zone (non-bag families) ──
 
-function compileDetailZoneGeneric(shot: RecommendedShot, fp?: ProductFingerprint): string {
+function compileDetailZoneGeneric(shot: RecommendedShot, fp?: ProductFingerprint, input?: LookbookInput): string {
   const arch = shot.archetype;
-  const title = arch.title.toLowerCase();
+  const title = (shot.resolvedTitle ?? arch.title).toLowerCase();
 
   if (title.includes("hardware")) {
     if (fp?.family === "bags") {
@@ -938,7 +1370,12 @@ function compileDetailZoneGeneric(shot: RecommendedShot, fp?: ProductFingerprint
 
   if (title.includes("construction") || title.includes("texture")) {
     if (fp) {
-      return `Close-up of ${(fp as any).constructionStyle || "construction"} on ${fp.materialFinish || ""} ${fp.materialColour || ""} surface.`.replace(/\s+/g, " ");
+      const style = (fp as any).constructionStyle;
+      const material = [fp.materialFinish, fp.materialColour].filter(Boolean).join(" ");
+      if (style) return `Close-up of ${style} on ${material} surface.`.replace(/\s+/g, " ");
+      return material
+        ? `Close-up of construction detail on ${material} surface.`
+        : "Close-up of construction detail and material texture.";
     }
     return "Close-up of construction detail and material texture.";
   }
@@ -957,7 +1394,17 @@ function compileDetailZoneGeneric(shot: RecommendedShot, fp?: ProductFingerprint
     return "Close-up of watch dial.";
   }
 
-  return `Close-up of ${arch.role.split(".")[0]?.toLowerCase() || "product detail"}.`;
+  // Family-aware fallback using normalized subtype keys
+  if (input) {
+    const zones = FAMILY_DETAIL_ZONES[input.productFamily];
+    const itemKey = normalizeSubtypeKey(input.specificItem);
+    const desc = (itemKey && zones?.[itemKey]) || zones?.default;
+    if (desc) return `Close-up of ${desc}.`;
+  }
+
+  // Ultimate fallback: use resolved role
+  const roleDesc = resolveArchetypeRole(arch, input?.specificItem).split(".")[0]?.toLowerCase();
+  return `Close-up of ${roleDesc || "product detail"}.`;
 }
 
 // ── Negative Prompt Compiler ──
@@ -968,6 +1415,7 @@ export function compileProviderNegative(
   mode: ProviderCompilationMode,
   hasProductRef?: boolean,
   shotClass?: BagShotClass,
+  secondaryObjectPolicy?: SecondaryObjectPolicy,
 ): string {
   const parts: string[] = [];
 
@@ -1012,6 +1460,11 @@ export function compileProviderNegative(
   });
   if (realismNeg) parts.push(realismNeg);
 
+  // Secondary object policy
+  if (secondaryObjectPolicy === "forbid" && mode === "on-body") {
+    parts.push("no additional bags, watches, or jewelry not in reference, no competing accessories");
+  }
+
   // Case B: styling consistency negatives
   if (hasProductRef === false && mode === "on-body") {
     parts.push("outfit change, different clothing, different accessories");
@@ -1027,6 +1480,7 @@ export function compileProviderPrompt(
   dna: MasterShootDNA,
   input: LookbookInput,
   hasProductRef: boolean,
+  hasModelRef: boolean = false,
 ): ProviderPromptOutput {
   const mode = detectCompilationMode(shot);
   const isBag = input.productFamily === "bags";
@@ -1040,40 +1494,49 @@ export function compileProviderPrompt(
 
     switch (shotClass) {
       case "proof_hero":
-        positive = compileBagProofHero(shot, dna, input, hasProductRef);
+        positive = compileBagProofHero(shot, dna, input, hasProductRef, hasModelRef);
         break;
       case "proof_profile":
-        positive = compileBagProofProfile(shot, dna, input, hasProductRef);
+        positive = compileBagProofProfile(shot, dna, input, hasProductRef, hasModelRef);
         break;
       case "proof_macro_construction":
-        positive = compileBagProofMacroConstruction(shot, dna, input, hasProductRef);
+        positive = compileBagProofMacroConstruction(shot, dna, input, hasProductRef, hasModelRef);
         break;
       case "proof_macro_attachment_or_brand_zone":
-        positive = compileBagProofMacroAttachment(shot, dna, input, hasProductRef);
+        positive = compileBagProofMacroAttachment(shot, dna, input, hasProductRef, hasModelRef);
         break;
       case "proof_open_top_or_capacity":
-        positive = compileBagProofOpenTop(shot, dna, input, hasProductRef);
+        positive = compileBagProofOpenTop(shot, dna, input, hasProductRef, hasModelRef);
         break;
       case "editorial_desire":
-        positive = compileBagEditorialDesire(shot, dna, input, hasProductRef);
+        positive = compileBagEditorialDesire(shot, dna, input, hasProductRef, hasModelRef);
         break;
     }
   } else {
     // Generic compilers for non-bag families (with F8 realism normalization)
     switch (mode) {
       case "on-body":
-        positive = compileGenericOnBody(shot, dna, input, hasProductRef);
+        positive = compileGenericOnBody(shot, dna, input, hasProductRef, hasModelRef);
         break;
       case "product-only":
-        positive = compileGenericProductOnly(shot, dna, input, hasProductRef);
+        positive = compileGenericProductOnly(shot, dna, input, hasProductRef, hasModelRef);
         break;
       case "detail":
-        positive = compileGenericDetail(shot, dna, input, hasProductRef);
+        positive = compileGenericDetail(shot, dna, input, hasProductRef, hasModelRef);
         break;
     }
   }
 
-  const negative = compileProviderNegative(shot, input, mode, hasProductRef, shotClass);
+  let negative = compileProviderNegative(shot, input, mode, hasProductRef, shotClass, dna.secondaryObjectPolicy);
+
+  // F9: Anchor contradiction scrubber (runs BEFORE critic so critic evaluates clean prompt)
+  const scrubbed = scrubAnchorContradictions(positive, negative, shot);
+  positive = scrubbed.positive;
+  negative = scrubbed.negative;
+
+  // Prompt hygiene: fix blank template variables, double spaces, malformed phrases
+  positive = sanitizePromptText(positive);
+  negative = sanitizePromptText(negative);
 
   // F8: Run deterministic critic
   const criticResult = runProviderCritic({

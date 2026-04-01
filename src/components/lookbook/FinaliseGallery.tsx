@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { SHOT_CATEGORY_LABELS } from "@/lib/lookbook/types";
 import type {
   RecommendedShot,
   TrackerState,
   GeneratedImageAsset,
   FinalMark,
-  GenerationPhase,
 } from "@/lib/lookbook/types";
 
 interface FinaliseGalleryProps {
@@ -17,12 +17,6 @@ interface FinaliseGalleryProps {
   presentationOrder?: number[];
   onFinalMarkChange: (position: number, mark: FinalMark) => void;
 }
-
-const PHASE_LABELS: Record<GenerationPhase, string> = {
-  anchor: "Anchor",
-  detail_validation: "Detail",
-  editorial: "Editorial",
-};
 
 function FinalMarkControl({
   mark,
@@ -84,14 +78,12 @@ function GalleryCard({
   image,
   mark,
   isLead,
-  phase,
   onMarkChange,
 }: {
   shot: RecommendedShot;
   image?: GeneratedImageAsset;
   mark: FinalMark;
   isLead: boolean;
-  phase: GenerationPhase;
   onMarkChange: (mark: FinalMark) => void;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -113,7 +105,7 @@ function GalleryCard({
         >
           <img
             src={image.previewUrl}
-            alt={shot.archetype.title}
+            alt={shot.resolvedTitle ?? shot.archetype.title}
             className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300"
           />
         </button>
@@ -136,13 +128,13 @@ function GalleryCard({
               </span>
             )}
           </div>
-          <span className="text-[10px] text-[--text-tertiary] capitalize">
-            {PHASE_LABELS[phase]}
+          <span className="text-[10px] text-[--text-tertiary]">
+            {SHOT_CATEGORY_LABELS[shot.archetype.shotCategory]}
           </span>
         </div>
 
         <h4 className="text-sm font-semibold text-[--text-primary] leading-snug">
-          {shot.archetype.title}
+          {shot.resolvedTitle ?? shot.archetype.title}
         </h4>
 
         <p className="text-xs text-[--text-secondary] line-clamp-2">
@@ -170,7 +162,7 @@ function GalleryCard({
                   #{shot.position}
                 </span>
                 <span className="text-sm font-medium text-[--text-primary]">
-                  {shot.archetype.title}
+                  {shot.resolvedTitle ?? shot.archetype.title}
                 </span>
                 {isLead && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[--accent-soft] text-[--accent]">
@@ -207,20 +199,6 @@ export default function FinaliseGallery({
   presentationOrder,
   onFinalMarkChange,
 }: FinaliseGalleryProps) {
-  // Derive generation phase for each shot position
-  const phaseMap: Record<number, GenerationPhase> = {};
-  for (const shot of shots) {
-    // Anchors are hero/product_focus, details are detail, editorial is rest
-    const cat = shot.archetype.shotCategory;
-    if (cat === "hero" || cat === "product_focus") {
-      phaseMap[shot.position] = "anchor";
-    } else if (cat === "detail") {
-      phaseMap[shot.position] = "detail_validation";
-    } else {
-      phaseMap[shot.position] = "editorial";
-    }
-  }
-
   // Sort shots by presentation order (contrast-maximised gallery sequence)
   // Falls back to generation order if presentationOrder not available
   const displayOrder = presentationOrder ?? generationOrder;
@@ -258,7 +236,6 @@ export default function FinaliseGallery({
           const mark = status?.finalMark ?? null;
           const isLead = mark === "best_in_set";
           const image = generatedImages[shot.position];
-          const phase = phaseMap[shot.position] ?? "editorial";
 
           return (
             <GalleryCard
@@ -267,7 +244,6 @@ export default function FinaliseGallery({
               image={image}
               mark={mark}
               isLead={isLead}
-              phase={phase}
               onMarkChange={(m) => onFinalMarkChange(shot.position, m)}
             />
           );

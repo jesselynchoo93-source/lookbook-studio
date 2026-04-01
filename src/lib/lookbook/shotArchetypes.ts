@@ -295,6 +295,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["face", "hip", "hand"],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["apparel"],
   },
 
   // ────────────────────────────────────────────
@@ -355,6 +356,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["face", "hand", "shoulder"],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["apparel"],
   },
 
   // ────────────────────────────────────────────
@@ -415,6 +417,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: [],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["apparel"],
   },
 
   // ────────────────────────────────────────────
@@ -678,6 +681,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["shoulder", "hip"],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["apparel"],
   },
 
   // ────────────────────────────────────────────
@@ -1059,6 +1063,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: [],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["jewelry", "watches", "small_accessories"],
   },
 
   // ────────────────────────────────────────────
@@ -1120,6 +1125,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["shoulder", "neckline"],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["eyewear"],
   },
 
   // ────────────────────────────────────────────
@@ -1181,6 +1187,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["face", "ear", "shoulder"],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["jewelry"],
   },
 
   // ────────────────────────────────────────────
@@ -1252,6 +1259,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["hand", "full_body"],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["bags"],
   },
 
   // ────────────────────────────────────────────
@@ -1323,6 +1331,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["knee_down"],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["footwear"],
   },
 
   // ────────────────────────────────────────────
@@ -1394,6 +1403,497 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["face"],
     showsProductInMotion: false,
     showsFullProduct: false,
+  },
+
+  // ════════════════════════════════════════════
+  // NEW ARCHETYPES: Visual Rhythm Expansion
+  // ════════════════════════════════════════════
+
+  // ────────────────────────────────────────────
+  // N1. back_hand_pocket
+  // ────────────────────────────────────────────
+  {
+    id: "back_hand_pocket",
+    title: "Back Hand Pocket",
+    role: "Rear view with one hand in back pocket, showing fit, pocket placement, and rear construction.",
+    shotCategory: "silhouette",
+    suitableFamilies: ["apparel", "full_look"],
+    suitableItems: ["trousers", "jeans", "chinos", "blazer", "jacket"],
+    suitableGoals: ["silhouette", "detail_focus"],
+    suitableStyles: ["editorial", "luxury", "commercial", "minimal", "contemporary", "street"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["balanced", "directional"],
+    logoVisibilitySuitability: "low",
+    productClaritySuitability: "medium",
+    silhouetteSuitability: "high",
+    detailSuitability: "medium",
+    movementSuitability: "low",
+    editorialStrength: "medium",
+    higgsfieldReliability: "high",
+    difficulty: "easy",
+    logoRisk: "high",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The garment has rear pockets, back yoke, vents, or back construction details worth showing. Also useful for denim and trouser fit from behind.",
+    avoidWhen:
+      "Front branding is the primary goal, or the garment has no distinctive back features.",
+    defaultFraming: "Full body from behind, head to toe, centred",
+    defaultLens: "85mm",
+    defaultAperture: "f/5.6",
+    defaultCameraHeight: "chest height",
+    defaultCameraDistance: "~4m",
+    defaultAngle: "Directly behind model (180 degrees from front), slight 170-degree offset",
+    defaultLighting: "Soft key from camera-left, edge light for shoulder and hip definition",
+    poseFamily: "Standing rear view",
+    bodyDirection: "Back facing camera with slight hip offset, weight on one leg",
+    handBehavior: "One hand in back pocket, other hand relaxed at side",
+    legBehavior: "Natural stance, slight weight shift to one side",
+    headDirection: "Looking away from camera, or turned 15-20 degrees over shoulder",
+    realismNotes:
+      "Highly reliable. Rear views minimize face rendering risk. One hand in pocket is a natural gesture that Higgsfield handles well. Watch for pocket seam alignment and natural hand insertion depth.",
+    whyItWorks:
+      "Adds personality to a standard back view. The hand-in-pocket gesture communicates confidence and shows pocket placement, a key selling point for trousers and jeans.",
+    deltaBlueprint:
+      "Camera behind model. Full body framing. Model stands with slight hip offset, one hand casually in back pocket. Head turned slightly over shoulder for editorial quality. Edge lighting defines the shoulder line and hip. Relaxed, confident energy.",
+    evidenceCapabilities: [
+      "full_silhouette",
+      "back_shape",
+      "fit_on_body",
+      "construction_quality",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body", "torso_back"],
+    secondaryDisplayZones: ["hip", "shoulder"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
+    exclusiveTo: ["apparel"],
+  },
+
+  // ────────────────────────────────────────────
+  // N2. hands_in_pockets_casual
+  // ────────────────────────────────────────────
+  {
+    id: "hands_in_pockets_casual",
+    title: "Hands In Pockets Casual",
+    role: "Relaxed full-body with hands in front pockets, confident and approachable.",
+    shotCategory: "hero",
+    suitableFamilies: ["apparel", "full_look"],
+    suitableItems: ["trousers", "jeans", "blazer", "jacket", "coat", "hoodie"],
+    suitableGoals: ["product_clarity", "mood", "silhouette"],
+    suitableStyles: ["commercial", "editorial", "street", "contemporary", "minimal"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "medium",
+    productClaritySuitability: "high",
+    silhouetteSuitability: "medium",
+    detailSuitability: "low",
+    movementSuitability: "low",
+    editorialStrength: "medium",
+    higgsfieldReliability: "high",
+    difficulty: "easy",
+    logoRisk: "medium",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The outfit benefits from a relaxed, confident presentation. Works well for casual and smart-casual looks where pocket styling is relevant.",
+    avoidWhen:
+      "Hands-in-pockets would hide key product details like belt buckles or waist detail. Avoid for formal tailoring where a squared stance is expected.",
+    defaultFraming: "Full body, head to toe, slightly asymmetric composition",
+    defaultLens: "85mm",
+    defaultAperture: "f/5.6",
+    defaultCameraHeight: "chest height",
+    defaultCameraDistance: "~4m",
+    defaultAngle: "15-20 degrees off centre (three-quarter)",
+    defaultLighting: "Soft directional key light from camera-right, natural bounce fill",
+    poseFamily: "Standing casual",
+    bodyDirection: "Facing camera at 15-20 degree angle, relaxed posture",
+    handBehavior: "Both hands in front trouser or jacket pockets, thumbs may be visible",
+    legBehavior: "Natural stance, weight slightly shifted to one leg",
+    headDirection: "Looking toward camera or slightly past camera for editorial feel",
+    realismNotes:
+      "Very reliable. Hands in pockets reduce finger rendering risk. Watch for natural thumb placement and pocket opening size. The relaxed posture is well within Higgsfield's comfort zone.",
+    whyItWorks:
+      "The hands-in-pockets gesture is universally confident and approachable. It changes the emotional register from a stiff hero shot to a lived-in look that buyers connect with.",
+    deltaBlueprint:
+      "Full body at slight three-quarter angle. Model standing relaxed with hands in front pockets. Weight on one leg for natural asymmetry. Camera at chest height. Soft directional light. Relaxed, confident expression. The outfit should speak for itself.",
+    evidenceCapabilities: [
+      "full_silhouette",
+      "fit_on_body",
+      "fabric_drape",
+      "body_scale",
+      "styling_context",
+    ],
+    primaryDisplayZones: ["full_body"],
+    secondaryDisplayZones: ["face", "hip", "shoulder"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
+  },
+
+  // ────────────────────────────────────────────
+  // N3. seated_full_trouser
+  // ────────────────────────────────────────────
+  {
+    id: "seated_full_trouser",
+    title: "Seated Full Trouser Line",
+    role: "Seated on stool or edge showing full trouser line, fabric drape at knee, and overall proportion.",
+    shotCategory: "editorial",
+    suitableFamilies: ["apparel", "full_look", "footwear"],
+    suitableItems: ["trousers", "jeans", "chinos", "dress", "skirt"],
+    suitableGoals: ["silhouette", "mood", "detail_focus"],
+    suitableStyles: ["editorial", "luxury", "commercial", "contemporary", "minimal"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["balanced", "directional"],
+    logoVisibilitySuitability: "medium",
+    productClaritySuitability: "medium",
+    silhouetteSuitability: "medium",
+    detailSuitability: "medium",
+    movementSuitability: "low",
+    editorialStrength: "high",
+    higgsfieldReliability: "medium",
+    difficulty: "moderate",
+    logoRisk: "medium",
+    anatomyRisk: "medium",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "Trousers or lower-body garments need to show fabric behaviour when seated: knee break, crease, drape. Also when the set needs a visual 'release' from standing poses.",
+    avoidWhen:
+      "The garment's key feature is full-length silhouette line that seated posture would compress.",
+    defaultFraming: "Full body seated, head to toe including legs and feet",
+    defaultLens: "85mm",
+    defaultAperture: "f/5.6",
+    defaultCameraHeight: "seated eye level",
+    defaultCameraDistance: "~3.5m",
+    defaultAngle: "15-25 degrees off centre (three-quarter)",
+    defaultLighting: "Soft directional key light, fill light preserving trouser leg detail",
+    poseFamily: "Seated casual",
+    bodyDirection: "Seated on stool, bench, or architectural edge. Body at slight angle to camera",
+    handBehavior: "Hands resting on thighs, or one hand on the seat edge",
+    legBehavior: "Legs extended forward or one leg bent, showing full trouser line from hip to hem",
+    headDirection: "Looking toward camera or slightly off-axis for editorial softness",
+    realismNotes:
+      "Seated poses are moderately reliable. Watch for: natural knee bend, fabric crease at hip, foot ground contact, seat surface consistency. Avoid complex cross-legged positions.",
+    whyItWorks:
+      "Seated poses show how fabric behaves under real wear conditions: knee crease, trouser break, and drape at the hip. This is selling information that standing shots cannot provide.",
+    deltaBlueprint:
+      "Model seated on a stool or minimal surface at three-quarter angle. Legs extended to show the full trouser line. Camera at seated eye level. Hands resting naturally. Fabric drape at knee and hip visible. Soft directional light preserving crease and texture detail.",
+    evidenceCapabilities: [
+      "fit_on_body",
+      "fabric_drape",
+      "full_silhouette",
+      "styling_context",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body", "lower_body"],
+    secondaryDisplayZones: ["hip", "face"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
+    titleOverrides: {
+      dress: "Seated Drape Line",
+      skirt: "Seated Hem Spread",
+    },
+    roleOverrides: {
+      dress: "Seated on stool or edge showing dress drape, fabric cascade, and skirt behaviour at rest.",
+      skirt: "Seated on stool or edge showing hem spread, pleat behaviour, and fabric drape at knee.",
+    },
+  },
+
+  // ────────────────────────────────────────────
+  // N4. fabric_texture_detail
+  // ────────────────────────────────────────────
+  {
+    id: "fabric_texture_detail",
+    title: "Fabric Texture Detail",
+    role: "Pure fabric weave, knit, or textile texture at macro level. No branding, no hardware.",
+    shotCategory: "detail",
+    suitableFamilies: ["apparel", "scarves", "full_look"],
+    suitableItems: [],
+    suitableGoals: ["detail_focus", "premium_branding"],
+    suitableStyles: ["luxury", "commercial", "minimal", "editorial", "contemporary"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "low",
+    productClaritySuitability: "medium",
+    silhouetteSuitability: "low",
+    detailSuitability: "high",
+    movementSuitability: "low",
+    editorialStrength: "low",
+    higgsfieldReliability: "high",
+    difficulty: "easy",
+    logoRisk: "low",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The fabric is a selling point: cashmere, merino wool, raw denim, silk, linen weave. The texture communicates quality and justifies the price.",
+    avoidWhen:
+      "The fabric is plain or featureless, or when the set already has a hardware/construction detail shot that serves the same purpose.",
+    defaultFraming: "Extreme close-up of fabric surface, approximately 10x10cm area",
+    defaultLens: "100mm macro",
+    defaultAperture: "f/4",
+    defaultCameraHeight: "subject level",
+    defaultCameraDistance: "~0.3m",
+    defaultAngle: "Perpendicular to fabric surface, or slight raking angle to catch texture",
+    defaultLighting: "Focused directional light at raking angle to emphasise weave depth and texture",
+    poseFamily: "Static detail",
+    bodyDirection: "Not relevant; only fabric surface visible",
+    handBehavior: "Not visible",
+    legBehavior: "Not visible",
+    headDirection: "Not visible",
+    realismNotes:
+      "Very reliable. No anatomy to render. The main risk is fabric texture looking too smooth or generic. A raking light angle helps Higgsfield produce visible weave structure.",
+    whyItWorks:
+      "Fabric texture is the tactile dimension of online shopping. A macro shot of the weave lets buyers assess material quality the way they would by touching the garment in a store.",
+    deltaBlueprint:
+      "Extreme close-up of the fabric surface. Camera perpendicular or at slight raking angle. Macro lens at f/4 for texture sharpness. Directional light from the side to cast tiny shadows in the weave structure. No model, no hands, no branding. Pure material.",
+    evidenceCapabilities: [
+      "texture_detail",
+      "construction_quality",
+    ],
+    primaryDisplayZones: ["product_only"],
+    secondaryDisplayZones: [],
+    showsProductInMotion: false,
+    showsFullProduct: false,
+  },
+
+  // ────────────────────────────────────────────
+  // N5. walking_away_stride
+  // ────────────────────────────────────────────
+  {
+    id: "walking_away_stride",
+    title: "Walking Away Stride",
+    role: "Walking away from camera, showing back drape, garment movement, and rear silhouette in motion.",
+    shotCategory: "motion",
+    suitableFamilies: ["apparel", "full_look"],
+    suitableItems: ["coat", "trench coat", "blazer", "dress", "wide leg trousers"],
+    suitableGoals: ["movement", "silhouette", "mood"],
+    suitableStyles: ["editorial", "luxury", "contemporary", "street"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["balanced", "directional"],
+    logoVisibilitySuitability: "low",
+    productClaritySuitability: "medium",
+    silhouetteSuitability: "high",
+    detailSuitability: "low",
+    movementSuitability: "high",
+    editorialStrength: "high",
+    higgsfieldReliability: "medium",
+    difficulty: "moderate",
+    logoRisk: "high",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The garment has back movement qualities: coat tails, hem swing, fabric flow. Also when the set needs both a motion beat and a rear view, combining two rhythm slots.",
+    avoidWhen:
+      "Front branding is critical, or the garment has no visible back movement properties.",
+    defaultFraming: "Full body from behind, head to toe, with movement space ahead",
+    defaultLens: "85mm",
+    defaultAperture: "f/5.6",
+    defaultCameraHeight: "waist height",
+    defaultCameraDistance: "~4.5m",
+    defaultAngle: "Directly behind (180 degrees) or slight offset (170 degrees)",
+    defaultLighting: "Soft directional from behind-left, edge light on shoulder and hem movement",
+    poseFamily: "Walking mid-stride",
+    bodyDirection: "Walking away from camera, body at 180 or slight offset angle",
+    handBehavior: "Natural arm swing, opposite arm to leading leg",
+    legBehavior: "Mid-stride, one leg forward, controlled walking pace",
+    headDirection: "Looking forward (away from camera), slight head turn optional for editorial",
+    realismNotes:
+      "Moderately reliable. No face rendering needed (major advantage). Watch for: fabric flow direction matching movement, foot ground contact, hem alignment. Keep stride controlled.",
+    whyItWorks:
+      "The walk-away shot is a classic editorial closer. It combines rear silhouette with fabric movement, showing how the garment looks and moves in a single frame.",
+    deltaBlueprint:
+      "Camera behind model, waist height. Model walking away with controlled stride. Space ahead of model for movement direction. Edge lighting defines the shoulder and catches fabric movement. Natural arm swing. The garment should show visible motion in the hem or tails.",
+    evidenceCapabilities: [
+      "full_silhouette",
+      "back_shape",
+      "movement_behavior",
+      "fabric_drape",
+      "fit_on_body",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body", "torso_back"],
+    secondaryDisplayZones: ["hip", "foot"],
+    showsProductInMotion: true,
+    showsFullProduct: true,
+    exclusiveTo: ["apparel"],
+  },
+
+  // ────────────────────────────────────────────
+  // N6. profile_stride_clean
+  // ────────────────────────────────────────────
+  {
+    id: "profile_stride_clean",
+    title: "Profile Stride Clean",
+    role: "True profile walking shot showing clean silhouette in motion.",
+    shotCategory: "motion",
+    suitableFamilies: ["apparel", "footwear", "full_look"],
+    suitableItems: [],
+    suitableGoals: ["movement", "silhouette"],
+    suitableStyles: ["editorial", "commercial", "luxury", "contemporary"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["balanced", "directional"],
+    logoVisibilitySuitability: "low",
+    productClaritySuitability: "medium",
+    silhouetteSuitability: "high",
+    detailSuitability: "low",
+    movementSuitability: "high",
+    editorialStrength: "medium",
+    higgsfieldReliability: "medium",
+    difficulty: "moderate",
+    logoRisk: "high",
+    anatomyRisk: "medium",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The garment's silhouette is best revealed in profile motion: coat length, trouser break, shoe profile. The set needs both motion and a profile angle.",
+    avoidWhen:
+      "The product's key features are frontal (logos, buttons, neckline detail).",
+    defaultFraming: "Full body, true profile, with generous movement space",
+    defaultLens: "85mm",
+    defaultAperture: "f/5.6",
+    defaultCameraHeight: "waist height",
+    defaultCameraDistance: "~5m",
+    defaultAngle: "True profile (90 degrees from front)",
+    defaultLighting: "Rim light from behind to define silhouette, soft fill from camera side",
+    poseFamily: "Walking mid-stride",
+    bodyDirection: "Walking across camera field, pure side profile",
+    handBehavior: "Natural arm swing visible in profile",
+    legBehavior: "Mid-stride, both legs visible in profile showing step length",
+    headDirection: "Looking in direction of walk, profile to camera",
+    realismNotes:
+      "Profile walking is moderately reliable. The true side angle hides one arm and leg, simplifying anatomy. Watch for: foot ground contact, fabric flow matching walk direction, natural stride length.",
+    whyItWorks:
+      "A profile stride is the purest expression of silhouette in motion. It shows garment length, fabric movement, and body proportion without any frontal detail competing for attention.",
+    deltaBlueprint:
+      "True profile angle. Model walking across frame with controlled stride. Camera at waist height, ~5m distance. Rim light from behind defines the silhouette edge. Generous space in the walking direction. Clean background for maximum silhouette readability.",
+    evidenceCapabilities: [
+      "full_silhouette",
+      "movement_behavior",
+      "fabric_drape",
+      "fit_on_body",
+      "on_foot_presence",
+      "body_scale",
+    ],
+    primaryDisplayZones: ["full_body"],
+    secondaryDisplayZones: ["foot", "hip"],
+    showsProductInMotion: true,
+    showsFullProduct: true,
+  },
+
+  // ────────────────────────────────────────────
+  // N7. collar_neckline_detail
+  // ────────────────────────────────────────────
+  {
+    id: "collar_neckline_detail",
+    title: "Collar & Neckline Detail",
+    role: "Close crop on collar, neckline, or lapel area showing construction and styling detail.",
+    shotCategory: "detail",
+    suitableFamilies: ["apparel"],
+    suitableItems: ["shirt", "blazer", "dress", "jacket", "sweater", "coat", "polo"],
+    suitableGoals: ["detail_focus", "premium_branding"],
+    suitableStyles: ["luxury", "commercial", "tailoring", "minimal", "contemporary"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["safe", "balanced"],
+    logoVisibilitySuitability: "medium",
+    productClaritySuitability: "medium",
+    silhouetteSuitability: "low",
+    detailSuitability: "high",
+    movementSuitability: "low",
+    editorialStrength: "low",
+    higgsfieldReliability: "high",
+    difficulty: "easy",
+    logoRisk: "low",
+    anatomyRisk: "low",
+    occlusionRisk: "low",
+    bestUsedWhen:
+      "The collar, neckline, or lapel is a design feature: spread collar, shawl lapel, ribbed crew neck, mandarin collar.",
+    avoidWhen:
+      "The neckline is plain and featureless, or the cuff detail shot already covers enough construction detail.",
+    defaultFraming: "Close crop from chest up, collar and neckline area as subject",
+    defaultLens: "85mm",
+    defaultAperture: "f/2.8",
+    defaultCameraHeight: "chin height",
+    defaultCameraDistance: "~1.5m",
+    defaultAngle: "Straight on or slightly above, looking at the collar area",
+    defaultLighting: "Focused key light on the collar area, soft fill to preserve stitching and fold detail",
+    poseFamily: "Static detail",
+    bodyDirection: "Chest and neck visible, cropped below chest",
+    handBehavior: "Not visible, or one hand lightly touching collar",
+    legBehavior: "Not visible",
+    headDirection: "Chin slightly lifted to expose neckline, face partially visible",
+    realismNotes:
+      "Very reliable. Minimal anatomy risk since only chin and neck are visible. Watch for: collar symmetry, fabric fold consistency, neckline seam alignment.",
+    whyItWorks:
+      "The collar and neckline are the first thing noticed when wearing a garment. A dedicated detail shot communicates craftsmanship and design intention at a level that full-body shots cannot achieve.",
+    deltaBlueprint:
+      "Close crop: chest to just above forehead. Camera at chin height, ~1.5m distance. Open aperture for shallow depth isolating the collar. Focused directional light on the neckline area. Chin slightly lifted. Clean, tight composition.",
+    evidenceCapabilities: [
+      "texture_detail",
+      "construction_quality",
+      "neckline_visibility",
+    ],
+    primaryDisplayZones: ["neckline", "upper_body"],
+    secondaryDisplayZones: ["face"],
+    showsProductInMotion: false,
+    showsFullProduct: false,
+    exclusiveTo: ["apparel"],
+  },
+
+  // ────────────────────────────────────────────
+  // N8. low_crouch_urban
+  // ────────────────────────────────────────────
+  {
+    id: "low_crouch_urban",
+    title: "Low Crouch Urban",
+    role: "Low crouch or squat with urban editorial energy, showing trouser knee break and garment compression.",
+    shotCategory: "editorial",
+    suitableFamilies: ["apparel", "footwear", "full_look"],
+    suitableItems: ["jeans", "trousers", "sneakers", "boots", "hoodie", "jacket"],
+    suitableGoals: ["mood", "silhouette"],
+    suitableStyles: ["street", "editorial", "contemporary"],
+    suitableGenderPresentation: ["menswear", "womenswear", "unisex"],
+    creativityBand: ["directional"],
+    logoVisibilitySuitability: "medium",
+    productClaritySuitability: "medium",
+    silhouetteSuitability: "medium",
+    detailSuitability: "low",
+    movementSuitability: "low",
+    editorialStrength: "high",
+    higgsfieldReliability: "low",
+    difficulty: "hard",
+    logoRisk: "medium",
+    anatomyRisk: "high",
+    occlusionRisk: "medium",
+    bestUsedWhen:
+      "Street or urban editorial style where the set needs an unconventional pose. The garment benefits from showing compression and knee break.",
+    avoidWhen:
+      "Safe creativity is required, or when the generation budget is tight. This pose has higher anatomy risk.",
+    defaultFraming: "Three-quarter body, from knees up or full crouching figure",
+    defaultLens: "35mm",
+    defaultAperture: "f/4",
+    defaultCameraHeight: "low (below waist)",
+    defaultCameraDistance: "~3m",
+    defaultAngle: "Frontal or slight three-quarter, looking slightly up at the model",
+    defaultLighting: "Directional side light for dramatic shadow, urban mood",
+    poseFamily: "Standing compressed",
+    bodyDirection: "Low crouch or deep squat, body facing camera or at slight angle",
+    handBehavior: "Arms resting on knees or hands together in front",
+    legBehavior: "Deep knee bend, feet flat or on balls of feet",
+    headDirection: "Looking at camera or downward for editorial intensity",
+    realismNotes:
+      "High difficulty. The crouching pose compresses limbs and creates complex knee/ankle geometry. Expect to need 3-5 generations. Watch for: knee anatomy, ankle position, fabric bunching at the knee.",
+    whyItWorks:
+      "A crouch breaks the standing-pose monotony and introduces editorial energy. It shows how fabric compresses, where trousers break at the knee, and adds street credibility to the set.",
+    deltaBlueprint:
+      "Low camera angle (~knee height), looking slightly up. Model in a low crouch or deep squat. Arms resting on knees. Three-quarter body framing. Directional side light for dramatic mood. Urban editorial energy. The garment should show natural compression at knee and hip.",
+    evidenceCapabilities: [
+      "fit_on_body",
+      "fabric_drape",
+      "styling_context",
+      "on_foot_presence",
+    ],
+    primaryDisplayZones: ["full_body", "lower_body"],
+    secondaryDisplayZones: ["face", "foot"],
+    showsProductInMotion: false,
+    showsFullProduct: true,
   },
 
   // ────────────────────────────────────────────
@@ -1515,6 +2015,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["neckline", "shoulder_line"],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["jewelry"],
   },
 
   // ────────────────────────────────────────────
@@ -1575,6 +2076,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["face", "shoulder_line", "collarbone"],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["jewelry"],
   },
 
   // ────────────────────────────────────────────
@@ -1637,6 +2139,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: [],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["jewelry"],
   },
 
   // ────────────────────────────────────────────
@@ -1695,6 +2198,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["ear", "neckline", "shoulder"],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["jewelry"],
   },
 
   // ────────────────────────────────────────────
@@ -1755,6 +2259,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["neckline", "collarbone"],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["jewelry"],
   },
 
   // ────────────────────────────────────────────
@@ -1952,6 +2457,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["hip"],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["bags"],
   },
 
   // ────────────────────────────────────────────
@@ -2020,6 +2526,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["hip"],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["bags"],
   },
 
   // ────────────────────────────────────────────
@@ -2291,6 +2798,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["ear"],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["eyewear"],
   },
 
   // ────────────────────────────────────────────
@@ -2367,6 +2875,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["hand"],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["watches"],
   },
 
   // ────────────────────────────────────────────
@@ -2446,6 +2955,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["ankle"],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["footwear"],
   },
 
   // ────────────────────────────────────────────
@@ -2526,6 +3036,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["hand"],
     showsProductInMotion: false,
     showsFullProduct: true,
+    exclusiveTo: ["watches"],
   },
 
   // ────────────────────────────────────────────
@@ -2600,6 +3111,7 @@ export const ALL_ARCHETYPES: ShotArchetype[] = [
     secondaryDisplayZones: ["hand"],
     showsProductInMotion: false,
     showsFullProduct: false,
+    exclusiveTo: ["watches"],
   },
 
   // ────────────────────────────────────────────

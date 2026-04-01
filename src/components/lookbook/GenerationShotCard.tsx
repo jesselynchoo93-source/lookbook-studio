@@ -625,64 +625,104 @@ export default function GenerationShotCard({
         {expanded && (
           <div className="mt-3 space-y-4">
             {/* Internal Planning Prompt (QA only) */}
-            <div>
+            <div className="space-y-3">
               <span className="text-xs font-medium text-[--text-tertiary] uppercase tracking-wider">
-                Planning Prompt (4-layer, internal)
+                Internal QA (planning data, not sent to Higgsfield)
               </span>
-              <p className="text-xs text-[--text-secondary] mt-1 leading-relaxed">
-                {pkg.generatorPrompt}
-              </p>
+
+              {pkg.promptLayers ? (
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Layer 1: Campaign Continuity
+                    </span>
+                    <p className="text-xs text-[--text-secondary] mt-1 break-words leading-relaxed">
+                      {pkg.promptLayers.campaignContinuityLock}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Layer 2: Product Truth
+                    </span>
+                    <p className="text-xs text-[--text-secondary] mt-1 break-words leading-relaxed">
+                      {pkg.promptLayers.productTruthLock}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Layer 3: Scale & Proportion
+                    </span>
+                    <p className="text-xs text-[--text-secondary] mt-1 break-words leading-relaxed">
+                      {pkg.promptLayers.scaleLock}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Layer 4: Shot Delta
+                    </span>
+                    <p className="text-xs text-[--text-secondary] mt-1 break-words leading-relaxed">
+                      {pkg.promptLayers.shotDelta}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
+                    Planning Prompt
+                  </span>
+                  <p className="text-xs text-[--text-secondary] mt-1 break-words leading-relaxed">
+                    {pkg.generatorPrompt}
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Internal Negative */}
-            <div>
-              <span className="text-xs font-medium text-[--text-tertiary] uppercase tracking-wider">
-                Internal Negative (3-tier)
-              </span>
-              <p className="text-xs text-[--text-tertiary] mt-1 break-words">
-                {pkg.negativePrompt}
-              </p>
+            {/* Internal Negatives */}
+            <div className="space-y-3">
+              {pkg.negativeLayers ? (
+                <>
+                  <span className="text-xs font-medium text-[--text-tertiary] uppercase tracking-wider">
+                    Internal Negatives
+                  </span>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Tier 1: Global Defaults
+                    </span>
+                    <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                      {pkg.negativeLayers.globalDefaults}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Tier 2: Family Drift
+                    </span>
+                    <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                      {pkg.negativeLayers.familyDrift}
+                    </p>
+                  </div>
+                  {pkg.negativeLayers.shotSpecific && (
+                    <div>
+                      <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                        Tier 3: Shot-Specific
+                      </span>
+                      <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                        {pkg.negativeLayers.shotSpecific}
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div>
+                  <span className="text-xs font-medium text-[--text-tertiary] uppercase tracking-wider">
+                    Internal Negative
+                  </span>
+                  <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                    {pkg.negativePrompt}
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Guardrail Checklist */}
-            {pkg.guardrailChecklist.length > 0 && (
-              <div>
-                <span className="text-xs font-medium text-[--text-tertiary] uppercase tracking-wider">
-                  Guardrail Checklist
-                </span>
-                <ul className="mt-1 space-y-1">
-                  {pkg.guardrailChecklist.map((item, i) => (
-                    <li
-                      key={i}
-                      className="text-xs text-[--text-secondary] flex items-start gap-2"
-                    >
-                      <span className="text-[--text-tertiary] mt-0.5">[ ]</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Enhancor Notes */}
-            {pkg.enhancorNotes.length > 0 && (
-              <div>
-                <span className="text-xs font-medium text-[--text-tertiary] uppercase tracking-wider">
-                  Enhancor Notes
-                </span>
-                <ul className="mt-1 space-y-1">
-                  {pkg.enhancorNotes.map((note, i) => (
-                    <li
-                      key={i}
-                      className="text-xs text-[--text-secondary] flex items-start gap-2"
-                    >
-                      <span className="text-[--phase-detail]">-</span>
-                      <span>{note}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
         )}
       </div>

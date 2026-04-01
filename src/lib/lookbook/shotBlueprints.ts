@@ -5,9 +5,540 @@ import type {
   ResolvedBlueprint,
   LookbookInput,
   ProductFamily,
+  ShotArchetype,
   ShotCategory,
+  RhythmSlotSpec,
+  EditorialBeat,
+  RhythmSlot,
+  PrimaryObjective,
+  EvidenceType,
+  EvidencePriority,
+  ResolvedEvidencePlan,
 } from "./types";
 import { resolveEvidencePlan } from "./productEvidence";
+
+// ═══════════════════════════════════════════════
+// VISUAL RHYTHM TEMPLATES (per family)
+// ═══════════════════════════════════════════════
+
+const APPAREL_RHYTHM: RhythmSlotSpec[] = [
+  {
+    slot: "anchor",
+    label: "Anchor",
+    description: "Front full-body seller shot",
+    requiredAngle: ["frontal"],
+    requiredPose: ["standing"],
+    requiredFraming: ["full_body"],
+    preferredCategories: ["hero"],
+    required: true,
+  },
+  {
+    slot: "contrast1",
+    label: "Back/Profile Contrast",
+    description: "Back or true side silhouette, opposite visual weight to anchor",
+    requiredAngle: ["rear", "profile"],
+    requiredPose: ["standing"],
+    requiredFraming: ["full_body"],
+    preferredCategories: ["silhouette"],
+    required: true,
+  },
+  {
+    slot: "contrast2",
+    label: "Framing Contrast",
+    description: "Different framing level, usually three-quarter crop",
+    requiredAngle: ["three_quarter", "frontal"],
+    requiredFraming: ["upper_body"],
+    preferredCategories: ["editorial", "product_focus"],
+    required: true,
+  },
+  {
+    slot: "release",
+    label: "Release",
+    description: "Lean, seated, or less square pose for visual breathing room",
+    requiredPose: ["leaning", "seated"],
+    preferredCategories: ["editorial"],
+    required: false,
+  },
+  {
+    slot: "movement",
+    label: "Motion",
+    description: "Stride, pivot, or dynamic motion beat",
+    requiredPose: ["walking"],
+    preferredCategories: ["motion"],
+    required: false,
+  },
+  {
+    slot: "detail_close",
+    label: "Detail",
+    description: "Cuff, lapel, fabric texture, or product zone close-up",
+    requiredFraming: ["close_up"],
+    preferredCategories: ["detail", "product_focus"],
+    required: true,
+  },
+];
+
+const BAGS_RHYTHM: RhythmSlotSpec[] = [
+  {
+    slot: "anchor",
+    label: "Anchor",
+    description: "Front or three-quarter carry shot showing bag shape and scale",
+    requiredAngle: ["frontal", "three_quarter"],
+    requiredPose: ["standing"],
+    requiredFraming: ["full_body"],
+    preferredCategories: ["hero"],
+    required: true,
+  },
+  {
+    slot: "contrast1",
+    label: "Carry Method Contrast",
+    description: "Profile or rear view showing carry method, strap drop, and bag depth",
+    requiredAngle: ["profile", "rear"],
+    requiredPose: ["standing"],
+    requiredFraming: ["full_body", "upper_body"],
+    preferredCategories: ["silhouette", "hero"],
+    required: true,
+  },
+  {
+    slot: "detail_close",
+    label: "Product Truth",
+    description: "Hardware, closure, material texture close-up",
+    requiredFraming: ["close_up"],
+    preferredCategories: ["detail", "product_focus"],
+    required: true,
+  },
+  {
+    slot: "contrast2",
+    label: "Scale Contrast",
+    description: "Different framing showing bag proportion against the body",
+    requiredAngle: ["three_quarter"],
+    requiredFraming: ["upper_body"],
+    preferredCategories: ["editorial", "product_focus"],
+    required: true,
+  },
+  {
+    slot: "release",
+    label: "Release",
+    description: "Seated or leaning editorial moment with bag visible",
+    requiredPose: ["leaning", "seated"],
+    preferredCategories: ["editorial"],
+    required: false,
+  },
+  {
+    slot: "movement",
+    label: "Motion",
+    description: "Walking with bag, showing strap behaviour and sway",
+    requiredPose: ["walking"],
+    preferredCategories: ["motion"],
+    required: false,
+  },
+];
+
+const JEWELRY_RHYTHM: RhythmSlotSpec[] = [
+  {
+    slot: "anchor",
+    label: "Wear Zone Anchor",
+    description: "Close or upper-body shot showing placement on skin",
+    requiredAngle: ["frontal"],
+    requiredFraming: ["close_up", "upper_body"],
+    preferredCategories: ["product_focus", "detail"],
+    required: true,
+  },
+  {
+    slot: "detail_close",
+    label: "Material Truth",
+    description: "Metal finish, stone setting, craftsmanship at macro level",
+    requiredFraming: ["close_up"],
+    preferredCategories: ["detail"],
+    required: true,
+  },
+  {
+    slot: "contrast1",
+    label: "On-Body Scale",
+    description: "Full or three-quarter body for scale and styling context",
+    requiredAngle: ["frontal", "three_quarter"],
+    requiredFraming: ["full_body"],
+    preferredCategories: ["hero"],
+    required: true,
+  },
+  {
+    slot: "contrast2",
+    label: "Angle Contrast",
+    description: "Profile or three-quarter showing dimensional depth of the piece",
+    requiredAngle: ["profile", "three_quarter"],
+    requiredFraming: ["upper_body"],
+    preferredCategories: ["editorial", "silhouette"],
+    required: true,
+  },
+  {
+    slot: "release",
+    label: "Styling Context",
+    description: "Seated or leaning editorial moment, piece as accent",
+    requiredPose: ["leaning", "seated"],
+    preferredCategories: ["editorial"],
+    required: false,
+  },
+  {
+    slot: "movement",
+    label: "Motion",
+    description: "Gentle movement showing how the piece catches light",
+    requiredPose: ["walking"],
+    preferredCategories: ["motion"],
+    required: false,
+  },
+];
+
+const FOOTWEAR_RHYTHM: RhythmSlotSpec[] = [
+  {
+    slot: "anchor",
+    label: "Anchor",
+    description: "Full-body or three-quarter showing the shoe on foot with ground contact",
+    requiredAngle: ["frontal", "three_quarter"],
+    requiredPose: ["standing"],
+    requiredFraming: ["full_body"],
+    preferredCategories: ["hero"],
+    required: true,
+  },
+  {
+    slot: "detail_close",
+    label: "Sole & Construction",
+    description: "Low-angle or close-up of sole, upper material, lacing",
+    requiredFraming: ["close_up"],
+    preferredCategories: ["detail", "product_focus"],
+    required: true,
+  },
+  {
+    slot: "contrast1",
+    label: "Profile Contrast",
+    description: "Side view showing shoe shape, sole depth, and silhouette",
+    requiredAngle: ["profile"],
+    requiredPose: ["standing"],
+    requiredFraming: ["full_body"],
+    preferredCategories: ["silhouette"],
+    required: true,
+  },
+  {
+    slot: "movement",
+    label: "Stride Motion",
+    description: "Walking shot showing sole flex and on-foot energy",
+    requiredPose: ["walking"],
+    preferredCategories: ["motion"],
+    required: false,
+  },
+  {
+    slot: "contrast2",
+    label: "Framing Contrast",
+    description: "Three-quarter crop focusing on ankle area and shoe-trouser interaction",
+    requiredAngle: ["three_quarter", "frontal"],
+    requiredFraming: ["upper_body"],
+    preferredCategories: ["editorial", "product_focus"],
+    required: false,
+  },
+  {
+    slot: "release",
+    label: "Release",
+    description: "Seated or leaning showing shoe in a relaxed context",
+    requiredPose: ["leaning", "seated"],
+    preferredCategories: ["editorial"],
+    required: false,
+  },
+];
+
+const WATCHES_RHYTHM: RhythmSlotSpec[] = [
+  {
+    slot: "anchor",
+    label: "Wrist Fit Anchor",
+    description: "Close-up of watch on wrist showing dial, case, and strap fit",
+    requiredAngle: ["frontal", "three_quarter"],
+    requiredFraming: ["close_up"],
+    preferredCategories: ["product_focus", "hero"],
+    required: true,
+  },
+  {
+    slot: "detail_close",
+    label: "Dial & Crown Detail",
+    description: "Macro of dial, crown, pushers, and case finishing",
+    requiredFraming: ["close_up"],
+    preferredCategories: ["detail"],
+    required: true,
+  },
+  {
+    slot: "contrast1",
+    label: "Lifestyle Scale",
+    description: "Half or full body showing the watch in wearing context",
+    requiredAngle: ["frontal", "three_quarter"],
+    requiredFraming: ["upper_body", "full_body"],
+    preferredCategories: ["hero", "editorial"],
+    required: true,
+  },
+  {
+    slot: "contrast2",
+    label: "Angle Contrast",
+    description: "Profile or rear showing case thickness and strap wrap",
+    requiredAngle: ["profile", "three_quarter"],
+    requiredFraming: ["close_up", "upper_body"],
+    preferredCategories: ["product_focus", "silhouette"],
+    required: true,
+  },
+  {
+    slot: "release",
+    label: "Styling Context",
+    description: "Relaxed editorial moment with watch as subtle accent",
+    requiredPose: ["leaning", "seated"],
+    preferredCategories: ["editorial"],
+    required: false,
+  },
+  {
+    slot: "movement",
+    label: "Motion",
+    description: "Wrist in motion, watch catching light",
+    requiredPose: ["walking"],
+    preferredCategories: ["motion"],
+    required: false,
+  },
+];
+
+const EYEWEAR_RHYTHM: RhythmSlotSpec[] = [
+  {
+    slot: "anchor",
+    label: "Face Frame Anchor",
+    description: "Front-facing portrait showing frame shape on face",
+    requiredAngle: ["frontal"],
+    requiredFraming: ["upper_body", "close_up"],
+    preferredCategories: ["hero", "product_focus"],
+    required: true,
+  },
+  {
+    slot: "contrast1",
+    label: "Profile Contrast",
+    description: "True profile showing temple arm, lens depth, bridge fit",
+    requiredAngle: ["profile"],
+    requiredFraming: ["upper_body", "close_up"],
+    preferredCategories: ["silhouette", "product_focus"],
+    required: true,
+  },
+  {
+    slot: "detail_close",
+    label: "Construction Detail",
+    description: "Hinge, temple tip, lens coating at close range",
+    requiredFraming: ["close_up"],
+    preferredCategories: ["detail"],
+    required: true,
+  },
+  {
+    slot: "contrast2",
+    label: "Three-Quarter Angle",
+    description: "Three-quarter showing frame dimensionality on face",
+    requiredAngle: ["three_quarter"],
+    requiredFraming: ["upper_body"],
+    preferredCategories: ["editorial", "hero"],
+    required: true,
+  },
+  {
+    slot: "release",
+    label: "Styling Context",
+    description: "Relaxed or editorial moment, frames as lifestyle accessory",
+    requiredPose: ["leaning", "seated"],
+    preferredCategories: ["editorial"],
+    required: false,
+  },
+  {
+    slot: "movement",
+    label: "Motion",
+    description: "Walking or turning, showing how frames stay on face",
+    requiredPose: ["walking"],
+    preferredCategories: ["motion"],
+    required: false,
+  },
+];
+
+// Shared rhythm for smaller accessory families that follow the jewelry pattern
+const SMALL_ACCESSORY_RHYTHM: RhythmSlotSpec[] = [
+  {
+    slot: "anchor",
+    label: "Product Anchor",
+    description: "Close or upper-body showing the product in use",
+    requiredAngle: ["frontal", "three_quarter"],
+    requiredFraming: ["close_up", "upper_body"],
+    preferredCategories: ["hero", "product_focus"],
+    required: true,
+  },
+  {
+    slot: "detail_close",
+    label: "Craftsmanship Detail",
+    description: "Material, hardware, stitching at macro level",
+    requiredFraming: ["close_up"],
+    preferredCategories: ["detail"],
+    required: true,
+  },
+  {
+    slot: "contrast1",
+    label: "Scale Context",
+    description: "Wider framing showing product against body for scale",
+    requiredFraming: ["full_body", "upper_body"],
+    preferredCategories: ["hero", "silhouette"],
+    required: true,
+  },
+  {
+    slot: "contrast2",
+    label: "Angle Contrast",
+    description: "Different angle showing dimensional depth",
+    requiredAngle: ["profile", "three_quarter"],
+    preferredCategories: ["editorial", "product_focus"],
+    required: false,
+  },
+  {
+    slot: "release",
+    label: "Lifestyle Context",
+    description: "Relaxed editorial moment",
+    requiredPose: ["leaning", "seated"],
+    preferredCategories: ["editorial"],
+    required: false,
+  },
+  {
+    slot: "movement",
+    label: "Motion",
+    description: "Product in gentle motion",
+    requiredPose: ["walking"],
+    preferredCategories: ["motion"],
+    required: false,
+  },
+];
+
+// ── Item-Level Rhythm Overrides (apparel subtypes) ──
+// Partial overrides: only the slots that differ from the family rhythm need to be specified.
+
+interface RhythmSlotOverride {
+  slot: RhythmSlotSpec["slot"];
+  overrides: Partial<Omit<RhythmSlotSpec, "slot">>;
+}
+
+const APPAREL_ITEM_RHYTHM_OVERRIDES: Record<string, RhythmSlotOverride[]> = {
+  blazer: [
+    { slot: "contrast1", overrides: { label: "Back Construction", description: "Rear view showing shoulder line, back seam, and vent construction", requiredAngle: ["rear"] } },
+    { slot: "detail_close", overrides: { label: "Lapel & Cuff Detail", description: "Lapel roll, buttonhole, cuff button, or interior lining" } },
+  ],
+  knitwear: [
+    { slot: "detail_close", overrides: { label: "Fabric Texture", description: "Knit stitch, yarn quality, or weave pattern at macro level" } },
+    { slot: "release", overrides: { required: true, label: "Drape Release", description: "Seated or leaning to show fabric drape and body interaction" } },
+  ],
+  coat: [
+    { slot: "contrast1", overrides: { label: "Profile Silhouette", description: "Profile view showing length, collar, and fabric fall line", requiredAngle: ["profile"] } },
+    { slot: "movement", overrides: { required: true, label: "Fabric Flow", description: "Walking to show coat movement, hem swing, and length in motion" } },
+  ],
+  dress: [
+    { slot: "anchor", overrides: { label: "Full-Length Seller", description: "Front full-body showing dress silhouette, neckline, and hem line" } },
+    { slot: "contrast1", overrides: { label: "Back/Profile Drape", description: "Rear or profile view showing back construction, zipper line, and fabric fall", requiredAngle: ["rear", "profile"] } },
+    { slot: "contrast2", overrides: { label: "Waistline Contrast", description: "Three-quarter showing waist definition, bodice, and neckline", requiredAngle: ["three_quarter"] } },
+    { slot: "release", overrides: { required: true, label: "Seated Drape", description: "Seated showing fabric pool, skirt spread, and dress behaviour at rest" } },
+    { slot: "movement", overrides: { required: true, label: "Hem Flow", description: "Walking to show hem behaviour, fabric drape, and silhouette in motion" } },
+    { slot: "detail_close", overrides: { label: "Neckline & Strap Detail", description: "Neckline construction, strap attachment, or bodice detail close-up" } },
+  ],
+  trousers: [
+    { slot: "release", overrides: { required: true, label: "Seated Trouser Line", description: "Seated showing full trouser line, knee break, and fabric behaviour at the crease" } },
+    { slot: "detail_close", overrides: { label: "Hem & Pocket Detail", description: "Knee, hem, or pocket construction close-up" } },
+  ],
+  shirt: [
+    { slot: "detail_close", overrides: { label: "Collar & Cuff Detail", description: "Collar shape, button spacing, cuff finish close-up" } },
+    { slot: "contrast2", overrides: { label: "Placket Contrast", description: "Three-quarter showing placket line, collar shape, and front opening" } },
+  ],
+  skirt: [
+    { slot: "anchor", overrides: { label: "Full-Length Silhouette", description: "Front full-body showing skirt length, waist fit, and hem line" } },
+    { slot: "contrast1", overrides: { label: "Back/Profile Line", description: "Rear or profile view showing back zip, pleat fall, and fabric drape", requiredAngle: ["rear", "profile"] } },
+    { slot: "contrast2", overrides: { label: "Waist & Hip Contrast", description: "Three-quarter showing waistband fit, hip drape, and pleat or gather detail", requiredAngle: ["three_quarter"] } },
+    { slot: "release", overrides: { required: true, label: "Seated Hem Spread", description: "Seated showing hem spread, pleat behaviour, and fabric drape at knee" } },
+    { slot: "movement", overrides: { required: true, label: "Hem Swing", description: "Walking to show hem movement, pleat behaviour, and silhouette in motion" } },
+    { slot: "detail_close", overrides: { label: "Waistband & Pleat Detail", description: "Waistband construction, pleat or gather detail close-up" } },
+  ],
+  top: [
+    { slot: "contrast2", overrides: { label: "Neckline Contrast", description: "Three-quarter showing neckline shape and sleeve or strap detail" } },
+  ],
+};
+
+// Map item names to rhythm override keys
+const ITEM_TO_RHYTHM_KEY: Record<string, string> = {
+  blazer: "blazer", "suit jacket": "blazer", "sport coat": "blazer", tuxedo: "blazer",
+  sweater: "knitwear", jumper: "knitwear", knit: "knitwear", cardigan: "knitwear", pullover: "knitwear",
+  coat: "coat", overcoat: "coat", "trench coat": "coat", parka: "coat", "long coat": "coat",
+  dress: "dress", gown: "dress", "maxi dress": "dress", "midi dress": "dress",
+  trousers: "trousers", pants: "trousers", chinos: "trousers", jeans: "trousers", slacks: "trousers",
+  shirt: "shirt", blouse: "shirt",
+  skirt: "skirt", "midi skirt": "skirt", "mini skirt": "skirt",
+  top: "top", tank: "top", tee: "top", "t-shirt": "top", cami: "top",
+};
+
+/**
+ * Normalize free-text specificItem to a canonical subtype key.
+ * Uses ITEM_TO_RHYTHM_KEY vocabulary as the canonical key set.
+ * E.g. "slip dress" -> "dress", "slim chinos" -> "trousers", "midi skirt" -> "skirt".
+ * Returns undefined if no match.
+ */
+export function normalizeSubtypeKey(specificItem?: string): string | undefined {
+  if (!specificItem) return undefined;
+  const itemLower = specificItem.toLowerCase();
+  for (const [keyword, key] of Object.entries(ITEM_TO_RHYTHM_KEY)) {
+    if (itemLower.includes(keyword)) return key;
+  }
+  return undefined;
+}
+
+/**
+ * Resolve an archetype's display title for a specific item subtype.
+ * Uses titleOverrides when the normalized subtype matches. Falls back to archetype.title.
+ */
+export function resolveArchetypeTitle(archetype: ShotArchetype, specificItem?: string): string {
+  if (!archetype.titleOverrides) return archetype.title;
+  const key = normalizeSubtypeKey(specificItem);
+  if (!key) return archetype.title;
+  return archetype.titleOverrides[key] ?? archetype.title;
+}
+
+/**
+ * Resolve an archetype's role description for a specific item subtype.
+ * Uses roleOverrides when the normalized subtype matches. Falls back to archetype.role.
+ */
+export function resolveArchetypeRole(archetype: ShotArchetype, specificItem?: string): string {
+  if (!archetype.roleOverrides) return archetype.role;
+  const key = normalizeSubtypeKey(specificItem);
+  if (!key) return archetype.role;
+  return archetype.roleOverrides[key] ?? archetype.role;
+}
+
+function resolveRhythmForItem(familyRhythm: RhythmSlotSpec[], specificItem?: string): RhythmSlotSpec[] {
+  const rhythmKey = normalizeSubtypeKey(specificItem);
+  if (!rhythmKey) return familyRhythm;
+
+  const overrides = APPAREL_ITEM_RHYTHM_OVERRIDES[rhythmKey];
+  if (!overrides?.length) return familyRhythm;
+
+  return familyRhythm.map((slotSpec) => {
+    const override = overrides.find((o) => o.slot === slotSpec.slot);
+    if (!override) return slotSpec;
+    return { ...slotSpec, ...override.overrides };
+  });
+}
+
+// ── Editorial Beat Tagging ──
+
+export const SLOT_TO_BEAT: Record<RhythmSlot, EditorialBeat> = {
+  anchor: "establish",
+  contrast1: "build",
+  contrast2: "pivot",
+  release: "breathe",
+  movement: "resolve",
+  detail_close: "reveal",
+};
+
+/** Tag rhythm slots with editorial beats. Cross-family: works for any product family. */
+function tagEditorialBeats(slots: RhythmSlotSpec[], isEditorial: boolean): RhythmSlotSpec[] {
+  if (!isEditorial) return slots;
+  return slots.map(slot => ({
+    ...slot,
+    editorialBeat: SLOT_TO_BEAT[slot.slot],
+  }));
+}
+
+/** Exported for use in recommendShots.ts as fallback */
+export { APPAREL_RHYTHM };
 
 // ═══════════════════════════════════════════════
 // LAYER 1: UNIVERSAL RULES
@@ -42,6 +573,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "contrast", "proof", "release", "editorial_finish", "contrast"],
       requiredRoles: ["hero", "contrast", "proof"],
       productOnlyPreference: "none",
+      rhythmSlots: APPAREL_RHYTHM,
     },
     dnaHints: {
       environment: "Clean neutral studio or minimal location: seamless backdrop or simple architectural surface, no competing visual elements.",
@@ -67,6 +599,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
       requiredRoles: ["hero", "proof", "contrast"],
       productOnlyPreference: "low",
+      rhythmSlots: FOOTWEAR_RHYTHM,
     },
     dnaHints: {
       environment: "Clean surface with visible ground plane. Urban concrete, studio floor, or minimal architectural surface. Ground texture matters for realism.",
@@ -92,6 +625,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "proof", "contrast", "product_only", "proof", "editorial_finish"],
       requiredRoles: ["hero", "proof", "contrast"],
       productOnlyPreference: "strong",
+      rhythmSlots: BAGS_RHYTHM,
     },
     dnaHints: {
       environment: "Clean neutral studio or minimal urban surface. Background should not compete with the bag's shape and hardware.",
@@ -117,6 +651,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
       requiredRoles: ["hero", "proof", "contrast"],
       productOnlyPreference: "low",
+      rhythmSlots: JEWELRY_RHYTHM,
     },
     dnaHints: {
       environment: "Clean neutral studio: seamless backdrop or solid matte surface. No competing patterns or textures. The product and skin are the only visual elements.",
@@ -142,6 +677,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
       requiredRoles: ["hero", "proof", "contrast"],
       productOnlyPreference: "low",
+      rhythmSlots: EYEWEAR_RHYTHM,
     },
     dnaHints: {
       environment: "Clean studio or minimal backdrop. Nothing competing with the frames on the face.",
@@ -167,6 +703,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "proof", "contrast", "product_only", "release", "editorial_finish"],
       requiredRoles: ["hero", "proof", "contrast"],
       productOnlyPreference: "strong",
+      rhythmSlots: WATCHES_RHYTHM,
     },
     dnaHints: {
       environment: "Clean studio or minimal setting. Dark matte surfaces work well for watch photography.",
@@ -192,6 +729,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
       requiredRoles: ["hero", "proof"],
       productOnlyPreference: "low",
+      rhythmSlots: SMALL_ACCESSORY_RHYTHM,
     },
     dnaHints: {
       environment: "Clean studio or urban exterior. Background should not compete with the headwear shape.",
@@ -217,6 +755,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "proof", "contrast", "proof", "product_only", "editorial_finish"],
       requiredRoles: ["hero", "proof"],
       productOnlyPreference: "strong",
+      rhythmSlots: SMALL_ACCESSORY_RHYTHM,
     },
     dnaHints: {
       environment: "Clean studio or minimal location. Waist area must be well-lit and unobstructed.",
@@ -242,6 +781,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "proof", "contrast", "proof", "release", "editorial_finish"],
       requiredRoles: ["hero", "proof", "contrast"],
       productOnlyPreference: "medium",
+      rhythmSlots: SMALL_ACCESSORY_RHYTHM,
     },
     dnaHints: {
       environment: "Clean studio or minimal location. Background should not compete with scarf pattern or colour.",
@@ -267,6 +807,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "proof", "product_only", "contrast", "proof", "editorial_finish"],
       requiredRoles: ["hero", "proof"],
       productOnlyPreference: "strong",
+      rhythmSlots: SMALL_ACCESSORY_RHYTHM,
     },
     dnaHints: {
       environment: "Clean studio with neutral surface. Product should be the only visual focus.",
@@ -292,6 +833,7 @@ const FAMILY_BLUEPRINTS: Record<ProductFamily, FamilyShotBlueprint> = {
       idealSequence: ["hero", "contrast", "proof", "release", "contrast", "editorial_finish"],
       requiredRoles: ["hero", "contrast", "proof"],
       productOnlyPreference: "none",
+      rhythmSlots: APPAREL_RHYTHM,
     },
     dnaHints: {
       environment: "Environmental location or clean studio depending on style. The setting should support the outfit story.",
@@ -661,6 +1203,73 @@ function findItemOverride(input: LookbookInput): ItemShotOverride | null {
   ) || null;
 }
 
+// ── Objective Evidence Boosts ──
+// Boosts only upgrade priorities (optional→recommended, recommended→required).
+// Family-level evidence requirements are the floor; the objective raises the ceiling.
+
+const PRIORITY_RANK: Record<EvidencePriority, number> = {
+  discouraged: 0,
+  optional: 1,
+  recommended: 2,
+  required: 3,
+};
+
+const RANK_TO_PRIORITY: EvidencePriority[] = ["discouraged", "optional", "recommended", "required"];
+
+const OBJECTIVE_EVIDENCE_BOOSTS: Record<PrimaryObjective, { evidence: EvidenceType; minPriority: EvidencePriority }[]> = {
+  sell_clearly: [
+    { evidence: "fit_on_body", minPriority: "required" },
+    { evidence: "full_silhouette", minPriority: "required" },
+    { evidence: "logo_placement", minPriority: "recommended" },
+  ],
+  shape_and_fit: [
+    { evidence: "full_silhouette", minPriority: "required" },
+    { evidence: "side_profile", minPriority: "required" },
+    { evidence: "body_scale", minPriority: "required" },
+  ],
+  craftsmanship: [
+    { evidence: "texture_detail", minPriority: "required" },
+    { evidence: "construction_quality", minPriority: "required" },
+    { evidence: "hardware_detail", minPriority: "recommended" },
+  ],
+  editorial_story: [
+    { evidence: "styling_context", minPriority: "required" },
+    { evidence: "movement_behavior", minPriority: "recommended" },
+  ],
+};
+
+function applyObjectiveEvidenceBoosts(
+  plan: ResolvedEvidencePlan,
+  objective: PrimaryObjective,
+): ResolvedEvidencePlan {
+  const boosts = OBJECTIVE_EVIDENCE_BOOSTS[objective];
+  if (!boosts || boosts.length === 0) return plan;
+
+  // Clone the ordered evidence so we don't mutate the original
+  const boosted = plan.orderedEvidence.map((req) => ({ ...req }));
+  const existingTypes = new Set(boosted.map((r) => r.evidence));
+
+  for (const boost of boosts) {
+    const existing = boosted.find((r) => r.evidence === boost.evidence);
+    if (existing) {
+      // Only upgrade, never downgrade
+      const currentRank = PRIORITY_RANK[existing.priority];
+      const boostRank = PRIORITY_RANK[boost.minPriority];
+      if (boostRank > currentRank) {
+        existing.priority = RANK_TO_PRIORITY[boostRank];
+      }
+    } else if (!existingTypes.has(boost.evidence)) {
+      // Evidence not in the family plan at all; add it at the boosted priority
+      boosted.push({ evidence: boost.evidence, priority: boost.minPriority });
+    }
+  }
+
+  // Re-sort: required first, then recommended, then optional, then discouraged
+  boosted.sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority]);
+
+  return { ...plan, orderedEvidence: boosted };
+}
+
 export function resolveBlueprint(input: LookbookInput): ResolvedBlueprint {
   const familyBP = FAMILY_BLUEPRINTS[input.productFamily];
   const itemOverride = findItemOverride(input);
@@ -693,11 +1302,23 @@ export function resolveBlueprint(input: LookbookInput): ResolvedBlueprint {
     additionalNegativeCues: itemOverride?.additionalNegativeCues ?? [],
     deltaBriefSuffix: itemOverride?.deltaBriefSuffix ?? "",
 
-    // ── Evidence-based planning ──
-    evidencePlan: resolveEvidencePlan(input),
+    // ── Evidence-based planning (family floor + objective boosts) ──
+    evidencePlan: applyObjectiveEvidenceBoosts(resolveEvidencePlan(input), input.primaryObjective),
 
     // ── F5a: Composition rhythm ──
-    setRhythm: familyBP.setRhythm,
+    setRhythm: familyBP.setRhythm
+      ? {
+          idealSequence: familyBP.setRhythm.idealSequence,
+          requiredRoles: familyBP.setRhythm.requiredRoles,
+          productOnlyPreference: familyBP.setRhythm.productOnlyPreference,
+          rhythmSlots: familyBP.setRhythm.rhythmSlots
+            ? tagEditorialBeats(
+                resolveRhythmForItem(familyBP.setRhythm.rhythmSlots, input.specificItem),
+                input.primaryObjective === "editorial_story",
+              )
+            : undefined,
+        }
+      : undefined,
   };
 }
 

@@ -8,6 +8,13 @@ import type {
   WatchFingerprint,
   BeltFingerprint,
   JewelryFingerprint,
+  EyewearFingerprint,
+  ApparelFingerprint,
+  FootwearFingerprint,
+  HeadwearFingerprint,
+  ScarfFingerprint,
+  SmallAccessoryFingerprint,
+  FullLookFingerprint,
 } from "@/lib/lookbook/types";
 
 interface ProductFingerprintFormProps {
@@ -379,6 +386,399 @@ function JewelryFields({
   );
 }
 
+// ── Eyewear-specific fields ──
+
+function EyewearFields({
+  fp,
+  onUpdate,
+}: {
+  fp: Partial<EyewearFingerprint>;
+  onUpdate: (patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Eyewear Type"
+          placeholder="sunglasses, optical..."
+          value={fp.eyewearType || ""}
+          onChange={(v) => onUpdate({ eyewearType: v })}
+        />
+        <Field
+          label="Frame Shape"
+          placeholder="aviator, wayfarer, cat-eye..."
+          value={fp.frameShape || ""}
+          onChange={(v) => onUpdate({ frameShape: v })}
+        />
+        <Field
+          label="Frame Material"
+          placeholder="acetate, metal, titanium..."
+          value={fp.frameMaterial || ""}
+          onChange={(v) => onUpdate({ frameMaterial: v })}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Lens Type"
+          placeholder="tinted, gradient, mirrored..."
+          value={fp.lensType || ""}
+          onChange={(v) => onUpdate({ lensType: v })}
+        />
+        <Field
+          label="Lens Colour"
+          placeholder="grey, brown, blue..."
+          value={fp.lensColour || ""}
+          onChange={(v) => onUpdate({ lensColour: v })}
+        />
+        <Field
+          label="Temple Style"
+          placeholder="straight, curved, wire..."
+          value={fp.templeStyle || ""}
+          onChange={(v) => onUpdate({ templeStyle: v })}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Bridge Type"
+          placeholder="keyhole, saddle, nose-pad..."
+          value={fp.bridgeType || ""}
+          onChange={(v) => onUpdate({ bridgeType: v })}
+        />
+        <Field
+          label="Construction Style"
+          placeholder="moulded, assembled..."
+          value={fp.constructionStyle || ""}
+          onChange={(v) => onUpdate({ constructionStyle: v })}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Apparel-specific fields ──
+
+function ApparelFields({
+  fp,
+  onUpdate,
+}: {
+  fp: Partial<ApparelFingerprint>;
+  onUpdate: (patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Apparel Type"
+          placeholder="jacket, dress, blazer..."
+          value={fp.apparelType || ""}
+          onChange={(v) => onUpdate({ apparelType: v })}
+        />
+        <Field
+          label="Fit Type"
+          placeholder="slim, oversized, tailored..."
+          value={fp.fitType || ""}
+          onChange={(v) => onUpdate({ fitType: v })}
+        />
+        <Field
+          label="Neckline"
+          placeholder="crew, v-neck, collar..."
+          value={fp.neckline || ""}
+          onChange={(v) => onUpdate({ neckline: v })}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Sleeve Length"
+          placeholder="short, long, sleeveless..."
+          value={fp.sleeveLength || ""}
+          onChange={(v) => onUpdate({ sleeveLength: v })}
+        />
+        <Field
+          label="Hem Length"
+          placeholder="cropped, hip, knee..."
+          value={fp.hemLength || ""}
+          onChange={(v) => onUpdate({ hemLength: v })}
+        />
+        <Select
+          label="Closure Type"
+          value={fp.closureType || "button"}
+          options={["button", "zip", "snap", "pull-on", "wrap", "toggle", "hook"]}
+          onChange={(v) => onUpdate({ closureType: v })}
+        />
+      </div>
+      <Field
+        label="Construction Style"
+        placeholder="tailored, knit, woven..."
+        value={fp.constructionStyle || ""}
+        onChange={(v) => onUpdate({ constructionStyle: v })}
+      />
+    </div>
+  );
+}
+
+// ── Footwear-specific fields ──
+
+function FootwearFields({
+  fp,
+  onUpdate,
+}: {
+  fp: Partial<FootwearFingerprint>;
+  onUpdate: (patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Footwear Type"
+          placeholder="sneaker, boot, loafer..."
+          value={fp.footwearType || ""}
+          onChange={(v) => onUpdate({ footwearType: v })}
+        />
+        <Field
+          label="Heel Height"
+          placeholder="flat, low, mid, high..."
+          value={fp.heelHeight || ""}
+          onChange={(v) => onUpdate({ heelHeight: v })}
+        />
+        <Field
+          label="Toe Shape"
+          placeholder="round, pointed, square..."
+          value={fp.toeShape || ""}
+          onChange={(v) => onUpdate({ toeShape: v })}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Sole Type"
+          placeholder="rubber, leather, platform..."
+          value={fp.soleType || ""}
+          onChange={(v) => onUpdate({ soleType: v })}
+        />
+        <Select
+          label="Closure Type"
+          value={fp.closureType || "slip-on"}
+          options={["lace-up", "slip-on", "buckle", "zip", "strap", "velcro"]}
+          onChange={(v) => onUpdate({ closureType: v })}
+        />
+        <Field
+          label="Ankle Height"
+          placeholder="low, ankle, mid-calf..."
+          value={fp.ankleHeight || ""}
+          onChange={(v) => onUpdate({ ankleHeight: v })}
+        />
+      </div>
+      <Field
+        label="Construction Style"
+        placeholder="cemented, stitched, welted..."
+        value={fp.constructionStyle || ""}
+        onChange={(v) => onUpdate({ constructionStyle: v })}
+      />
+    </div>
+  );
+}
+
+// ── Headwear-specific fields ──
+
+function HeadwearFields({
+  fp,
+  onUpdate,
+}: {
+  fp: Partial<HeadwearFingerprint>;
+  onUpdate: (patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Headwear Type"
+          placeholder="cap, beanie, fedora..."
+          value={fp.headwearType || ""}
+          onChange={(v) => onUpdate({ headwearType: v })}
+        />
+        <Field
+          label="Crown Shape"
+          placeholder="structured, unstructured..."
+          value={fp.crownShape || ""}
+          onChange={(v) => onUpdate({ crownShape: v })}
+        />
+        <Field
+          label="Brim Style"
+          placeholder="flat, curved, wide, none..."
+          value={fp.brimStyle || ""}
+          onChange={(v) => onUpdate({ brimStyle: v })}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Closure Type"
+          placeholder="snapback, fitted, elastic..."
+          value={fp.closureType || ""}
+          onChange={(v) => onUpdate({ closureType: v })}
+        />
+        <Field
+          label="Construction Style"
+          placeholder="woven, knit, felt..."
+          value={fp.constructionStyle || ""}
+          onChange={(v) => onUpdate({ constructionStyle: v })}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Scarf-specific fields ──
+
+function ScarfFields({
+  fp,
+  onUpdate,
+}: {
+  fp: Partial<ScarfFingerprint>;
+  onUpdate: (patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Scarf Type"
+          placeholder="scarf, shawl, bandana..."
+          value={fp.scarfType || ""}
+          onChange={(v) => onUpdate({ scarfType: v })}
+        />
+        <Field
+          label="Dimensions"
+          placeholder="square, rectangular..."
+          value={fp.dimensions || ""}
+          onChange={(v) => onUpdate({ dimensions: v })}
+        />
+        <Field
+          label="Fabric Weight"
+          placeholder="sheer, lightweight, heavy..."
+          value={fp.fabricWeight || ""}
+          onChange={(v) => onUpdate({ fabricWeight: v })}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Pattern Type"
+          placeholder="solid, printed, jacquard..."
+          value={fp.patternType || ""}
+          onChange={(v) => onUpdate({ patternType: v })}
+        />
+        <Field
+          label="Edge Finish"
+          placeholder="fringed, hemmed, rolled..."
+          value={fp.edgeFinish || ""}
+          onChange={(v) => onUpdate({ edgeFinish: v })}
+        />
+        <Field
+          label="Construction Style"
+          placeholder="woven, knit, printed..."
+          value={fp.constructionStyle || ""}
+          onChange={(v) => onUpdate({ constructionStyle: v })}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Small Accessory-specific fields ──
+
+function SmallAccessoryFields({
+  fp,
+  onUpdate,
+}: {
+  fp: Partial<SmallAccessoryFingerprint>;
+  onUpdate: (patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Accessory Type"
+          placeholder="wallet, card-holder..."
+          value={fp.accessoryType || ""}
+          onChange={(v) => onUpdate({ accessoryType: v })}
+        />
+        <Field
+          label="Opening Type"
+          placeholder="fold, zip, snap..."
+          value={fp.openingType || ""}
+          onChange={(v) => onUpdate({ openingType: v })}
+        />
+        <Field
+          label="Construction Style"
+          placeholder="stitched, bonded..."
+          value={fp.constructionStyle || ""}
+          onChange={(v) => onUpdate({ constructionStyle: v })}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Select
+          label="Card Slots"
+          value={String(fp.cardSlots ?? 0)}
+          options={["0", "1", "2", "3", "4", "5", "6", "8", "10", "12"]}
+          onChange={(v) => onUpdate({ cardSlots: Number(v) || undefined })}
+        />
+        <Select
+          label="Compartments"
+          value={String(fp.compartmentCount ?? 0)}
+          options={["0", "1", "2", "3", "4", "5"]}
+          onChange={(v) => onUpdate({ compartmentCount: Number(v) || undefined })}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Full Look-specific fields ──
+
+function FullLookFields({
+  fp,
+  onUpdate,
+}: {
+  fp: Partial<FullLookFingerprint>;
+  onUpdate: (patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Primary Piece"
+          placeholder="blazer, coat, dress..."
+          value={fp.primaryPiece || ""}
+          onChange={(v) => onUpdate({ primaryPiece: v })}
+        />
+        <Field
+          label="Style Direction"
+          placeholder="casual, formal, editorial..."
+          value={fp.styleDirection || ""}
+          onChange={(v) => onUpdate({ styleDirection: v })}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <Select
+          label="Layering Count"
+          value={String(fp.layeringCount ?? 1)}
+          options={["1", "2", "3", "4", "5"]}
+          onChange={(v) => onUpdate({ layeringCount: Number(v) })}
+        />
+        <Field
+          label="Colour Palette"
+          placeholder="monochrome, tonal..."
+          value={fp.colourPalette || ""}
+          onChange={(v) => onUpdate({ colourPalette: v })}
+        />
+        <Field
+          label="Construction Style"
+          placeholder="tailored, casual, mixed..."
+          value={fp.constructionStyle || ""}
+          onChange={(v) => onUpdate({ constructionStyle: v })}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ── Shared form primitives ──
 
 function Field({
@@ -441,7 +841,11 @@ function Select({
 
 // ── Supported families ──
 
-const SUPPORTED_FAMILIES = new Set<ProductFamily>(["bags", "watches", "belts", "jewelry"]);
+const SUPPORTED_FAMILIES = new Set<ProductFamily>([
+  "bags", "watches", "belts", "jewelry",
+  "eyewear", "apparel", "footwear", "headwear",
+  "scarves", "small_accessories", "full_look",
+]);
 
 // ── Default fingerprints ──
 
@@ -501,6 +905,82 @@ function defaultFingerprint(family: ProductFamily): ProductFingerprint | undefin
         family: "jewelry",
         jewelryType: "",
         stonePresent: false,
+        constructionStyle: "",
+      };
+    case "eyewear":
+      return {
+        ...base,
+        family: "eyewear",
+        eyewearType: "",
+        frameShape: "",
+        frameMaterial: "",
+        lensType: "",
+        lensColour: "",
+        templeStyle: "",
+        bridgeType: "",
+        constructionStyle: "",
+      };
+    case "apparel":
+      return {
+        ...base,
+        family: "apparel",
+        apparelType: "",
+        fitType: "",
+        neckline: "",
+        sleeveLength: "",
+        hemLength: "",
+        closureType: "",
+        constructionStyle: "",
+      };
+    case "footwear":
+      return {
+        ...base,
+        family: "footwear",
+        footwearType: "",
+        heelHeight: "",
+        toeShape: "",
+        soleType: "",
+        closureType: "",
+        ankleHeight: "",
+        constructionStyle: "",
+      };
+    case "headwear":
+      return {
+        ...base,
+        family: "headwear",
+        headwearType: "",
+        crownShape: "",
+        brimStyle: "",
+        closureType: "",
+        constructionStyle: "",
+      };
+    case "scarves":
+      return {
+        ...base,
+        family: "scarves",
+        scarfType: "",
+        dimensions: "",
+        fabricWeight: "",
+        patternType: "",
+        edgeFinish: "",
+        constructionStyle: "",
+      };
+    case "small_accessories":
+      return {
+        ...base,
+        family: "small_accessories",
+        accessoryType: "",
+        openingType: "",
+        constructionStyle: "",
+      };
+    case "full_look":
+      return {
+        ...base,
+        family: "full_look",
+        primaryPiece: "",
+        layeringCount: 1,
+        colourPalette: "",
+        styleDirection: "",
         constructionStyle: "",
       };
     default:
@@ -577,6 +1057,27 @@ export default function ProductFingerprintForm({
           )}
           {value.family === "jewelry" && (
             <JewelryFields fp={value} onUpdate={handleUpdate} />
+          )}
+          {value.family === "eyewear" && (
+            <EyewearFields fp={value} onUpdate={handleUpdate} />
+          )}
+          {value.family === "apparel" && (
+            <ApparelFields fp={value} onUpdate={handleUpdate} />
+          )}
+          {value.family === "footwear" && (
+            <FootwearFields fp={value} onUpdate={handleUpdate} />
+          )}
+          {value.family === "headwear" && (
+            <HeadwearFields fp={value} onUpdate={handleUpdate} />
+          )}
+          {value.family === "scarves" && (
+            <ScarfFields fp={value} onUpdate={handleUpdate} />
+          )}
+          {value.family === "small_accessories" && (
+            <SmallAccessoryFields fp={value} onUpdate={handleUpdate} />
+          )}
+          {value.family === "full_look" && (
+            <FullLookFields fp={value} onUpdate={handleUpdate} />
           )}
 
           {/* Shared base fields */}

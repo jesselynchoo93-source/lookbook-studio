@@ -516,58 +516,95 @@ export default function CurrentShotWorkspace({
             {/* Internal planning prompt (QA only) */}
             <div className="space-y-3">
               <span className="text-[10px] font-medium text-[--text-tertiary] uppercase tracking-wider">
-                Internal QA
+                Internal QA (planning data, not sent to Higgsfield)
               </span>
-              <div>
-                <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
-                  Planning Prompt (4-layer)
-                </span>
-                <p className="text-xs text-[--text-tertiary] mt-1 break-words">
-                  {pkg.generatorPrompt}
-                </p>
-              </div>
-              <div>
-                <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
-                  Internal Negative (3-tier)
-                </span>
-                <p className="text-xs text-[--text-tertiary] mt-1 break-words">
-                  {pkg.negativePrompt}
-                </p>
-              </div>
-              {pkg.guardrailChecklist.length > 0 && (
+
+              {pkg.promptLayers ? (
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Layer 1: Campaign Continuity
+                    </span>
+                    <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                      {pkg.promptLayers.campaignContinuityLock}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Layer 2: Product Truth
+                    </span>
+                    <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                      {pkg.promptLayers.productTruthLock}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Layer 3: Scale & Proportion
+                    </span>
+                    <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                      {pkg.promptLayers.scaleLock}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Layer 4: Shot Delta
+                    </span>
+                    <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                      {pkg.promptLayers.shotDelta}
+                    </p>
+                  </div>
+                </div>
+              ) : (
                 <div>
                   <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
-                    Guardrail Checklist
+                    Planning Prompt
                   </span>
-                  <ul className="mt-1 space-y-1">
-                    {pkg.guardrailChecklist.map((item, i) => (
-                      <li
-                        key={i}
-                        className="text-xs text-[--text-secondary] flex items-start gap-2"
-                      >
-                        <span className="text-[--text-tertiary] mt-0.5">[ ]</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                    {pkg.generatorPrompt}
+                  </p>
                 </div>
               )}
-              {pkg.enhancorNotes.length > 0 && (
+
+              {pkg.negativeLayers ? (
+                <div className="space-y-3">
+                  <span className="text-[10px] font-medium text-[--text-tertiary] uppercase tracking-wider">
+                    Internal Negatives
+                  </span>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Tier 1: Global Defaults
+                    </span>
+                    <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                      {pkg.negativeLayers.globalDefaults}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                      Tier 2: Family Drift
+                    </span>
+                    <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                      {pkg.negativeLayers.familyDrift}
+                    </p>
+                  </div>
+                  {pkg.negativeLayers.shotSpecific && (
+                    <div>
+                      <span className="text-[10px] font-semibold text-[--text-tertiary] uppercase tracking-wider">
+                        Tier 3: Shot-Specific
+                      </span>
+                      <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                        {pkg.negativeLayers.shotSpecific}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
                 <div>
                   <span className="text-[10px] text-[--text-tertiary] uppercase tracking-wider">
-                    Enhancor Notes
+                    Internal Negative
                   </span>
-                  <ul className="mt-1 space-y-1">
-                    {pkg.enhancorNotes.map((note, i) => (
-                      <li
-                        key={i}
-                        className="text-xs text-[--text-secondary] flex items-start gap-2"
-                      >
-                        <span className="text-[--phase-detail]">-</span>
-                        <span>{note}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-xs text-[--text-tertiary] mt-1 break-words">
+                    {pkg.negativePrompt}
+                  </p>
                 </div>
               )}
             </div>
